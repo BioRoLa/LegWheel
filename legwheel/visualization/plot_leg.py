@@ -9,8 +9,8 @@ from legwheel.models import leg_model as LegModel
 from legwheel.utils.fitted_coefficient import *
 
 class PlotLeg(LegModel.LegModel):
-    def __init__(self, sim=True):
-        super().__init__(sim=sim)
+    def __init__(self):
+        super().__init__()
         self.forward(np.deg2rad(17), 0, vector=False)
         self.O = np.array([0, 0])   # origin of leg in world coordinate
         self.leg_shape = self.LegShape(self, self.O)   # initial pose of leg
