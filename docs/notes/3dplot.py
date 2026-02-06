@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-sys.path.append('C:\\Users\\starl\\NTU\\Birola_LAB\\Code\\LegWheel')
-import LegModel
-import PlotLeg
+from legwheel.models import leg_model as LegModel
+from legwheel.visualization import plot_leg as PlotLeg
 # from mpl_toolkits.mplot3d import Axes3D
 
 T = np.array([np.deg2rad(i) for i in range(17,160)])

@@ -1,8 +1,7 @@
 import sys
-sys.path.append('C:\\Users\\starl\\NTU\\Birola_LAB\\Code\\LegWheel')
-import LegModel
 import pandas as pd
 import numpy as np
+from legwheel.models import leg_model as LegModel
 
 leg = LegModel.LegModel()
 Dir = 'Output_datas/0904/CSV/'

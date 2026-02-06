@@ -1,10 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
 from matplotlib.animation import FuncAnimation
-sys.path.append('C:\\Users\\starl\\NTU\\Birola_LAB\\Code\\LegWheel')
-import LegModel
-import PlotLeg
+from legwheel.models import leg_model as LegModel
+from legwheel.visualization import plot_leg as PlotLeg
     
     
 plot_leg = PlotLeg.PlotLeg()  # rad
