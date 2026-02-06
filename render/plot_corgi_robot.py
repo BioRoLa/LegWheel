@@ -46,4 +46,4 @@ def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0):
 
 if __name__ == "__main__":
     # Test with standard standing pose and some ABAD angle
-    plot_corgi_robot(theta=np.deg2rad(17), beta=np.deg2rad(0), gamma=np.deg2rad(15))
+    plot_corgi_robot(theta=np.deg2rad(110), beta=np.deg2rad(10), gamma=np.deg2rad(15))
