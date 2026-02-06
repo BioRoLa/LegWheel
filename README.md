@@ -8,7 +8,7 @@ A Python library for leg-wheel robot control and trajectory planning.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/legwheel.git
+git clone https://github.com/BioRoLa/LegWheel.git
 cd legwheel
 
 # Install in editable mode
