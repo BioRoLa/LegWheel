@@ -12,7 +12,7 @@ from legwheel.config import RobotParams, TrajectoryParams
 def main():
     """Demonstrate basic leg model usage."""
     # Create leg model
-    leg = LegModel(sim=True)
+    leg = LegModel()
     
     # Forward kinematics
     theta = np.deg2rad(90)
@@ -22,7 +22,7 @@ def main():
     print(f"Foot position (G): {leg.G}")
     
     # Visualization
-    plot_leg = PlotLeg(sim=True)
+    plot_leg = PlotLeg()
     ax = plot_leg.plot_by_angle(theta, beta)
     plt.show()
     
