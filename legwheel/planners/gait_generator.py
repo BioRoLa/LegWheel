@@ -101,8 +101,7 @@ class Gait_Generator:
         self.Target_dist = distance     # target distance to walk, meter
         self.total_time = self.Target_dist / self.Traj.V        # moving time, unit: second
         self.data_len = int(self.total_time / self.Traj.dt)     # target cmd data length must output
-        # self.gait_select = "trot"
-        self.gait_select = "walk"
+        self.gait_select = gait_select
         self.select_gait()
         self.legs = [leg_object( curve=self.Traj["cmd"],
                                  start_point=(self.gait[i]-1)/len(self.gait),
@@ -137,6 +136,15 @@ class Gait_Generator:
         elif self.gait_select == "trot":
             # trotting gait
             self.gait = [1,3,1,3]
+        elif self.gait_select == "pace":
+            # pacing gait
+            self.gait = [1,3,3,1]
+        elif self.gait_select == "bound":
+            # bounding gait
+            self.gait = [1,1,3,3]
+        elif self.gait_select == "pronk":
+            # pronking gait
+            self.gait = [1,1,1,1]
         else:
             self.gait = [4,2,3,1]
     
