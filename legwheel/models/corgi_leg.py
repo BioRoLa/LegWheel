@@ -55,7 +55,7 @@ class CorgiLegKinematics:
         self.p_Mi_in_R = np.array([
             self.sx * 0.5 * self.l_body,
             self.sy * 0.5 * self.w_body,
-            0.0 
+            self.d_abad 
         ])
 
         # PlotLeg acts as the internal 2D solver for the 5-bar linkage geometry.
@@ -84,15 +84,16 @@ class CorgiLegKinematics:
             np.ndarray: [x, y, 0] coordinates in {Li}.
         """
         # Internal solver adds 90 deg. By subtracting 90 here, user beta=0 points Down.
-        self.solver.forward(theta, beta - np.pi/2, vector=True)
+        self.solver.forward(theta, beta, vector=True)
         # rim_point returns the 2D position of a point on the rim for a given alpha.
         p_contact = self.solver.rim_point(np.rad2deg(alpha))
         
+        # if rim_point returns a batch of points, we take the first one for FK.
         if isinstance(p_contact, np.ndarray):
             return np.array([p_contact[0], p_contact[1], 0.0])
         return np.array([p_contact.real, p_contact.imag, 0.0])
 
-    def _get_transformation_matrices(self, gamma):
+    def _get_transformation_matrices(self):
         """
         Defines the rotation matrices for coordinate frame mapping.
         
@@ -102,29 +103,37 @@ class CorgiLegKinematics:
         - Z_L (Sagittal thickness) -> +X_M (pointing 'Lateral Outward')
         """
         # R_L_to_M: Basis of Leg Frame {Li} expressed in Module Frame {Mi}.
-        R_L_to_M = np.array([
-            [0, 0, 1],
-            [-1, 0, 0],
-            [0, 1, 0]
-        ])
-
         if self.is_left:
-            # Mi orientation in R: X_M=Left (+Y_R), Y_M=Up (+Z_R), Z_M=Front (+X_R)
-            R_M_to_R = np.array([
-                [0, 0, 1], # X_R = Z_M
-                [1, 0, 0], # Y_R = X_M
-                [0, 1, 0]  # Z_R = Y_M
+            R_L_to_M = np.array([
+                [ 0, 0, 1],  
+                [ 0, 1, 0],  
+                [-1, 0, 0]   
             ])
         else:
-            # Mi orientation in R: X_M=Right (-Y_R), Y_M=Up (+Z_R), Z_M=Front (+X_R)
+            R_L_to_M = np.array([
+                [ 0, 0,-1],  
+                [ 0,-1, 0],  
+                [ 1, 0, 0]   
+            ])
+        
+        # R_M_to_R: Basis of Module Frame {Mi} expressed in Robot Frame {R}.
+        if self.is_left:
+            # X_M -> +Y_R, Y_M -> +Z_R, Z_M -> +X_R for left legs @ gamma=0
             R_M_to_R = np.array([
-                [0, 0, 1], # X_R = Z_M
-                [-1, 0, 0],# Y_R = X_M
-                [0, 1, 0]  # Z_R = Y_M
+                [ 0, 0, 1], 
+                [ 1, 0, 0], 
+                [ 0, 1, 0]  
+            ])
+        else:
+            # X_M -> -Y_R, Y_M -> -Z_R, Z_M -> -X_R for right legs @ gamma=0
+            R_M_to_R = np.array([
+                [ 0, 0,-1], 
+                [-1, 0, 0],
+                [ 0,-1, 0]  
             ])
         return R_L_to_M, R_M_to_R
 
-    def _transform_to_robot(self, p_L, gamma, is_wheel=True):
+    def _transform_to_robot(self, p_L, gamma):
         """
         Transforms a 3D point from the Leg Frame assembly to the Robot Frame.
         
@@ -133,20 +142,25 @@ class CorgiLegKinematics:
         2. Apply structural lateral offset (d_abad or d_abad + d_wheel).
         3. Rotate by active ABAD angle (gamma) around the roll axis (Z_M).
         4. Transform the result to the global Robot Frame {R}.
+        Args:
+            p_L (np.ndarray): [x, y, z] point in Leg Frame {Li}.
+            gamma (float): ABAD joint angle (rad).
         """
-        R_L_to_M, R_M_to_R = self._get_transformation_matrices(gamma)
+        # Get the transformation matrices based on current gamma (ABAD angle)
+        R_L_to_M, R_M_to_R = self._get_transformation_matrices()
         
         # base lateral offset based on whether the component is on the linkage or the wheel.
-        d_lat = self.d_abad + (self.d_wheel if is_wheel else 0.0)
+        d_lat = self.d_wheel
         
-        # 1. Orientation mapping
+        # starts with the point in the Leg Frame {Li}
+        # 1. Orientation mapping {Li} -> {Mi}
         p_M_base = R_L_to_M @ p_L 
         
         # 2. Add structural lateral offset along X_M (Outward)
         p_M_offset = p_M_base + np.array([d_lat, 0, 0])
         
         # 3. Apply joint rotation gamma about Z_M
-        p_M_rot = self._rot_z(gamma) @ p_M_offset
+        p_M_rot = self._rot_z(gamma if self.is_left else -gamma) @ p_M_offset
         
         # 4. Final transform to R
         return R_M_to_R @ p_M_rot + self.p_Mi_in_R
@@ -159,7 +173,7 @@ class CorgiLegKinematics:
             np.ndarray: [x, y, z] position in Robot Frame {R}.
         """
         p_L = self.fk_sagittal(theta, beta, alpha) 
-        return self._transform_to_robot(p_L, gamma, is_wheel=True)
+        return self._transform_to_robot(p_L, gamma)
 
     def get_joint_positions(self, theta, beta, gamma):
         """
@@ -177,7 +191,7 @@ class CorgiLegKinematics:
         }
         
         # Transform each joint. G is the only one typically considered 'wheel center'.
-        return {k: self._transform_to_robot(np.array([v[0], v[1], 0]), gamma, is_wheel=(k=='G')) for k, v in joints_2d.items()}
+        return {k: self._transform_to_robot(np.array([v[0], v[1], 0]), gamma) for k, v in joints_2d.items()}
 
     def plot_leg_3d(self, theta, beta, gamma, ax):
         """
@@ -187,15 +201,16 @@ class CorgiLegKinematics:
         # 1. Update the 2D solver with corrected beta to get current linkage geometry
         self.fk_sagittal(theta, beta)
         shape = self.solver.leg_shape
+        shape.get_shape(shape.O)  # Update all geometric primitives based on current leg state
         
         # layer_z: Separation between the two parallel linkage plates for visual depth.
-        layer_z = 0.01
+        layer_z = 0
 
-        def proj(x, y, color, lw, is_w=False, z_offset=0.0):
+        def proj(x, y, color, lw, z_offset=0.0):
             """Internal projection helper."""
             z = np.full_like(x, z_offset)
             pts_L = np.vstack([x, y, z]).T
-            pts_R = np.array([self._transform_to_robot(p, gamma, is_w) for p in pts_L])
+            pts_R = np.array([self._transform_to_robot(p, gamma) for p in pts_L])
             ax.plot(pts_R[:,0], pts_R[:,1], pts_R[:,2], color=color, linewidth=lw)
 
         # Iterate through PlotLeg's shape dictionary to find plotable primitives
@@ -205,7 +220,7 @@ class CorgiLegKinematics:
             
             # 1. Linkage Bars (Line2D objects)
             if "bar" in key and hasattr(val, 'get_xdata'):
-                proj(val.get_xdata(), val.get_ydata(), val.get_color(), val.get_linewidth(), is_w=False, z_offset=z_off)
+                proj(val.get_xdata(), val.get_ydata(), val.get_color(), val.get_linewidth(), z_offset=z_off)
             
             # 2. Rims and Arcs
             elif "rim" in key and hasattr(val, 'arc'):
@@ -219,14 +234,14 @@ class CorgiLegKinematics:
                     
                     cx, cy = arc.center
                     x, y = cx + (arc.width/2) * np.cos(ang), cy + (arc.height/2) * np.sin(ang)
-                    proj(x, y, arc.get_edgecolor(), arc.get_linewidth(), is_w=False, z_offset=z_off)
+                    proj(x, y, arc.get_edgecolor(), arc.get_linewidth(), z_offset=z_off)
             
             # 3. Joints (Circle patches)
             elif "joint" in key and hasattr(val, 'center'):
                 cx, cy = val.center
                 ang = np.linspace(0, 2*np.pi, 20)
                 x, y = cx + val.radius * np.cos(ang), cy + val.radius * np.sin(ang)
-                proj(x, y, val.get_edgecolor(), val.get_linewidth(), is_w=False, z_offset=z_off)
+                proj(x, y, val.get_edgecolor(), val.get_linewidth(), z_offset=z_off)
 
     def plot_frames(self, ax, gamma, axis_len=0.05):
         """
@@ -243,8 +258,8 @@ class CorgiLegKinematics:
             ax.quiver(0, 0, 0, 0, 0, axis_len, color='b', linewidth=2)
             ax.text(0, 0, 0.02, '{R}', color='k', fontsize=12, fontweight='bold')
 
-        R_L_to_M, R_M_to_R = self._get_transformation_matrices(gamma)
-        R_gamma = self._rot_z(gamma)
+        R_L_to_M, R_M_to_R = self._get_transformation_matrices()
+        R_gamma = self._rot_z(gamma if self.is_left else -gamma)
         mo = self.p_Mi_in_R
         
         # Rotated Module Frame {Mi} axes (now reflecting the active ABAD rotation)
