@@ -1,25 +1,20 @@
 import numpy as np
 from legwheel.config import RobotParams
-from legwheel.utils.fitted_coefficient import inv_G_dist_poly
 
 class CorgiLegKinematics:
     """
     3D Kinematics for the Corgi Leg-Wheel module with ABAD (Abduction/Adduction).
     
     Frames:
-        {W}: World Frame
-        {R}: Robot Frame (Origin at IMU center)
-        {Mi}: Module Frame (Base for each limb)
-        {Li}: Leg Frame (Attached to ABAD output, rotates with gamma)
-    
-    Leg Indexing (i):
-        0: FL (Front-Left)
-        1: FR (Front-Right)
-        2: RR (Rear-Right)
-        3: RL (Rear-Left)
+        {R}: Robot Frame (Origin at IMU/Chassis center, Forward: +X, Left: +Y, Up: +Z)
+        {Mi}: Module Frame (Base for each limb, centered at the Roll Axis of the ABAD joint)
+        {Li}: Leg Frame (Sagittal plane attached to ABAD output, rotates with gamma about Z_M)
     """
     
     def __init__(self, leg_index):
+        """
+        Initializes the kinematics model for a specific leg.
+        """
         self.leg_index = leg_index
         self.is_left = leg_index in [0, 3]
         self.is_front = leg_index in [0, 1]
@@ -35,172 +30,92 @@ class CorgiLegKinematics:
         self.sx = 1.0 if self.is_front else -1.0
         self.sy = 1.0 if self.is_left else -1.0
         
-        # Origin of Module Frame {Mi} in Robot Frame {R}
-        # FL: (+L/2, +W/2, +d_abad)
-        # FR: (+L/2, -W/2, +d_abad) ... etc
         self.p_Mi_in_R = np.array([
             self.sx * 0.5 * self.l_body,
             self.sy * 0.5 * self.w_body,
-            self.d_abad
+            0.0 
         ])
 
-    def _rot_x(self, angle):
-        c, s = np.cos(angle), np.sin(angle)
-        return np.array([
-            [1, 0, 0],
-            [0, c, -s],
-            [0, s, c]
-        ])
+        from legwheel.visualization.plot_leg import PlotLeg
+        self.solver = PlotLeg()
+        self.theta0 = self.solver.theta0
+        self.beta0 = self.solver.beta0
 
-    def _rot_y(self, angle):
-        c, s = np.cos(angle), np.sin(angle)
-        return np.array([
-            [c, 0, s],
-            [0, 1, 0],
-            [-s, 0, c]
-        ])
-        
     def _rot_z(self, angle):
         c, s = np.cos(angle), np.sin(angle)
-        return np.array([
-            [c, -s, 0],
-            [s, c, 0],
-            [0, 0, 1]
-        ])
-
-    def get_module_to_robot_transform(self, gamma):
-        """
-        Calculates T_Mi_to_R.
-        Accounts for hip offset and active ABAD rotation gamma.
-        """
-        # This method is effectively replaced by the logic in forward_kinematics
-        # but kept for potential separate use if needed.
-        pass
+        return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
     def fk_sagittal(self, theta, beta, alpha=0.0):
-        """
-        2D Forward Kinematics in the leg plane.
-        Calculates the contact point [x, y, 0] in the Leg Frame {Li} (Sagittal Plane).
-        
-        Using polynomial approximations for the mechanism kinematics.
-        """
-        from legwheel.utils.fitted_coefficient import G_poly, inv_O_r_dist_poly
-        from legwheel.config import RobotParams
-        
-        # We need a helper LegModel instance to access the polynomial logic consistently
-        if not hasattr(self, '_leg_model_solver'):
-            from legwheel.models.leg_model import LegModel
-            self._leg_model_solver = LegModel()
-            
-        # Use the helper to calculate forward kinematics
-        self._leg_model_solver.forward(theta, beta)
-        
-        # Get rim point based on alpha
-        # rim_point returns complex number or numpy array [x, y]
-        p_contact = self._leg_model_solver.rim_point(np.rad2deg(alpha))
-        
-        # If it's a vector [x, y]
+        self.solver.forward(theta, beta, vector=True)
+        p_contact = self.solver.rim_point(np.rad2deg(alpha))
         if isinstance(p_contact, np.ndarray):
             return np.array([p_contact[0], p_contact[1], 0.0])
-        
-        # Map complex result to 3D vector [x, y, 0]
         return np.array([p_contact.real, p_contact.imag, 0.0])
 
+    def _transform_to_robot(self, p_L, gamma, is_wheel=True):
+        if self.is_left:
+            R_L_to_M = np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]])
+            R_M_to_R = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]])
+        else:
+            R_L_to_M = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
+            R_M_to_R = np.array([[0, 0, -1], [-1, 0, 0], [0, 1, 0]])
+
+        d_lat = self.d_abad + (self.d_wheel if is_wheel else 0.0)
+        p_M = R_L_to_M @ p_L + np.array([d_lat, 0, 0])
+        return R_M_to_R @ (self._rot_z(gamma) @ p_M) + self.p_Mi_in_R
+
     def forward_kinematics(self, theta, beta, gamma, alpha=0.0):
-        """
-        Full 3D Forward Kinematics.
-        Returns p_contact in Robot Frame {R}.
-        """
-        # 1. Sagittal FK in {Li} -> [x, y, 0] (complex real/imag mapped to x/y)
         p_L = self.fk_sagittal(theta, beta, alpha) 
-        
-        # 2. Transform {Li} -> {Mi}
-        if self.is_left:
-            # Basis vectors of {Li} expressed in {Mi} for Left Legs
-            R_L_to_M = np.array([
-                [0, 0, 1],
-                [0, 1, 0],
-                [-1, 0, 0]
-            ])
-        else: # Right Legs
-            R_L_to_M = np.array([
-                [0, 0, -1],
-                [0, 1, 0],
-                [1, 0, 0]
-            ])
+        return self._transform_to_robot(p_L, gamma, is_wheel=True)
 
-        # p_M = R_L_to_M @ p_L + [d_wheel, 0, 0]
-        p_M = R_L_to_M @ p_L + np.array([self.d_wheel, 0, 0])
-        
-        # 3. Transform {Mi} -> {R}
-        # Rotation about Z-axis of {Mi} (which aligns with +/- X_R)
-        R_gamma = self._rot_z(gamma)
-        
-        # Final Position in {Mi} (rotated)
-        p_M_rot = R_gamma @ p_M
-        
-        # Transform to {R}
-        if self.is_left:
-            # X_M = Y_R = [0, 1, 0]
-            # Y_M = Z_R = [0, 0, 1]
-            # Z_M = X_R = [1, 0, 0]
-            R_M_to_R = np.array([
-                [0, 0, 1],
-                [1, 0, 0],
-                [0, 1, 0]
-            ]).T
-        else: # Right
-            # X_M = -Y_R = [0, -1, 0]
-            # Y_M = Z_R = [0, 0, 1]
-            # Z_M = -X_R = [-1, 0, 0]
-            R_M_to_R = np.array([
-                [0, -1, 0], 
-                [0, 0, 1],  
-                [-1, 0, 0]  
-            ]).T
+    def get_joint_positions(self, theta, beta, gamma):
+        self.solver.forward(theta, beta, vector=True)
+        lm = self.solver
+        joints_2d = {'O':[0,0], 'A':lm.A_l, 'B':lm.B_l, 'C':lm.C_l, 'D':lm.D_l, 'E':lm.E, 'F':lm.F_l, 'G':lm.G}
+        return {k: self._transform_to_robot(np.array([v[0], v[1], 0]), gamma, is_wheel=(k=='G')) for k, v in joints_2d.items()}
 
-        p_R_rel = R_M_to_R @ p_M_rot
-        
-        return p_R_rel + self.p_Mi_in_R
+    def plot_leg_3d(self, theta, beta, gamma, ax):
+        """
+        Projects 2D PlotLeg geometry into 3D robot space.
+        """
+        self.solver.forward(theta, beta, vector=False)
+        self.solver.leg_shape.get_shape([0, 0])
+        shape = self.solver.leg_shape
+
+        def project_and_plot(xdata, ydata, color, lw, is_w=False):
+            pts_L = np.vstack([xdata, ydata, np.zeros_like(xdata)]).T
+            pts_R = np.array([self._transform_to_robot(p, gamma, is_wheel=is_w) for p in pts_L])
+            ax.plot(pts_R[:,0], pts_R[:,1], pts_R[:,2], color=color, linewidth=lw)
+
+        for key, val in shape.__dict__.items():
+            # 1. Handle Bars (Line2D)
+            if "bar" in key and hasattr(val, 'get_xdata'):
+                is_wheel = ('foot' in key or 'center' in key)
+                project_and_plot(val.get_xdata(), val.get_ydata(), val.get_color(), val.get_linewidth(), is_w=is_wheel)
+            
+            # 2. Handle Rims (Custom rim objects with Arcs)
+            elif "rim" in key and hasattr(val, 'arc'):
+                is_wheel = ('lower' in key or 'foot' in key)
+                for arc in val.arc:
+                    # Sample points from the Arc
+                    theta1, theta2 = np.deg2rad(arc.theta1), np.deg2rad(arc.theta2)
+                    angles = np.linspace(theta1, theta2, 20)
+                    # Center of arc is in [x, y] format from PlotLeg
+                    cx, cy = arc.center 
+                    r = arc.width / 2
+                    x = cx + r * np.cos(angles)
+                    y = cy + r * np.sin(angles)
+                    project_and_plot(x, y, arc.get_edgecolor(), arc.get_linewidth(), is_w=is_wheel)
 
     def inverse_kinematics(self, target_pos, guess_q=None):
-        """
-        3D Inverse Kinematics using Gauss-Newton.
-        Target: [x, y, z] in {R}
-        Output: [theta, beta, gamma]
-        """
-        if guess_q is None:
-            guess_q = np.array([self.theta0, self.beta0, 0.0])
-            
+        if guess_q is None: guess_q = np.array([self.theta0, self.beta0, 0.0])
         q = guess_q
-        for i in range(10): # Iterations
-            # 1. Forward Kinematics
-            curr_pos = self.forward_kinematics(*q)
-            
-            # 2. Error
-            error = target_pos - curr_pos
-            if np.linalg.norm(error) < 1e-4:
-                break
-                
-            # 3. Jacobian (Numerical)
-            delta = 1e-5
-            J = np.zeros((3, 3))
-            
-            # d/d_theta
-            fk_dth = self.forward_kinematics(q[0]+delta, q[1], q[2])
-            J[:, 0] = (fk_dth - curr_pos) / delta
-            
-            # d/d_beta
-            fk_dbe = self.forward_kinematics(q[0], q[1]+delta, q[2])
-            J[:, 1] = (fk_dbe - curr_pos) / delta
-            
-            # d/d_gamma
-            fk_dga = self.forward_kinematics(q[0], q[1], q[2]+delta)
-            J[:, 2] = (fk_dga - curr_pos) / delta
-            
-            # 4. Update (Damped Least Squares / Pseudo-inverse)
-            # dq = pinv(J) * error
-            dq = np.linalg.pinv(J) @ error
-            q = q + dq
-            
+        for _ in range(10):
+            err = target_pos - self.forward_kinematics(*q)
+            if np.linalg.norm(err) < 1e-4: break
+            d, J = 1e-5, np.zeros((3, 3))
+            for j in range(3):
+                q_d = q.copy(); q_d[j] += d
+                J[:, j] = (self.forward_kinematics(*q_d) - self.forward_kinematics(*q)) / d
+            q += np.linalg.pinv(J) @ err
         return q
