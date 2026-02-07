@@ -8,19 +8,30 @@ def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0):
     fig = plt.figure(figsize=(12, 10))
     ax = fig.add_subplot(111, projection='3d')
     
-    # 1. Plot Robot Chassis (Box)
-    l = RobotParams.WHEEL_BASE
-    w = RobotParams.BODY_WIDTH
+    # 1. Plot Robot Chassis (Octagon - 八邊形)
+    # Geometric center at (0, 0, ABAD_AXIS_OFFSET)
+    l = RobotParams.CHASSIS_LENGTH
+    w = RobotParams.CHASSIS_WIDTH
+    z_chassis = RobotParams.ABAD_AXIS_OFFSET
     
-    # Simple rectangle for body at z=0 (in robot frame {R})
+    # Define octagon by chamfering the corners of the bounding box
+    # front view:   ____    | top view:   ____    | side view:   
+    #             /      \  |            |    |   |         _____________      
+    #            |        | |            |    |   |        |_____________|      
+    #             \ ____ /  |            |____|   |              
+    c = 0.1 # Chamfer distance
     corners = np.array([
-        [l/2, w/2, 0],
-        [l/2, -w/2, 0],
-        [-l/2, -w/2, 0],
-        [-l/2, w/2, 0],
-        [l/2, w/2, 0]
+        [l/2 - c, w/2, z_chassis],
+        [l/2, w/2 - c, z_chassis],
+        [l/2, -w/2 + c, z_chassis],
+        [l/2 - c, -w/2, z_chassis],
+        [-l/2 + c, -w/2, z_chassis],
+        [-l/2, -w/2 + c, z_chassis],
+        [-l/2, w/2 - c, z_chassis],
+        [-l/2 + c, w/2, z_chassis],
+        [l/2 - c, w/2, z_chassis] # Close the loop
     ])
-    ax.plot(corners[:, 0], corners[:, 1], corners[:, 2], 'k-', linewidth=3, label="Body")
+    ax.plot(corners[:, 0], corners[:, 1], corners[:, 2], 'k-', linewidth=3, label="Chassis")
     
     # 2. Plot Detailed Legs and Frames
     for i in range(4):
@@ -40,7 +51,7 @@ def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0):
     max_range = 0.4
     ax.set_xlim(-max_range, max_range)
     ax.set_ylim(-max_range, max_range)
-    ax.set_zlim(-0.4, 0.1)
+    ax.set_zlim(-0.4, 0.2) # Adjusted to show chassis height
     
     plt.show()
 
