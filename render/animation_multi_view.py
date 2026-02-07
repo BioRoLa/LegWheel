@@ -1,14 +1,20 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 import sys
 import os
 
 # Ensure the parent directory is in path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from render.plot_corgi_robot import draw_corgi_robot
+from legwheel.config import OUTPUT_VIDEO_DIR
 
-def animate_multi_view():
+def animate_multi_view(save_mp4=False):
+    # Switch to non-interactive backend if saving to avoid pop-ups
+    if save_mp4:
+        matplotlib.use('Agg')
+
     fig = plt.figure(figsize=(18, 6))
     
     # Define subplots
@@ -18,17 +24,9 @@ def animate_multi_view():
     
     axes = [ax_front, ax_side, ax_ortho]
     titles = ["Front View (Y-Z)", "Side View (X-Z)", "Orthogonal View"]
-    
-    # Initial view settings
-    # Front: look from +X towards origin
-    ax_front.view_init(elev=0, azim=0)
-    # Side: look from -Y towards origin
-    ax_side.view_init(elev=0, azim=-90)
-    # Ortho: standard perspective
-    ax_ortho.view_init(elev=20, azim=45)
 
     def update(frame):
-        # Define animation phases (same as basic animation)
+        # Define animation phases
         if frame < 60:
             t_deg = 90 + 50 * np.sin(frame * np.pi / 60)
             theta, beta, gamma = np.deg2rad(t_deg), 0.0, 0.0
@@ -44,10 +42,11 @@ def animate_multi_view():
 
         for i, ax in enumerate(axes):
             ax.clear()
-            draw_corgi_robot(ax, theta, beta, gamma)
+            # Draw without axes/grid
+            draw_corgi_robot(ax, theta, beta, gamma, show_axes=False)
             ax.set_title(titles[i])
             
-            # Re-apply view init because clear() resets it in some matplotlib versions
+            # Re-apply view init
             if i == 0: ax.view_init(elev=0, azim=0)
             elif i == 1: ax.view_init(elev=0, azim=-90)
             elif i == 2: ax.view_init(elev=20, azim=45)
@@ -56,7 +55,17 @@ def animate_multi_view():
 
     ani = FuncAnimation(fig, update, frames=180, interval=50)
     plt.tight_layout()
-    plt.show()
+    
+    if save_mp4:
+        output_path = os.path.join(OUTPUT_VIDEO_DIR, "corgi_multi_view.mp4")
+        print(f"Saving animation to {output_path}...")
+        writer = FFMpegWriter(fps=20, metadata=dict(artist='Gemini CLI'), bitrate=1800)
+        ani.save(output_path, writer=writer)
+        plt.close(fig)
+        print("Done.")
+    else:
+        plt.show()
 
 if __name__ == "__main__":
-    animate_multi_view()
+    # Change to True to save as MP4 without showing plot
+    animate_multi_view(save_mp4=False)

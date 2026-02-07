@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.config import RobotParams
 
-def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0):
+def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0, show_axes=True):
     """
     Draws the Corgi robot (chassis + legs + frames) on the provided 3D axis.
     Reused by plotting and animation scripts.
@@ -32,9 +32,14 @@ def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0):
         kin.plot_frames(ax, gamma)
 
     # 3. Finalize Plot Style
-    ax.set_xlabel('X (Front)')
-    ax.set_ylabel('Y (Left)')
-    ax.set_zlabel('Z (Up)')
+    if show_axes:
+        ax.set_xlabel('X (Front)')
+        ax.set_ylabel('Y (Left)')
+        ax.set_zlabel('Z (Up)')
+        ax.grid(True)
+    else:
+        ax.set_axis_off()
+        ax.grid(False)
     
     max_range = 0.4
     ax.set_xlim(-max_range, max_range)
