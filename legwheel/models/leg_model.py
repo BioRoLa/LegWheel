@@ -159,7 +159,11 @@ class LegModel:
         return np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang),  np.cos(ang)]])
 
     def rim_point(self, alpha=0.0):
-        """Calculates point on the wheel rim for given alpha angle (degrees)."""
+        """
+        Calculates point on the wheel rim for given alpha angle (degrees).
+        Args:
+            alpha: Angle in degrees, where 0° is directly in front of the wheel (in the direction of motion), and positive angles rotate counterclockwise.
+        """
         alpha_rad = np.deg2rad(alpha)
         # We ensure it's calculated in vector form internally
         self.forward(self.theta, self.beta, vector=True)
