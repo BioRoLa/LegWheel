@@ -97,6 +97,7 @@ class RobotParams:
     WHEEL_AXIAL_OFFSET = 0.091675 # Lateral offset from leg plane to wheel center
     WHEEL_RADIUS_PITCH = 0.100    # Effective radius for kinematics
     WHEEL_RADIUS_OUTER = 0.135    # Physical outer radius (collision)
+    WHEEL_THICKNESS    = 0.04     # Thickness of the wheel (for collision and visualization)
     
     # Linkage parameters (Standard ratios)
     ARC_HF_DEG = 130.0
