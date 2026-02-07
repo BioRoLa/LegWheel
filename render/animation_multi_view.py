@@ -10,6 +10,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from render.plot_corgi_robot import draw_corgi_robot
 from legwheel.config import OUTPUT_VIDEO_DIR
 
+# Explicit path to ffmpeg found via search
+FFMPEG_PATH = r"C:\Users\Star\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg.Shared_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build-shared\bin\ffmpeg.exe"
+matplotlib.rcParams['animation.ffmpeg_path'] = FFMPEG_PATH
+
 def animate_multi_view(save_mp4=False):
     if save_mp4:
         matplotlib.use('Agg')
@@ -22,7 +26,6 @@ def animate_multi_view(save_mp4=False):
     titles = ["Front View (Y-Z)", "Side View (X-Z)", "Orthogonal View"]
 
     def update(frame):
-        # 90 frames total
         if frame < 30:
             t_deg = 90 + 50 * np.sin(frame * np.pi / 30)
             theta, beta, gamma = np.deg2rad(t_deg), 0.0, 0.0
@@ -55,9 +58,9 @@ def animate_multi_view(save_mp4=False):
             print(f"Saving animation to {output_path} (using FFMpeg)...")
             writer = FFMpegWriter(fps=20, metadata=dict(artist='Gemini CLI'), bitrate=1800)
             ani.save(output_path, writer=writer)
-        except Exception:
+        except Exception as e:
             output_path = os.path.join(OUTPUT_VIDEO_DIR, "corgi_multi_view.gif")
-            print(f"FFMpeg failed, saving to {output_path} (using Pillow)...")
+            print(f"FFMpeg failed ({e}), saving to {output_path} (using Pillow)...")
             writer = PillowWriter(fps=20)
             ani.save(output_path, writer=writer)
             
