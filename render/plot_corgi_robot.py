@@ -8,30 +8,31 @@ def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0):
     fig = plt.figure(figsize=(12, 10))
     ax = fig.add_subplot(111, projection='3d')
     
-    # 1. Plot Robot Chassis (Octagon - 八邊形)
+    # 1. Plot Robot Chassis (Octagonal Prism)
     # Geometric center at (0, 0, ABAD_AXIS_OFFSET)
     l = RobotParams.CHASSIS_LENGTH
     w = RobotParams.CHASSIS_WIDTH
+    h = RobotParams.CHASSIS_HEIGHT
     z_chassis = RobotParams.ABAD_AXIS_OFFSET
     
-    # Define octagon by chamfering the corners of the bounding box
+    # Define cross-section octagon in Y-Z plane based on view description:
     # front view:   ____    | top view:   ____    | side view:   
     #             /      \  |            |    |   |         _____________      
     #            |        | |            |    |   |        |_____________|      
     #             \ ____ /  |            |____|   |              
-    c = 0.1 # Chamfer distance
-    corners = np.array([
-        [l/2 - c, w/2, z_chassis],
-        [l/2, w/2 - c, z_chassis],
-        [l/2, -w/2 + c, z_chassis],
-        [l/2 - c, -w/2, z_chassis],
-        [-l/2 + c, -w/2, z_chassis],
-        [-l/2, -w/2 + c, z_chassis],
-        [-l/2, w/2 - c, z_chassis],
-        [-l/2 + c, w/2, z_chassis],
-        [l/2 - c, w/2, z_chassis] # Close the loop
-    ])
-    ax.plot(corners[:, 0], corners[:, 1], corners[:, 2], 'k-', linewidth=3, label="Chassis")
+    
+    c = 0.04 # Chamfer distance for the Y-Z cross-section
+    # 8 vertices of the octagon cross-section
+    y_points = np.array([w/2 - c, w/2, w/2, w/2 - c, -w/2 + c, -w/2, -w/2, -w/2 + c, w/2 - c])
+    z_points = np.array([h/2, h/2 - c, -h/2 + c, -h/2, -h/2, -h/2 + c, h/2 - c, h/2, h/2]) + z_chassis
+    
+    # Plot Front Face (at x = l/2)
+    ax.plot(np.full_like(y_points, l/2), y_points, z_points, 'k-', linewidth=2)
+    # Plot Rear Face (at x = -l/2)
+    ax.plot(np.full_like(y_points, -l/2), y_points, z_points, 'k-', linewidth=2)
+    # Plot Longitudinal Edges (connecting front and rear)
+    for i in range(8):
+        ax.plot([l/2, -l/2], [y_points[i], y_points[i]], [z_points[i], z_points[i]], 'k-', linewidth=1)
     
     # 2. Plot Detailed Legs and Frames
     for i in range(4):
@@ -51,7 +52,7 @@ def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0):
     max_range = 0.4
     ax.set_xlim(-max_range, max_range)
     ax.set_ylim(-max_range, max_range)
-    ax.set_zlim(-0.4, 0.2) # Adjusted to show chassis height
+    ax.set_zlim(-0.4, 0.2)
     
     plt.show()
 
