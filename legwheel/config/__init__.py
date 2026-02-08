@@ -87,17 +87,21 @@ class RobotParams:
     CHASSIS_WIDTH = 0.352
     CHASSIS_HEIGHT = 0.138
     
-    WHEEL_BASE = 0.510  # Distance between front and rear wheel centers
-    BODY_WIDTH = 0.240  # Hip-to-hip distance
-    
-    COM_BIAS = 0.0       # x bias of center of mass
+    WHEEL_BASE = 0.510              # Distance between front and rear wheel centers
+    BODY_WIDTH = 0.240              # Hip-to-hip distance
     
     # Leg & Wheel Configuration
-    ABAD_AXIS_OFFSET = 0.057166   # Offset from Hip Roll axis to Leg Pitch plane
-    WHEEL_AXIAL_OFFSET = 0.091675 # Lateral offset from leg plane to wheel center
-    WHEEL_RADIUS_PITCH = 0.100    # Effective radius for kinematics
-    WHEEL_RADIUS_OUTER = 0.135    # Physical outer radius (collision)
-    WHEEL_THICKNESS    = 0.04     # Thickness of the wheel (for collision and visualization)
+    ABAD_AXIS_OFFSET = 0.057166     # Offset from Hip Roll axis to Leg Pitch plane
+    WHEEL_AXIAL_OFFSET = 0.091675   # Lateral offset from leg plane to wheel center
+    WHEEL_RADIUS_PITCH = 0.100      # Effective radius for kinematics
+    WHEEL_RADIUS_OUTER = 0.135      # Physical outer radius (collision)
+    WHEEL_THICKNESS    = 0.04       # Thickness of the wheel (for collision and visualization)
+    
+    # Center of Mass (COM) Biases
+    COM_BIAS = 0.0                  # x bias of center of mass
+    COM_BIAS_X = 0.0                # x bias of center of mass
+    COM_BIAS_Y = 0.0                # y bias of center of mass
+    COM_BIAS_Z = ABAD_AXIS_OFFSET   # z bias of center of mass
     
     # Linkage parameters (Standard ratios)
     ARC_HF_DEG = 130.0
