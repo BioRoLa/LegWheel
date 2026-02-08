@@ -338,7 +338,7 @@ class CorgiLegKinematics:
             ax.quiver(mo[0], mo[1], mo[2], axis[0], axis[1], axis[2], color=c, alpha=0.8)
         
         # Label Module Frame and Limb Name
-        ax.text(mo[0], mo[1], mo[2] + 0.02, f'{name} {{Mi}}', 
+        ax.text(mo[0], mo[1], mo[2] + 0.02, f'{name} {{M{self.leg_index}}}', 
                 fontsize=10, fontweight='bold', color='blue')
         
         # Leg Frame {Li} origin (offset by d_abad and rotated)
@@ -353,7 +353,7 @@ class CorgiLegKinematics:
 
         # Label Leg Frame
         ax.text(lo[0], lo[1], lo[2] - 0.02, f'{{L{self.leg_index}}}', 
-                fontsize=9, fontstyle='italic', color='darkgreen')
+                fontsize=9, fontweight='bold', color='darkgreen')
 
     def inverse_kinematics(self, target_pos, guess_q=None, rim_point=(0.0, 0.0)):
         """
