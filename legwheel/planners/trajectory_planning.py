@@ -155,14 +155,16 @@ class TrajectoryPlanner:
 
     def cartesian_to_polar(self, point):
         """Convert a point from Cartesian to polar coordinates.
+        Supports 2D and 3D points (ignoring the 3rd component).
 
         Args:
-            point (tuple): The (x, y) coordinates in Cartesian space.
+            point (tuple/list/np.ndarray): The (x, y, [z]) coordinates.
 
         Returns:
             tuple: The (r, beta) coordinates in polar space.
         """
-        x, y = point
+        x = point[0]
+        y = point[1]
         r = np.sqrt(x**2 + y**2)
         beta_ = (np.arctan2(y, x))    # Angle in polar coordinates
         return r, beta_
