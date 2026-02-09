@@ -10,26 +10,26 @@ def main():
     q_stand = [np.deg2rad(110), 0.0, 0.0]
     q_all = [q_stand for _ in range(4)]
     
-    feet_R = robot.get_leg_positions(q_all)
-    print(f"\nFeet positions in Robot Frame {{R}} (Standing Pose):")
+    feet_B = robot.get_leg_positions(q_all)
+    print(f"\nFeet positions in Body Frame {{B}} (Standing Pose):")
     for i, name in enumerate(['FL', 'FR', 'RR', 'RL']):
-        print(f" {name}: {np.round(feet_R[i], 4)}")
+        print(f" {name}: {np.round(feet_B[i], 4)}")
         
     # 2. Test World Transformation
     # Place robot at z=0.3m, Tilt pitch by 5 degrees
     robot.base_pos = np.array([0, 0, 0.3])
     robot.base_ori = np.array([0, np.deg2rad(5), 0])
     
-    foot_W = robot.robot_to_world(feet_R[0])
+    foot_W = robot.body_to_world(feet_B[0])
     print(f"\nFL Foot in World Frame {{W}} (z=0.3, pitch=5 deg):")
     print(f" {np.round(foot_W, 4)}")
     
     # 3. Test Full Robot IK
     print(f"\nRunning Full Robot IK...")
-    # Target: reach the current world positions
+    # Target: reach the current Body positions
     # Provide a guess slightly offset from q_stand to verify convergence
     guess_q = [np.array(q_stand) + np.deg2rad(2) for _ in range(4)]
-    recovered_q = robot.inverse_kinematics(feet_R, guess_q=guess_q)
+    recovered_q = robot.inverse_kinematics(feet_B, guess_q=guess_q)
     
     print(f"Recovered angles for FL (deg): {np.rad2deg(recovered_q[0])}")
     

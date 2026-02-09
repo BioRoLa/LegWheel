@@ -20,7 +20,7 @@ def test_leg_ik(leg_index):
     
     # 2. Calculate Forward Kinematics to get the "Ground Truth" target position
     target_pos = kin.forward_kinematics(q_true[0], q_true[1], q_true[2])
-    print(f"Target Position {name} [x, y, z] in {{R}}: {target_pos}")
+    print(f"Target Position {name} [x, y, z] in {{B}}: {target_pos}")
     
     # 3. Run Inverse Kinematics
     # We provide a slight offset from the true angles as an initial guess to test convergence
