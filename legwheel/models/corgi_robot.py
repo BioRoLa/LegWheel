@@ -1,6 +1,7 @@
 import numpy as np
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.config import RobotParams
+from legwheel.utils.screw import Screw
 
 class CorgiRobot:
     """
@@ -31,7 +32,7 @@ class CorgiRobot:
 
     def get_leg_positions(self, q_list):
         """
-        Calculates the 3D positions of all 4 feet in the Robot Frame {R}.
+        Calculates the 3D positions of all 4 feet in the Body Frame {B}.
         Args:
             q_list (list of lists): List of 4 [theta, beta, gamma] joint angle sets.
         Returns:
@@ -45,7 +46,7 @@ class CorgiRobot:
 
     def inverse_kinematics(self, target_positions, guess_q=None):
         """
-        Calculates joint angles for all 4 legs to reach target positions in {R}.
+        Calculates joint angles for all 4 legs to reach target positions in {B}.
         Args:
             target_positions (np.ndarray): 4x3 target positions.
             guess_q (list of lists): Initial joint angle guesses.
@@ -73,24 +74,24 @@ class CorgiRobot:
         ])
         return R
 
-    def robot_to_world(self, p_R):
+    def body_to_world(self, p_B):
         """
-        Transforms a point from Robot Frame {R} to World Frame {W}.
+        Transforms a point from Body Frame {B} to World Frame {W}.
         Args:
-            p_R (np.ndarray): Point in {R}.
+            p_B (np.ndarray): Point in {B}.
         Returns:
             np.ndarray: Point in {W}.
         """
         R_W = self._rot_matrix(self.base_ori)
-        return R_W @ p_R + self.base_pos
+        return R_W @ p_B + self.base_pos
 
-    def world_to_robot(self, p_W):
+    def world_to_body(self, p_W):
         """
-        Transforms a point from World Frame {W} to Robot Frame {R}.
+        Transforms a point from World Frame {W} to Body Frame {B}.
         Args:
             p_W (np.ndarray): Point in {W}.
         Returns:
-            np.ndarray: Point in {R}.
+            np.ndarray: Point in {B}.
         """
         R_W = self._rot_matrix(self.base_ori)
         return R_W.T @ (p_W - self.base_pos)
