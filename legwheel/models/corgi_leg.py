@@ -6,11 +6,11 @@ class CorgiLegKinematics:
     3D Kinematics model for the Corgi Leg-Wheel module with Abduction/Adduction (ABAD).
     
     This class handles the transformation between the 2D sagittal leg mechanism 
-    (solved by PlotLeg/LegModel) and the 3D Robot Frame. It accounts for mechanical 
+    (solved by PlotLeg/LegModel) and the 3D Body Frame. It accounts for mechanical 
     offsets (ABAD axis and wheel axial distance) and the active ABAD joint angle.
 
     Coordinate Frames:
-        {R}  - Robot Frame: Origin at chassis center. +X Front, +Y Left, +Z Up.
+        {B}  - Body Frame: Origin at chassis center. +X Front, +Y Left, +Z Up.
         {Mi} - Module Frame (Rotated): Base for each limb, centered at the Hip Roll (ABAD) axis.
                Oriented such that Z_M is the longitudinal roll axis. In this implementation,
                the frame axes shown in plots rotate with the joint angle gamma.
@@ -52,13 +52,13 @@ class CorgiLegKinematics:
         self.wheel_thickness = RobotParams.WHEEL_THICKNESS
         
         # sx, sy: "Sign X" and "Sign Y". 
-        # Used as multipliers to determine frame origin positions in {R} based on symmetry.
+        # Used as multipliers to determine frame origin positions in {B} based on symmetry.
         self.sx = 1.0 if self.is_front else -1.0
         self.sy = 1.0 if self.is_left else -1.0
         
-        # p_Mi_in_R: The 3D position of the Module {Mi} origin (ABAD Roll Axis) in {R}.
+        # p_Mi_in_B: The 3D position of the Module {Mi} origin (ABAD Roll Axis) in {B}.
         # FL: (+L/2, +W/2, 0), FR: (+L/2, -W/2, 0), etc.
-        self.p_Mi_in_R = np.array([
+        self.p_Mi_in_B = np.array([
             self.sx * 0.5 * self.l_body,
             self.sy * 0.5 * self.w_body,
             self.d_abad 
@@ -118,12 +118,12 @@ class CorgiLegKinematics:
                 [ 1, 0, 0]   
             ])
         
-        # R_M_to_R: Basis of Module Frame {Mi} expressed in Robot Frame {R}.
+        # R_M_to_B: Basis of Module Frame {Mi} expressed in Body Frame {B}.
         if self.is_left:
             # X_M -> +Y_R*cos(\gamma) + +Z_R *sin(\gamma),
             # Y_M -> +Z_R*cos(\gamma) - +Y_R*sin(\gamma),
             # Z_M -> +X_R for left legs
-            R_M_to_R = np.array([
+            R_M_to_B = np.array([
                 [ 0             , 0             , 1], 
                 [ np.cos(gamma) ,-np.sin(gamma) , 0], 
                 [ np.sin(gamma) , np.cos(gamma) , 0]  
@@ -132,7 +132,7 @@ class CorgiLegKinematics:
             # X_M -> -Y_R*cos(\gamma) + +Z_R *sin(\gamma),
             # Y_M -> -Z_R*cos(\gamma) - +Y_R *sin(\gamma),
             # Z_M -> -X_R for right legs
-            R_M_to_R = np.array([
+            R_M_to_B = np.array([
                 [ 0             , 0             ,-1], 
                 [-np.cos(gamma) ,-np.sin(gamma) , 0],
                 [ np.sin(gamma) ,-np.cos(gamma) , 0]  
@@ -151,11 +151,11 @@ class CorgiLegKinematics:
         T_L_to_M[3, 3] = 1
         
         # T_M_to_R includes the rotation and the translation from Module Frame to Robot Frame
-        T_M_to_R = np.eye(4)
-        T_M_to_R[:3, :3] = R_M_to_R
-        T_M_to_R[:3, 3] = self.p_Mi_in_R
-        T_M_to_R[3, 3] = 1
-        return T_L_to_M, T_M_to_R
+        T_M_to_B = np.eye(4)
+        T_M_to_B[:3, :3] = R_M_to_B
+        T_M_to_B[:3, 3] = self.p_Mi_in_B
+        T_M_to_B[3, 3] = 1
+        return T_L_to_M, T_M_to_B
     
     def _L_to_M(self, p_L, gamma=None):
         """
@@ -171,26 +171,26 @@ class CorgiLegKinematics:
         p_M = T_L_to_M @ p_L_homogeneous
         return p_M[:3]  # Return only the x, y, z components
     
-    def _M_to_R(self, p_M, gamma=None):
+    def _M_to_B(self, p_M, gamma=None):
         """
-        Transforms a point from Module Frame {Mi} to Robot Frame {R}.
+        Transforms a point from Module Frame {Mi} to Body Frame {B}.
         Args:
             p_M (np.ndarray): [x, y, z] point in Module Frame {Mi}.
         Returns:
-            np.ndarray: [x, y, z] point in Robot Frame {R}.
+            np.ndarray: [x, y, z] point in Body Frame {B}.
         """
-        _, T_M_to_R = self._get_transformation_matrices(gamma)
+        _, T_M_to_B = self._get_transformation_matrices(gamma)
         p_M_homogeneous = np.append(p_M, 1)  # Convert to homogeneous coordinates
-        p_R = T_M_to_R @ p_M_homogeneous
-        return p_R[:3]  # Return only the x, y, z components
+        p_B = T_M_to_B @ p_M_homogeneous
+        return p_B[:3]  # Return only the x, y, z components
         
-    def _transform_to_robot(self, p_L, gamma=None):
+    def _transform_to_body(self, p_L, gamma=None):
         """
-        Transforms a 3D point from the Leg Frame assembly to the Robot Frame.
+        Transforms a 3D point from the Leg Frame assembly to the Body Frame.
         
         Logic Sequence:
         1. Map point from {Li} assembly base to Module orientation {Mi}.
-        3. Transform the result to the global Robot Frame {R}.
+        3. Transform the result to the global Body Frame {B}.
         Args:
             p_L (np.ndarray): [x, y, z] point in Leg Frame {Li}.
             gamma (float): ABAD joint angle (rad).
@@ -199,10 +199,8 @@ class CorgiLegKinematics:
         # starts with the point in the Leg Frame {Li}
         # 1. Orientation mapping {Li} -> {Mi}
         p_M = self._L_to_M(p_L, gamma)
-        
-        # 2. Add structural lateral offset along X_M (Outward)
-        p_R = self._M_to_R(p_M, gamma)  # Get the point in Robot Frame
-        return p_R
+        p_B = self._M_to_B(p_M, gamma)
+        return p_B
 
     def forward_kinematics(self, theta, beta, gamma=None, alpha=0.0, w=0.0):
         """
@@ -214,14 +212,14 @@ class CorgiLegKinematics:
             alpha (float): Rim contact angle (deg). 0 is bottom center.
             w (float)    : Contact point depth(mm). ±20 mm from the mid surface.
         Returns:
-            np.ndarray: [x, y, z] position in Robot Frame {R}.
+            np.ndarray: [x, y, z] position in Body Frame {B}.
         """
-        p_L = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, w])  # Add depth offset in Leg Frame
-        return self._transform_to_robot(p_L, gamma)
+        p_L = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, w])
+        return self._transform_to_body(p_L, gamma)
 
     def get_joint_positions(self, theta, beta, gamma=None):
         """
-        Returns all linkage joint positions (O, A, B, C, D, E, F, G) in Robot Frame {R}.
+        Returns all linkage joint positions (O, A, B, C, D, E, F, G) in Body Frame {B}.
         """
         # Solver is updated inside fk_sagittal
         self.fk_sagittal(theta, beta)
@@ -233,16 +231,14 @@ class CorgiLegKinematics:
             'A': lm.A_l, 'B': lm.B_l, 'C': lm.C_l, 'D': lm.D_l,
             'E': lm.E,   'F': lm.F_l, 'G': lm.G
         }
-        
-        # Transform each joint. G is the only one typically considered 'wheel center'.
-        return {k: self._transform_to_robot(np.array([v[0], v[1], 0]), gamma) for k, v in joints_2d.items()}
+        return {k: self._transform_to_body(np.array([v[0], v[1], 0]), gamma) for k, v in joints_2d.items()}
 
     def plot_leg_in_3d_plane(self, theta, beta, gamma=None,
                              z_offset = 0.0, ax=None,
                              select_components=["bars", "rims", "joints"]):
         """
         Visualizes the full detailed mechanism by projecting 2D PlotLeg into specific planes in 3D space.
-        This method uses the internal geometry of the PlotLeg solver to render the geometric primitives into 3D robot space.
+        This method uses the internal geometry of the PlotLeg solver to render the geometric primitives into 3D Body space.
         """
         # 1. Update the 2D solver with corrected beta to get current linkage geometry
         self.fk_sagittal(theta, beta)
@@ -253,8 +249,8 @@ class CorgiLegKinematics:
             """Internal projection helper."""
             z = np.full_like(x, z_offset)
             pts_L = np.vstack([x, y, z]).T
-            pts_R = np.array([self._transform_to_robot(p, gamma) for p in pts_L])
-            ax.plot(pts_R[:,0], pts_R[:,1], pts_R[:,2], color=color, linewidth=lw)
+            pts_B = np.array([self._transform_to_body(p, gamma) for p in pts_L])
+            ax.plot(pts_B[:,0], pts_B[:,1], pts_B[:,2], color=color, linewidth=lw)
 
         # Iterate through PlotLeg's shape dictionary to find plotable primitives
         for key, val in shape.__dict__.items():
@@ -274,7 +270,6 @@ class CorgiLegKinematics:
                     while diff > np.pi: diff -= 2*np.pi
                     while diff < -np.pi: diff += 2*np.pi
                     ang = np.linspace(t1, t1 + diff, 20)
-                    
                     cx, cy = arc.center
                     x, y = cx + (arc.width/2) * np.cos(ang), cy + (arc.height/2) * np.sin(ang)
                     proj(x, y, arc.get_edgecolor(), arc.get_linewidth(), z_offset=z_off)
@@ -316,38 +311,33 @@ class CorgiLegKinematics:
         limb_names = ['FL', 'FR', 'RR', 'RL']
         name = limb_names[self.leg_index]
 
-        # Robot Frame {R} origin
+        # Robot Frame {B} origin
         if self.leg_index == 0:
-            ax.quiver(0, 0, 0, axis_len, 0, 0, color='r', linewidth=2)  # X_R
-            ax.quiver(0, 0, 0, 0, axis_len, 0, color='g', linewidth=2)  # Y_R
-            ax.quiver(0, 0, 0, 0, 0, axis_len, color='b', linewidth=2)  # Z_R
-            ax.text(0, 0, 0.02, '{R}', color='k', fontsize=12, fontweight='bold')
+            ax.quiver(0, 0, 0, axis_len, 0, 0, color='r', linewidth=2) # X_B
+            ax.quiver(0, 0, 0, 0, axis_len, 0, color='g', linewidth=2) # Y_B
+            ax.quiver(0, 0, 0, 0, 0, axis_len, color='b', linewidth=2) # Z_B
+            ax.text(0, 0, 0.02, '{B}', color='k', fontsize=12, fontweight='bold')
 
-        T_L_to_M, T_M_to_R = self._get_transformation_matrices(gamma=gamma)
+        T_L_to_M, T_M_to_B = self._get_transformation_matrices(gamma=gamma)
+        mo = self._M_to_B(np.array([0,0,0]), gamma)                     # Origin of Module Frame {Mi} in Body Frame {B}
+        lo = self._transform_to_body(np.array([0,0,0]), gamma)          # Origin of Leg Frame {Li} in Body Frame {B}
         
-        # setup the origins for {Mi} and {Li} based on the transformations
-        O_Li = np.array([0, 0, 0])  # Origin of Leg Frame
-        O_Mi = np.array([0, 0, 0])  # Origin of Module Frame
-        lo = self._transform_to_robot(O_Li, gamma)  # Leg origin in Module Frame
-        mo = self._M_to_R(O_Mi, gamma)  # Module origin in Robot Frame
-        
+        R_M_to_B = T_M_to_B[:3, :3]
         for i, c in enumerate(['r', 'g', 'b']):
             # Module Frame {Mi} axes
-            axis = T_M_to_R[:3, :3][:, i] * axis_len
+            axis = R_M_to_B[:, i] * axis_len
             # Plot the Module Frame axes from the module origin in Robot Frame
             ax.quiver(mo[0], mo[1], mo[2], axis[0], axis[1], axis[2], color=c, alpha=0.8)
         
         # Label Module Frame and Limb Name
-        ax.text(mo[0], mo[1], mo[2] + 0.02, f'{name} {{M{self.leg_index}}}', 
-                fontsize=10, fontweight='bold', color='blue')
+        ax.text(mo[0], mo[1], mo[2] + 0.02, f'{name} {{Mi}}', fontsize=10, fontweight='bold', color='blue')
         
         # Leg Frame {Li} origin (offset by d_abad and rotated)
-        R_L_to_R = T_M_to_R[:3, :3] @ T_L_to_M[:3, :3]
-        
+        R_L_to_B = R_M_to_B @ T_L_to_M[:3, :3]
         # Leg Frame {Li} axes
         for i, c in enumerate(['r', 'g', 'b']):
             # Plot the Leg Frame axes from the leg origin in Robot Frame
-            axis = R_L_to_R[:, i] * axis_len
+            axis = R_L_to_B[:, i] * axis_len
             # Plot the Leg Frame axes from the leg origin in Robot Frame
             ax.quiver(lo[0], lo[1], lo[2], axis[0], axis[1], axis[2], color=c)
 
