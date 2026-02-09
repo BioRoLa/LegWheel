@@ -15,6 +15,12 @@ def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0, show_axes=Tr
     h = RobotParams.CHASSIS_HEIGHT
     z_chassis = RobotParams.ABAD_AXIS_OFFSET
     
+    # Define cross-section octagon in Y-Z plane based on view description:
+    # front view:   ____    | top view:   ____    | side view:   
+    #             /      \  |            |    |   |         _____________      
+    #            |        | |            |    |   |        |_____________|      
+    #             \ ____ /  |            |____|   |              
+    
     c = 0.04 # Chamfer distance for cross-section
     y_points = np.array([w/2 - c, w/2, w/2, w/2 - c, -w/2 + c, -w/2, -w/2, -w/2 + c, w/2 - c])
     z_points = np.array([h/2, h/2 - c, -h/2 + c, -h/2, -h/2, -h/2 + c, h/2 - c, h/2, h/2]) + z_chassis
@@ -54,7 +60,7 @@ def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0):
     
     draw_corgi_robot(ax, theta, beta, gamma)
     
-    ax.set_title(f'Corgi Robot 3D Visualization\ntheta={np.rad2deg(theta):.1f}°, beta={np.rad2deg(beta):.1f}°, gamma={np.rad2deg(gamma):.1f}°')
+    ax.set_title(f'Corgi Robot 3D Visualization (Body Frame {{B}})\ntheta={np.rad2deg(theta):.1f}°, beta={np.rad2deg(beta):.1f}°, gamma={np.rad2deg(gamma):.1f}°')
     plt.show()
 
 if __name__ == "__main__":
