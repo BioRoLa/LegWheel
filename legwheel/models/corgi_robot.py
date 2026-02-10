@@ -30,6 +30,29 @@ class CorgiRobot:
         self.wheelbase = RobotParams.WHEEL_BASE
         self.trackwidth = RobotParams.BODY_WIDTH
 
+        # Base movement description (Twist) in Body Frame {B}
+        self.base_twist = Screw(np.zeros(6))
+
+    def get_base_transform(self):
+        """
+        Returns the 4x4 SE(3) transformation matrix of the body in World Frame.
+        """
+        T = np.eye(4)
+        T[:3, :3] = self._rot_matrix(self.base_ori)
+        T[:3, 3] = self.base_pos
+        return T
+
+    def transform_screw_to_world(self, screw_B):
+        """
+        Transforms a Screw (Twist or Wrench) from Body Frame {B} to World Frame {W}.
+        Args:
+            screw_B (Screw): Screw object in Body Frame.
+        Returns:
+            Screw: Transformed Screw object in World Frame.
+        """
+        T_W_B = self.get_base_transform()
+        return screw_B.transform(T_W_B)
+
     def get_leg_positions(self, q_list):
         """
         Calculates the 3D positions of all 4 feet in the Body Frame {B}.
