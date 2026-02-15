@@ -1,4 +1,5 @@
 import numpy as np
+from typing import overload
 from legwheel.config import RobotParams
 
 class CorgiLegKinematics:
@@ -183,7 +184,35 @@ class CorgiLegKinematics:
         p_M_homogeneous = np.append(p_M, 1)  # Convert to homogeneous coordinates
         p_B = T_M_to_B @ p_M_homogeneous
         return p_B[:3]  # Return only the x, y, z components
-        
+    
+    def _B_to_M(self, p_B, gamma=None):
+        """
+        Transforms a point from Body Frame {B} to Module Frame {Mi}.
+        Args:
+            p_B (np.ndarray): [x, y, z] point in Body Frame {B}.
+        Returns:
+            np.ndarray: [x, y, z] point in Module Frame {Mi}.
+        """
+        _, T_M_to_B = self._get_transformation_matrices(gamma)
+        T_B_to_M = np.linalg.inv(T_M_to_B)
+        p_B_homogeneous = np.append(p_B, 1)  # Convert to homogeneous coordinates
+        p_M = T_B_to_M @ p_B_homogeneous
+        return p_M[:3]  # Return only the x, y, z components
+    
+    def _M_to_L(self, p_M, gamma=None):
+        """
+        Transforms a point from Module Frame {Mi} to Leg Frame {Li}.
+        Args:
+            p_M (np.ndarray): [x, y, z] point in Module Frame {Mi}.
+        Returns:
+            np.ndarray: [x, y, z] point in Leg Frame {Li}.
+        """
+        T_L_to_M, _ = self._get_transformation_matrices(gamma)
+        T_M_to_L = np.linalg.inv(T_L_to_M)
+        p_M_homogeneous = np.append(p_M, 1)  # Convert to homogeneous coordinates
+        p_L = T_M_to_L @ p_M_homogeneous
+        return p_L[:3]  # Return only the x, y, z components
+    
     def _transform_to_body(self, p_L, gamma=None):
         """
         Transforms a 3D point from the Leg Frame assembly to the Body Frame.
@@ -202,6 +231,18 @@ class CorgiLegKinematics:
         p_B = self._M_to_B(p_M, gamma)
         return p_B
 
+    @overload
+    def forward_kinematics(self, q, g=[0.0, 0.0]):
+        """
+        Overloaded method to allow calling with either separate joint angles or a combined state vector.
+        Args:
+            q (list or np.ndarray): Joint angles [theta, beta, gamma] (rad).
+            g (float): Rim contact geometry parameters (alpha, w) (deg) for calculating the foot contact point on the rim.
+        Returns:
+            np.ndarray: [x, y, z] position in Body Frame {B}.
+        """
+        return self.forward_kinematics(q[0], q[1], q[2], alpha=g[0], w=g[1])  # g is a list [alpha, w]
+    
     def forward_kinematics(self, theta, beta, gamma=None, alpha=0.0, w=0.0):
         """
         Full 3D Forward Kinematics for the foot contact point.
@@ -217,6 +258,24 @@ class CorgiLegKinematics:
         p_L = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, w])
         return self._transform_to_body(p_L, gamma)
 
+    def foor_rim_contact_fk(self, theta, beta, gamma=None, ground_slope=0.0):
+        """
+        Specialized FK to calculate the foot contact point on the rim, accounting for ground slope.
+        This method adjusts the beta angle to ensure the foot remains in contact with the ground plane defined by the slope.
+        Args:
+            theta (float): Joint angle 1 (rad).
+            beta (float) : Joint angle 2 (rad).
+            gamma (float): ABAD joint angle (rad).
+            ground_slope (float): Local ground slope angle (radians).
+        Returns:
+            alpha, w contact position on rim.
+        """
+        # w = 0 for current implementation, but can be adjusted for different contact depths.
+        w = 0.0
+        # Adjust beta to maintain ground contact based on slope. This is a simplified model and may require calibration.
+        alpha = ground_slope - beta
+        return alpha, w
+    
     def get_joint_positions(self, theta, beta, gamma=None):
         """
         Returns all linkage joint positions (O, A, B, C, D, E, F, G) in Body Frame {B}.
@@ -350,7 +409,7 @@ class CorgiLegKinematics:
         3D Inverse Kinematics using numerical Gauss-Newton iteration.
         assign specific rim point to ensure the IK solution corresponds to a desired contact point on the wheel.
         Args:
-            target_pos (np.ndarray): [x, y, z] target in {R}.
+            target_pos (np.ndarray): [x, y, z] target in {B}.
             guess_q (np.ndarray): Initial [theta, beta, gamma] guess.
             rim_point (tuple): (alpha, w) rim contact parameters.
             
