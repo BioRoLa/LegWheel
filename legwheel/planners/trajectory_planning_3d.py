@@ -147,12 +147,22 @@ class TrajectoryPlanner3D:
         p_hip_next = p_hip + hip_movement if p_hip is not None else None
         # current foot position based on current joint angles
         p_contact_current = self.kin.forward_kinematics(q[0], q[1], q[2], alpha = ground_slope-q[1]) if q is not None else None
-        
-        # assume q_next = q for initial guess
-        q_next = q.copy() if q is not None else [self.theta0, self.beta0, 0.0]
-        p_contact_next = self.kin.forward_kinematics(q_next[0], q_next[1], q_next[2],
-                                                     alpha = ground_slope-q_next[1]) + hip_movement if q is not None else None
-        # get rolling distance along Robot Frame X-Z plane
-        rolling_distance = np.linalg.norm(p_contact_next[:2] - p_contact_current[:2]) if p_contact_current is not None and p_contact_next is not None else 0
-        
+        def cost_func(q_guess):
+            contact_0 = self.kin.foot_rim_contact_fk(*q, ground_slope=ground_slope)
+            FK_0 = self.kin.forward_kinematics(*q, contact_0)
+            contact_1 = self.kin.foot_rim_contact_fk(*q_guess, ground_slope=ground_slope)
+            FK_1 = self.kin.forward_kinematics(*q_guess, contact_1)
+            err_vec = FK_0 - FK_1 - hip_movement + [(contact_1[0] - contact_0[0]), 0, 0] * self.kin.solver["foot_radius"] # compensate for foot slip
+            return np.linalg.norm(err_vec)
+        # Use current q as initial guess for optimization
+        q_guess = q if q is not None else [self.theta0, self.beta0, 0.0]
+        while cost_func(q_guess) > 1e-6:
+            # Simple gradient descent step (could be replaced with more sophisticated optimizer)
+            grad = np.zeros(3)
+            for i in range(3):
+                dq = np.zeros(3)
+                dq[i] = 1e-5
+                grad[i] = (cost_func(q_guess + dq) - cost_func(q_guess - dq)) / (2 * 1e-5)
+            q_guess -= 0.01 * grad # learning rate
+        q_next = q_guess.tolist()
         return q_next  # gamma=0 in stance 
