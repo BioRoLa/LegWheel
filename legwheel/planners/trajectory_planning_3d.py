@@ -130,3 +130,29 @@ class TrajectoryPlanner3D:
             self.cmd.append(q.tolist())
             
         return self.cmd
+    
+    def stance_rt_solver(self, v_hip = np.zeros(3), p_hip=None, q=None, ground_slope=0.0):
+        """
+        Real-time solver for stance phase given time t.
+        Args:
+            v_hip (np.array): Desired hip velocity vector (3D), defalut:[0,0,0].
+            p_hip (np.array): Current hip position (3D), default: None.
+            q (list): Current joint angles [theta, beta, gamma], default: None.
+            ground_slope (float): Local ground slope angle (radians), default: 0.0.
+        Returns:             
+            list: Updated joint angles [theta, beta, gamma].
+        """
+        # predict next hip position based on velocity command and current position
+        hip_movement = v_hip * self.dt
+        p_hip_next = p_hip + hip_movement if p_hip is not None else None
+        # current foot position based on current joint angles
+        p_contact_current = self.kin.forward_kinematics(q[0], q[1], q[2], alpha = ground_slope-q[1]) if q is not None else None
+        
+        # assume q_next = q for initial guess
+        q_next = q.copy() if q is not None else [self.theta0, self.beta0, 0.0]
+        p_contact_next = self.kin.forward_kinematics(q_next[0], q_next[1], q_next[2],
+                                                     alpha = ground_slope-q_next[1]) + hip_movement if q is not None else None
+        # get rolling distance along Robot Frame X-Z plane
+        rolling_distance = np.linalg.norm(p_contact_next[:2] - p_contact_current[:2]) if p_contact_current is not None and p_contact_next is not None else 0
+        
+        return q_next  # gamma=0 in stance 
