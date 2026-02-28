@@ -95,7 +95,7 @@ class CorgiLegKinematics:
             return np.array([p_contact[0], p_contact[1], 0.0])
         return np.array([p_contact.real, p_contact.imag, 0.0])
 
-    def _get_transformation_matrices(self, gamma=None):
+    def _get_transformation_matrices(self, gamma=None, type="pos"):
         """
         Defines the rotation matrices for coordinate frame mapping.
         
@@ -139,6 +139,10 @@ class CorgiLegKinematics:
                 [ np.sin(gamma) ,-np.cos(gamma) , 0]  
             ])
         
+        if type == "vec":
+            # For direction vectors, we only need the rotation part without translation.
+            return R_L_to_M, R_M_to_B
+        
         # Transform matrices T:
         # | R | offset |
         # |---|--------|
@@ -158,62 +162,85 @@ class CorgiLegKinematics:
         T_M_to_B[3, 3] = 1
         return T_L_to_M, T_M_to_B
     
-    def _L_to_M(self, p_L, gamma=None):
+    def _L_to_M(self, p_L, gamma=None, type="pos"):
         """
         Transforms a point from Leg Frame {Li} to Module Frame {Mi}.
         Args:
             p_L (np.ndarray): [x, y, z] point in Leg Frame {Li}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
         Returns:
             np.ndarray: [x, y, z] point in Module Frame {Mi}.
         """
-        T_L_to_M, _ = self._get_transformation_matrices(gamma)
+        if type == "vec":
+            R_L_to_M, _ = self._get_transformation_matrices(gamma, type=type)
+            return R_L_to_M @ p_L  # Rotate the direction vector without translation
+        
+        T_L_to_M, _ = self._get_transformation_matrices(gamma, type=type)
         # append scale factor to set p_l in to 1x4 homogeneous coordinates for transformation
         p_L_homogeneous = np.append(p_L, 1)  # Convert to homogeneous coordinates
         p_M = T_L_to_M @ p_L_homogeneous
         return p_M[:3]  # Return only the x, y, z components
     
-    def _M_to_B(self, p_M, gamma=None):
+    def _M_to_B(self, p_M, gamma=None, type="pos"):
         """
         Transforms a point from Module Frame {Mi} to Body Frame {B}.
         Args:
             p_M (np.ndarray): [x, y, z] point in Module Frame {Mi}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
         Returns:
             np.ndarray: [x, y, z] point in Body Frame {B}.
         """
+        if type == "vec":
+            _, R_M_to_B = self._get_transformation_matrices(gamma, type=type)
+            return R_M_to_B @ p_M  # Rotate the direction vector without translation
         _, T_M_to_B = self._get_transformation_matrices(gamma)
         p_M_homogeneous = np.append(p_M, 1)  # Convert to homogeneous coordinates
         p_B = T_M_to_B @ p_M_homogeneous
         return p_B[:3]  # Return only the x, y, z components
     
-    def _B_to_M(self, p_B, gamma=None):
+    def _B_to_M(self, p_B, gamma=None, type="pos"):
         """
         Transforms a point from Body Frame {B} to Module Frame {Mi}.
         Args:
             p_B (np.ndarray): [x, y, z] point in Body Frame {B}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
         Returns:
             np.ndarray: [x, y, z] point in Module Frame {Mi}.
         """
+        if type == "vec":
+             _, R_M_to_B = self._get_transformation_matrices(gamma, type=type)
+             R_B_to_M = R_M_to_B.T  # Inverse rotation for direction vectors
+             return R_B_to_M @ p_B  # Rotate the direction vector without translation
         _, T_M_to_B = self._get_transformation_matrices(gamma)
         T_B_to_M = np.linalg.inv(T_M_to_B)
         p_B_homogeneous = np.append(p_B, 1)  # Convert to homogeneous coordinates
         p_M = T_B_to_M @ p_B_homogeneous
         return p_M[:3]  # Return only the x, y, z components
     
-    def _M_to_L(self, p_M, gamma=None):
+    def _M_to_L(self, p_M, gamma=None, type="pos"):
         """
         Transforms a point from Module Frame {Mi} to Leg Frame {Li}.
         Args:
             p_M (np.ndarray): [x, y, z] point in Module Frame {Mi}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
         Returns:
             np.ndarray: [x, y, z] point in Leg Frame {Li}.
         """
+        if type == "vec":
+            R_L_to_M, _ = self._get_transformation_matrices(gamma, type=type)
+            R_M_to_L = R_L_to_M.T  # Inverse rotation for direction vectors
+            return R_M_to_L @ p_M  # Rotate the direction vector without translation
         T_L_to_M, _ = self._get_transformation_matrices(gamma)
         T_M_to_L = np.linalg.inv(T_L_to_M)
         p_M_homogeneous = np.append(p_M, 1)  # Convert to homogeneous coordinates
         p_L = T_M_to_L @ p_M_homogeneous
         return p_L[:3]  # Return only the x, y, z components
     
-    def _transform_to_body(self, p_L, gamma=None):
+    def _transform_to_body(self, p_L, gamma=None, type="pos"):
         """
         Transforms a 3D point from the Leg Frame assembly to the Body Frame.
         
@@ -223,12 +250,13 @@ class CorgiLegKinematics:
         Args:
             p_L (np.ndarray): [x, y, z] point in Leg Frame {Li}.
             gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
         """
         
         # starts with the point in the Leg Frame {Li}
         # 1. Orientation mapping {Li} -> {Mi}
-        p_M = self._L_to_M(p_L, gamma)
-        p_B = self._M_to_B(p_M, gamma)
+        p_M = self._L_to_M(p_L, gamma, type=type)
+        p_B = self._M_to_B(p_M, gamma, type=type)
         return p_B
 
     @overload
@@ -256,9 +284,9 @@ class CorgiLegKinematics:
             np.ndarray: [x, y, z] position in Body Frame {B}.
         """
         p_L = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, w])
-        return self._transform_to_body(p_L, gamma)
+        return self._transform_to_body(p_L, gamma, type="pos")
 
-    def foor_rim_contact_fk(self, theta, beta, gamma=None, ground_slope=0.0):
+    def foot_rim_contact_fk(self, theta, beta, gamma=None, ground_slope=0.0):
         """
         Specialized FK to calculate the foot contact point on the rim, accounting for ground slope.
         This method adjusts the beta angle to ensure the foot remains in contact with the ground plane defined by the slope.
@@ -290,7 +318,7 @@ class CorgiLegKinematics:
             'A': lm.A_l, 'B': lm.B_l, 'C': lm.C_l, 'D': lm.D_l,
             'E': lm.E,   'F': lm.F_l, 'G': lm.G
         }
-        return {k: self._transform_to_body(np.array([v[0], v[1], 0]), gamma) for k, v in joints_2d.items()}
+        return {k: self._transform_to_body(np.array([v[0], v[1], 0]), gamma, type="pos") for k, v in joints_2d.items()}
 
     def plot_leg_in_3d_plane(self, theta, beta, gamma=None,
                              z_offset = 0.0, ax=None,
@@ -419,15 +447,20 @@ class CorgiLegKinematics:
         if guess_q is None: guess_q = np.array([self.theta0, self.beta0, 0.0])
         q = guess_q
         alpha, w = rim_point
-        for _ in range(10):
+        iterated = 0
+        err = target_pos - self.forward_kinematics(*q, alpha=alpha, w=w)
+        while np.linalg.norm(err) > 1e-4:
+            if iterated > 100:
+                print("IK did not converge after 100 iterations.")
+                break
             err = target_pos - self.forward_kinematics(*q, alpha=alpha, w=w)
-            if np.linalg.norm(err) < 1e-4: break
             # Jacobian calculation via finite difference
             d, J = 1e-5, np.zeros((3, 3))
             for j in range(3):
                 q_d = q.copy(); q_d[j] += d
                 J[:, j] = (self.forward_kinematics(*q_d, alpha=alpha, w=w) - self.forward_kinematics(*q, alpha=alpha, w=w)) / d
             q += np.linalg.pinv(J) @ err
+            iterated += 1
         return q
     
     def set_gamma(self, gamma):
