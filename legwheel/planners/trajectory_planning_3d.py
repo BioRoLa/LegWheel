@@ -16,13 +16,13 @@ class TrajectoryPlanner3D:
         Initializes the 3D trajectory planner.
         
         Args:
-            stand_height (float): Target body height (m).
-            step_length (float): Total horizontal stride (m).
-            step_height (float): Swing clearance (m).
-            period (float): Cycle time (s).
-            dt (float): Time step (s).
-            duty (float): Swing phase duty cycle.
-            leg_index (int): Index of the leg (0-3).
+            stand_height (float):   Target body height (m).         default: 0.3   m
+            step_length (float) :   Total horizontal stride (m).    default: 0.4   m
+            step_height (float) :   Swing clearance (m).            default: 0.04  m
+            period (float)      :   Cycle time (s).                 default: 1.0   s
+            dt (float)          :   Time step (s).                  default: 0.001 s
+            duty (float)        :   Swing phase duty cycle.         default: 0.25
+            leg_index (int)     :   Index of the leg (0-3).         default: 0
         """
         self.stand_height = stand_height
         self.step_length = step_length
@@ -37,7 +37,7 @@ class TrajectoryPlanner3D:
         
         # Internal params derived from 2D logic for stance phase
         self.H = stand_height - self.kin.solver["foot_radius"]
-        self.theta0 = 0.0
+        self.theta0 = np.deg2rad(17) # Initial guess, will be refined
         self.beta0 = 0.0
         self.D = 0.0 # Forward hip movement per stride
         
@@ -131,7 +131,7 @@ class TrajectoryPlanner3D:
             
         return self.cmd
     
-    def stance_rt_solver(self, v_hip = np.zeros(3), p_hip=None, q=None, ground_slope=0.0):
+    def stance_rt_solver(self, v_hip = np.zeros(3), p_hip=np.zeros(3), q=None, ground_slope=0.0):
         """
         Real-time solver for stance phase given time t.
         Args:
@@ -142,27 +142,56 @@ class TrajectoryPlanner3D:
         Returns:             
             list: Updated joint angles [theta, beta, gamma].
         """
-        # predict next hip position based on velocity command and current position
-        hip_movement = v_hip * self.dt
-        p_hip_next = p_hip + hip_movement if p_hip is not None else None
-        # current foot position based on current joint angles
-        p_contact_current = self.kin.forward_kinematics(q[0], q[1], q[2], alpha = ground_slope-q[1]) if q is not None else None
+        try:
+            # predict next hip position based on velocity command and current position
+            hip_movement = v_hip * self.dt
+            p_hip_next = p_hip + hip_movement if p_hip is not None else None
+            # current foot position based on current joint angles
+            p_contact_current = self.kin.forward_kinematics(*q, alpha = ground_slope-q[1]) if q is not None else None
+        except Exception as e:
+            print(f"Error in stance_rt_solver initial calculations: {e}")
+            raise e
+            
+        # Define a cost function that measures the error between the predicted foot position (based on current q) and the desired foot position (based on hip movement)
         def cost_func(q_guess):
-            contact_0 = self.kin.foot_rim_contact_fk(*q, ground_slope=ground_slope)
-            FK_0 = self.kin.forward_kinematics(*q, contact_0)
-            contact_1 = self.kin.foot_rim_contact_fk(*q_guess, ground_slope=ground_slope)
-            FK_1 = self.kin.forward_kinematics(*q_guess, contact_1)
-            err_vec = FK_0 - FK_1 - hip_movement + [(contact_1[0] - contact_0[0]), 0, 0] * self.kin.solver["foot_radius"] # compensate for foot slip
+            try:
+                contact_0 = self.kin.foot_rim_contact_fk(*q, ground_slope=ground_slope)
+                FK_0 = self.kin.forward_kinematics(*q, alpha=contact_0[0], w=contact_0[1])
+                contact_1 = self.kin.foot_rim_contact_fk(*q_guess, ground_slope=ground_slope)
+                FK_1 = self.kin.forward_kinematics(*q_guess, alpha=contact_1[0], w=contact_1[1])
+                err_vec = FK_0 - FK_1 - hip_movement + np.array([(contact_1[0] - contact_0[0]), 0, 0]) * self.kin.solver["foot_radius"] # compensate for foot slip
+            except Exception as e:
+                print(f"Error in cost function of stance_rt_solver: {e}")
+                raise e
             return np.linalg.norm(err_vec)
+        
         # Use current q as initial guess for optimization
-        q_guess = q if q is not None else [self.theta0, self.beta0, 0.0]
+        q_guess = q.copy() if q is not None else np.array([self.theta0, self.beta0, 0.0])
+        iterated = 0
         while cost_func(q_guess) > 1e-6:
-            # Simple gradient descent step (could be replaced with more sophisticated optimizer)
-            grad = np.zeros(3)
-            for i in range(3):
-                dq = np.zeros(3)
-                dq[i] = 1e-5
-                grad[i] = (cost_func(q_guess + dq) - cost_func(q_guess - dq)) / (2 * 1e-5)
-            q_guess -= 0.01 * grad # learning rate
+            # use Gussian-Newton Method to iteratively solve for q_guess that minimizes the cost function
+            diff = 1e-5
+            J = np.zeros((3, 3)) # Jacobian matrix
+            try:
+                for i in range(3):
+                    q_plus = q_guess.copy()
+                    q_plus[i] += diff
+                    J[:, i] = (cost_func(q_plus) - cost_func(q_guess)) / diff
+            except Exception as e:
+                print(f"Error computing Jacobian in stance_rt_solver: {e}")
+                raise e
+            # Update q_guess using the pseudo-inverse of the Jacobian
+            try:
+                q_guess -= np.linalg.pinv(J) @ np.array([cost_func(q_guess)])
+            except np.linalg.LinAlgError:
+                print("Warning: Jacobian is singular in stance_rt_solver")
+                raise Exception("Singular Jacobian")
+                
+            
+            if iterated > 100:
+                print("Warning: Maximum iterations exceeded in stance_rt_solver")
+                raise Exception("Max iterations exceeded")
+            
+            iterated += 1
         q_next = q_guess.tolist()
         return q_next  # gamma=0 in stance 
