@@ -17,6 +17,7 @@ def test_leg_ik(leg_index):
     # 1. Define test joint angles [theta, beta, gamma]
     # theta ~ 110 deg (extended), beta ~ 10 deg (tilted), gamma ~ 15 deg (abducted)
     q_true = np.array([np.deg2rad(110), np.deg2rad(10), np.deg2rad(15)])
+    print(f"True Joint Angles [deg]: {np.rad2deg(q_true)}")
     
     # 2. Calculate Forward Kinematics to get the "Ground Truth" target position
     target_pos = kin.forward_kinematics(q_true[0], q_true[1], q_true[2])
