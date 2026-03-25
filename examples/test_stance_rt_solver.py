@@ -13,7 +13,7 @@ def test_stance_rt_solver():
 
     # Initialize planner for Leg 0 (FL)
     planner = TrajectoryPlanner3D(
-        leg_index=0, stand_height=0.3, step_length=0.4)
+        leg_index=0, stand_height=0.3, velocity=[0.15, 0.0, 0.0])
 
     # Initial state
     q_current = np.array([np.deg2rad(50), np.deg2rad(10), 0.0])
@@ -58,7 +58,7 @@ def test_leg_twist():
     print("\nTesting compute_leg_twist (§5.3.2 Twist Synthesis)...")
 
     planner = TrajectoryPlanner3D(
-        leg_index=0, stand_height=0.3, step_length=0.4)
+        leg_index=0, stand_height=0.3, velocity=[0.15, 0.0, 0.0])
 
     q = np.array([np.deg2rad(50), np.deg2rad(10), 0.0])
     v_hip = np.array([0.1, 0.0, 0.0])

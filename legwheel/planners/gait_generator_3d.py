@@ -24,12 +24,12 @@ class GaitGenerator3D:
         self.gait_type = gait_type
         self.velocity = velocity
         self.T = period
-        self.duty = 1.0 - duty_factor
         
         # Initialize 4 individual planners
         self.planners = [
-            TrajectoryPlanner3D(stand_height=stand_height, step_length=0.4, 
-                               step_height=step_height, period=self.T, duty=self.duty, 
+            TrajectoryPlanner3D(stand_height=stand_height, velocity=[velocity, 0, 0], 
+                               step_height=step_height, period=self.T,
+                               stance_duty=duty_factor, 
                                leg_index=i) 
             for i in range(4)
         ]

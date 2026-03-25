@@ -12,6 +12,8 @@ Usage:
     /home/starlee/envs/legwheel/bin/python examples/test_stance_trajectory.py
 """
 
+from legwheel.models.corgi_leg import CorgiLegKinematics
+from legwheel.planners.trajectory_planning_3d import TrajectoryPlanner3D
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -20,9 +22,6 @@ import os
 
 # Add the project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from legwheel.planners.trajectory_planning_3d import TrajectoryPlanner3D
-from legwheel.models.corgi_leg import CorgiLegKinematics
 
 
 def draw_ground_plane(ax, z_ground, center_xy=(0, 0), extent=0.3):
@@ -72,7 +71,8 @@ def test_stance_trajectory_animation():
 
     planner = TrajectoryPlanner3D(
         leg_index=LEG_INDEX, stand_height=0.3,
-        step_length=0.4, period=1.0, dt=0.005
+        velocity=[0.15, 0.0, 0.0], period=1.0, dt=0.005,
+        stance_duty=0.75
     )
     kin = CorgiLegKinematics(LEG_INDEX)
 
@@ -81,7 +81,7 @@ def test_stance_trajectory_animation():
     cmd = planner.generate_trajectory(lateral_offset=0.0)
     cmd = np.array(cmd)
 
-    n_stance = int(planner.T * (1 - planner.duty) / planner.dt)
+    n_stance = int(planner.T * planner.stance_duty / planner.dt)
     n_stance = min(n_stance, len(cmd))
 
     print(f"  Total frames: {len(cmd)}  |  Stance frames: {n_stance}")
@@ -111,13 +111,15 @@ def test_stance_trajectory_animation():
 
     # Print error statistics
     errors = np.linalg.norm(est_contacts - act_contacts, axis=1)
-    print(f"  Contact estimation error — mean: {errors.mean():.4f} m, max: {errors.max():.4f} m")
+    print(
+        f"  Contact estimation error — mean: {errors.mean():.4f} m, max: {errors.max():.4f} m")
 
     z_ground = min(est_contacts[:, 2].min(), act_contacts[:, 2].min())
 
     # --- Figure setup: 3 views ---
     fig = plt.figure(figsize=(18, 6))
-    fig.suptitle("Stance Trajectory — Estimated (Red) vs Actual (Blue) Contact", fontsize=14, fontweight='bold')
+    fig.suptitle("Stance Trajectory — Estimated (Red) vs Actual (Blue) Contact",
+                 fontsize=14, fontweight='bold')
 
     axes = [
         fig.add_subplot(131, projection='3d'),
@@ -137,7 +139,8 @@ def test_stance_trajectory_animation():
             ax.clear()
 
             # Ground plane
-            draw_ground_plane(ax, z_ground, center_xy=(mo[0], mo[1]), extent=lim)
+            draw_ground_plane(ax, z_ground, center_xy=(
+                mo[0], mo[1]), extent=lim)
 
             # Single-leg mechanism
             kin.plot_leg_3d(q_f[0], q_f[1], q_f[2], ax)
@@ -165,12 +168,28 @@ def test_stance_trajectory_animation():
             ax.set_ylim(mo[1] - lim, mo[1] + lim)
             ax.set_zlim(z_ground - 0.05, mo[2] + lim)
             ax.set_title(f"{titles[i]}  |  err={errors[frame_idx]:.4f} m")
-            ax.set_xlabel('X'); ax.set_ylabel('Y'); ax.set_zlabel('Z')
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
+
+            # --- Target Velocity Vector at Hip (Green) ---
+            v_vec = planner.velocity
+            ax.quiver(mo[0], mo[1], mo[2], v_vec[0], v_vec[1], v_vec[2],
+                      color='black', length=0.1, normalize=False,
+                      label='Target Velocity' if frame_idx == 0 else "")
+
+            # --- Real-time q display (bottom left) ---
+            q_deg = np.rad2deg(q_f)
+            q_text = (f"q (deg): [{q_deg[0]:.1f}, {q_deg[1]:.1f}, {q_deg[2]:.1f}]\n"
+                      f"q (rad): [{q_f[0]:.3f}, {q_f[1]:.3f}, {q_f[2]:.3f}]")
+            ax.text2D(0.05, 0.05, q_text, transform=ax.transAxes, 
+                      fontsize=9, bbox=dict(facecolor='white', alpha=0.7))
 
             if i == 0:
                 ax.legend(loc='upper right', fontsize=8)
 
-    print(f"Rendering {len(stance_cmds)} animation frames ... (close the window to exit)")
+    print(
+        f"Rendering {len(stance_cmds)} animation frames ... (close the window to exit)")
     ani = FuncAnimation(fig, update, frames=len(stance_cmds),
                         interval=DT_ANIM * 1000, repeat=True)
     plt.tight_layout()

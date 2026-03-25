@@ -14,66 +14,93 @@ class TrajectoryPlanner3D:
     Extends the 2D logic to support the Abduction/Adduction (gamma) DOF.
     """
 
-    def __init__(self, stand_height=0.3, step_length=0.4, step_height=0.04,
-                 period=1.0, dt=0.001, duty=0.25, leg_index=0):
+    def __init__(self, stand_height=0.3, velocity=None, step_height=0.04,
+                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0):
         """
         Initializes the 3D trajectory planner.
 
         Args:
             stand_height (float):   Target body height (m).         default: 0.3   m
-            step_length (float) :   Total horizontal stride (m).    default: 0.4   m
+            velocity (array-like):  Target body velocity [vx,vy,vz] (m/s). default: [0.15, 0, 0]
             step_height (float) :   Swing clearance (m).            default: 0.04  m
             period (float)      :   Cycle time (s).                 default: 1.0   s
             dt (float)          :   Time step (s).                  default: 0.001 s
-            duty (float)        :   Swing phase duty cycle.         default: 0.25
+            stance_duty (float) :   Stance phase duty cycle (D_f).  default: 0.75
             leg_index (int)     :   Index of the leg (0-3).         default: 0
         """
         self.stand_height = stand_height
-        self.step_length = step_length
+        self.velocity = np.array(
+            velocity if velocity is not None else [0.15, 0.0, 0.0])
         self.step_height = step_height
         self.T = period
         self.dt = dt
-        self.duty = duty
+        self.stance_duty = stance_duty
         self.leg_index = leg_index
 
         # 3D Kinematics model
         self.kin = CorgiLegKinematics(leg_index)
 
-        # Internal params derived from 2D logic for stance phase
-        self.H = stand_height - self.kin.solver["foot_radius"]
+        # Geometric constant: H = stand_height - R (hip-to-rim-center height)
+        self.R = self.kin.solver["foot_radius"]
+        self.H = stand_height - self.R
         self.theta0 = np.deg2rad(17)  # Initial guess, will be refined
         self.beta0 = 0.0
-        self.D = 0.0  # Forward hip movement per stride
+
+        # Derived gait distances (from unified gait equation)
+        self.D_stance = 0.0  # Hip travel during stance = v_x * T * D_f
+        self.D_swing = 0.0   # Hip travel during swing  = v_x * T * (1 - D_f)
 
         self._calculate_initial_pose()
 
         # Swing Planner (3D)
         self.swing_planner = swing.SwingLegPlanner(
-            dt=dt, T_sw=self.T * self.duty, T_st=self.T * (1-self.duty))
+            dt=dt,
+            T_sw=self.T * (1 - self.stance_duty),
+            T_st=self.T * self.stance_duty)
+
+    @property
+    def step_length(self):
+        """Total stride length (m), derived from velocity and period."""
+        return np.abs(self.velocity[0]) * self.T
 
     def _calculate_initial_pose(self):
-        """Calculates theta0 and beta0 based on target stand height and step length."""
-        # Use existing 2D solver logic via Solver utility
-        def func(x): return self.H * np.tan(x) + \
-            self.kin.solver["foot_radius"] * x - 3 * self.step_length / 8
+        """
+        Calculates theta0 and beta0 using the unified gait equation:
+            v_x · T · D_f = 2(H − R)·tan(β) + 2R·β
+
+        Uses small-angle approximation for initial guess, then refines
+        with the exact nonlinear equation via Secant method.
+        """
+        v_x = np.abs(self.velocity[0])
+        target = v_x * self.T * self.stance_duty  # D_stance
+
+        # Small-angle initial guess: β ≈ D_stance / (2H)
+        beta_guess = target / \
+            (2 * self.stand_height) if self.stand_height > 0 else 0.01
+        beta_guess = np.clip(beta_guess, 0.001, np.deg2rad(40))
+
+        # Exact solve: 2(H-R)·tan(β) + 2R·β - D_stance = 0
+        def func(b):
+            return 2 * self.H * np.tan(b) + 2 * self.R * b - target
+
+        def dfunc(b):
+            return 2 * self.H / (np.cos(b) ** 2) + 2 * self.R
+
         solver = Solver(
             method="Secant",
             tol=1e-6,
             max_iter=100,
             function=func,
-            derivative=lambda x: self.H *
-            (1 / np.cos(x))**2 +
-            self.kin.solver["foot_radius"] - 3 * self.step_length / 8
+            derivative=dfunc
         )
-        self.beta0 = solver.solve(0, np.deg2rad(40))
+        self.beta0 = solver.solve(0.001, beta_guess)
 
-        G_dist = self.H / np.cos(self.beta0) + self.kin.solver["R"]
+        G_dist = self.H / np.cos(self.beta0) + self.R
         self.theta0 = inv_G_dist_poly(G_dist)
 
-        OO_r_Dist = G_dist - self.kin.solver["R"]
-        L = 2 * OO_r_Dist * np.sin(self.beta0)
-        self.D = (L + self.kin.solver.foot_radius * 2 * self.beta0) / 3
-        self.V = self.D / (self.T * (1 - self.duty))  # Body forward velocity
+        # Store derived gait distances
+        self.D_stance = target
+        self.D_swing = v_x * self.T * (1 - self.stance_duty)
 
     def solve_theta(self, beta):
         """Helper to find theta for a given beta to maintain height."""
@@ -84,6 +111,9 @@ class TrajectoryPlanner3D:
         """
         Generates the full gait cycle commands for the leg.
 
+        Uses stance_rt_solver (Rolling Jacobian + DLS) for the stance phase
+        and Bézier swing planner for the swing phase.
+
         Args:
             lateral_offset (float): Target lateral (gamma) displacement (m).
         Returns:
@@ -91,26 +121,18 @@ class TrajectoryPlanner3D:
         """
         self.cmd = []  # [theta, beta, gamma]
 
-        # 1. Stance Phase (Rolling)
-        # We assume gamma=0 during pure forward stance for now
-        stance_duration = self.T * (1 - self.duty)
-        for t in np.arange(0, stance_duration, self.dt):
-            # Solve for beta to match forward velocity V
-            solver = Solver(
-                method="Newton",
-                tol=1e-9,
-                max_iter=100,
-                function=lambda b: self.H * (np.sin(self.beta0) - np.sin(b)) +
-                self.kin.solver["foot_radius"] * (self.beta0 - b) - self.V * t,
-                derivative=lambda b: -self.H *
-                np.cos(b) - self.kin.solver["foot_radius"]
-            )
-            beta = solver.solve(self.cmd[-1][1] if self.cmd else self.beta0)
-            if abs(beta) > np.deg2rad(45):
-                break
+        # 1. Stance Phase (Rolling via stance_rt_solver)
+        stance_duration = self.T * self.stance_duty
 
-            theta = self.solve_theta(beta)
-            self.cmd.append([theta, beta, 0.0])  # gamma=0 in stance
+        # Touchdown starts in front of the hip (negative beta)
+        q = np.array([self.theta0, -self.beta0, 0.0])
+        self.cmd.append(q.tolist())
+
+        for t in np.arange(self.dt, stance_duration, self.dt):
+            q = self.stance_rt_solver(v_hip=self.velocity, q=q)
+            if abs(q[1]) > np.deg2rad(45):
+                break
+            self.cmd.append(q.tolist())
 
         # 2. Swing Phase (Bezier)
         # Get lift-off and touchdown points in Body Frame
@@ -119,21 +141,23 @@ class TrajectoryPlanner3D:
         p_lo = self.kin.forward_kinematics(last_q[0], last_q[1], last_q[2])
 
         # Touchdown: start of next stance (symmetric pose)
-        p_td = self.kin.forward_kinematics(self.theta0, self.beta0, 0.0)
+        p_td = self.kin.forward_kinematics(self.theta0, -self.beta0, 0.0)
 
         # Add lateral displacement if requested (mapping Y offset to p_td)
         p_td[1] += lateral_offset
 
         # Define velocities (rough estimate for smooth blending)
-        v_lo = np.array([0, 0, self.V])  # Vertical lift? Need calibration.
-        v_td = np.array([0, 0, -self.V/10])
+        v_mag = np.linalg.norm(self.velocity)
+        v_lo = np.array([0, 0, v_mag])      # Vertical lift
+        v_td = np.array([0, 0, -v_mag / 10])  # Soft landing
 
         # Solve 3D Bezier Swing
+        swing_duration = self.T * (1 - self.stance_duty)
         swing_profile = self.swing_planner.solveSwingTrajectory(
             p_lo, p_td, self.step_height, v_lo, v_td)
 
         swing_points_3d = [swing_profile.getFootendPoint(ti)
-                           for ti in np.linspace(0, 1, int(self.T * self.duty / self.dt))]
+                           for ti in np.linspace(0, 1, int(swing_duration / self.dt))]
 
         # Inverse Kinematics to recover joint angles for swing points
         for p in swing_points_3d:
