@@ -309,7 +309,7 @@ class CorgiLegKinematics:
         # w = 0 for current implementation, but can be adjusted for different contact depths.
         w = 0.0
         # Adjust beta to maintain ground contact based on slope. This is a simplified model and may require calibration.
-        alpha = ground_slope - beta
+        alpha = np.rad2deg(ground_slope - beta)
         return alpha, w
 
     def get_joint_positions(self, theta, beta, gamma=None):
