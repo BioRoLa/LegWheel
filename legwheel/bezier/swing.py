@@ -88,7 +88,15 @@ class SwingProfile:
         Calculates position at normalized time t.
         Returns: [x, height, lateral]
         """
-        return self.bezier.getBzPoint(t_duty, self.offset_x, self.offset_y, self.offset_z)
+        pt = self.bezier.getBzPoint(t_duty, self.offset_x, self.offset_y, self.offset_z)
+        # Apply backward-step mirroring if needed
+        if hasattr(self, '_step_sign') and self._step_sign < 0:
+            # x was solved in |L| space relative to offset_x=0.
+            # Mirror: x_true = offset_x_true - x_local (where x_local = pt[0])
+            pt[0] = self._offset_x_true - pt[0]
+        elif hasattr(self, '_offset_x_true'):
+            pt[0] = self._offset_x_true + pt[0]
+        return pt
 
 
 class SwingLegPlanner:
@@ -152,13 +160,22 @@ class SwingLegPlanner:
         v_td = np.pad(v_td, (0, 3 - len(v_td)))
 
         diff = p_td - p_lo
-        self.step_L = diff[0]
+        
+        # Handle negative step_L (backward-moving legs in yaw turns):
+        # The Bezier control point geometry assumes positive L.
+        # We mirror the problem to always solve with |L|, then flip the result.
+        self._step_sign = np.sign(diff[0]) if abs(diff[0]) > 1e-6 else 1.0
+        self.step_L = abs(diff[0])
         self.diff_h = diff[1]
         self.diff_lat = diff[2]
         
         self.step_h = step_h
-        self.v_liftoff = v_lo
-        self.v_touchdown = v_td
+        # Mirror velocities if step is backward
+        self.v_liftoff = v_lo.copy()
+        self.v_touchdown = v_td.copy()
+        if self._step_sign < 0:
+            self.v_liftoff[0] = -self.v_liftoff[0]
+            self.v_touchdown[0] = -self.v_touchdown[0]
 
         # Optimize Lift-off parameters (dL1, dL2)
         self.opt.set_min_objective(self.objectiveFunc_lo)
@@ -171,12 +188,16 @@ class SwingLegPlanner:
         self.opt.add_inequality_constraint(self.constraint_td)
         x_td_opt = self.opt.optimize(np.array([self.dL3_preset, self.dL4_preset]))
 
-        return SwingProfile(
+        # Build the profile with |L|, then the caller reverses X if needed
+        profile = SwingProfile(
             self.step_L, self.step_h, 0.01,
             x_lo_opt[0], x_lo_opt[1], x_td_opt[0], x_td_opt[1],
-            offset_x=p_lo[0], offset_y=p_lo[1], offset_z=p_lo[2],
+            offset_x=0, offset_y=p_lo[1], offset_z=p_lo[2],
             diff_h=self.diff_h, diff_lat=self.diff_lat
         )
+        profile._step_sign = self._step_sign
+        profile._offset_x_true = p_lo[0]
+        return profile
 
     def objectiveFunc_lo(self, x, grad):
         """Calculates 3D velocity error at lift-off."""

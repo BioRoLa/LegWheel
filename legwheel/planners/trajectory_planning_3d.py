@@ -102,12 +102,33 @@ class TrajectoryPlanner3D:
         )
         self.beta0 = solver.solve(0.001, beta_guess)
 
+        # --- Workspace Guard ---
+        # The foot contact angle α = -β on flat ground.
+        # Geometric constraint: |α| ≤ 40° → |β| ≤ 40°.
+        # As β increases, the swing Bezier arc extends further horizontally.
+        # To keep the arc within the kinematic workspace, step_height is
+        # scaled down proportionally: high speed → lower lift.
+        BETA_MAX = np.deg2rad(40)   # From α geometric limit ±40°
+        GAMMA_MAX = np.deg2rad(8)   # Safe lateral sweep limit
+
+        velocity_was_clamped = False
+
+        if abs(self.beta0) > BETA_MAX:
+            # Scale vx so beta0 = BETA_MAX
+            D_max = 2 * self.H_O * np.tan(BETA_MAX) + 2 * self.R_arc * BETA_MAX
+            v_x_max = D_max / (self.T * self.stance_duty)
+            scale = v_x_max / (np.abs(self.velocity[0]) + 1e-9)
+            self.velocity[0] *= scale
+            self.beta0 = BETA_MAX
+            target = D_max
+            velocity_was_clamped = True
+
         G_dist = self.H_O / np.cos(self.beta0) + self.R_link
         self.theta0 = inv_G_dist_poly(G_dist)
 
         # Store derived gait distances
         self.D_stance = target
-        self.D_swing = v_x * self.T * (1 - self.stance_duty)
+        self.D_swing = np.abs(self.velocity[0]) * self.T * (1 - self.stance_duty)
 
         # --- Lateral (Y-axis) initial ABAD angle ---
         # Symmetric lateral motion: Δy = 2 * H_true * sin(γ₀)
@@ -120,6 +141,33 @@ class TrajectoryPlanner3D:
             self.gamma0 = np.arcsin(sin_arg)
         else:
             self.gamma0 = 0.0
+
+        if abs(self.gamma0) > GAMMA_MAX:
+            # Scale vy so gamma0 = GAMMA_MAX
+            D_lat_max = 2 * H_true * np.sin(GAMMA_MAX)
+            v_y_max = D_lat_max / (self.T * self.stance_duty)
+            scale_y = v_y_max / (np.abs(self.velocity[1]) + 1e-9)
+            self.velocity[1] *= scale_y
+            self.gamma0 = GAMMA_MAX
+            velocity_was_clamped = True
+
+        # --- Dynamic step height scaling ---
+        # Accounts for both sagittal (β) and lateral (γ) workspace usage.
+        # The larger ratio dominates the reduction.
+        #   At 0% usage → full step_height
+        #   At 100% usage → minimum floor (20% of step_height)
+        beta_ratio = abs(self.beta0) / BETA_MAX
+        gamma_ratio = abs(self.gamma0) / GAMMA_MAX if GAMMA_MAX > 0 else 0.0
+        usage = max(beta_ratio, gamma_ratio)
+        step_scale = max(1.0 - 0.8 * usage, 0.2)
+        self.step_height = self.step_height * step_scale
+
+        if velocity_was_clamped:
+            leg_names = ['FL', 'FR', 'RR', 'RL']
+            print(f"  ⚠ Workspace guard [{leg_names[self.kin.leg_index]}]: "
+                  f"v_hip clamped to [{self.velocity[0]:.4f}, {self.velocity[1]:.4f}, {self.velocity[2]:.4f}] m/s "
+                  f"(β0={np.rad2deg(self.beta0):.1f}°, γ0={np.rad2deg(self.gamma0):.1f}°, "
+                  f"h_step={self.step_height:.4f}m)")
 
     def solve_theta(self, beta):
         """Helper to find theta for a given beta to maintain height."""
@@ -157,34 +205,76 @@ class TrajectoryPlanner3D:
                 break
             self.cmd.append(q.tolist())
 
-        # 2. Swing Phase (Bezier)
-        # Get lift-off and touchdown points in Body Frame
-        # Lift-off: end of stance
-        last_q = self.cmd[-1]
-        p_lo = self.kin.forward_kinematics(last_q[0], last_q[1], last_q[2])
+        # 2. Swing Phase (Bezier) — Twist-Mapped Material Point Tracking
+        # 
+        # Instead of interpolating alpha across the swing, we track a SINGLE
+        # material point on the rim (alpha_td) throughout the entire swing phase.
+        # This ensures physical consistency: we are planning the trajectory of
+        # the exact rubber point that will touch the ground at touchdown.
+        #
+        # Steps:
+        #   1. Find alpha_td (the contact angle at the next touchdown pose)
+        #   2. Compute p_lo_virtual: where alpha_td is in space at liftoff config
+        #   3. Compute v_lo_virtual: velocity of alpha_td at liftoff via Jacobian twist
+        #   4. Plan Bezier from p_lo_virtual → p_td using v_lo_virtual and v_td
+        #   5. IK tracks all swing points at fixed alpha_td (no interpolation)
 
-        # Touchdown: start of next stance (symmetric pose)
-        p_td = self.kin.forward_kinematics(self.theta0, -self.beta0, 0.0)
+        # --- Step 1: Touchdown target ---
+        q_td = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma0])
+        alpha_td, _ = self.kin.foot_rim_contact_fk(*q_td)
+        p_td = self.kin.forward_kinematics(*q_td, alpha=alpha_td, w=0.0)
 
-        # Add lateral displacement if requested (mapping Y offset to p_td)
-        p_td[1] += lateral_offset
+        # --- Step 2: Virtual liftoff point (alpha_td evaluated at liftoff config) ---
+        last_q = np.array(self.cmd[-1])
+        p_lo_virtual = self.kin.forward_kinematics(*last_q, alpha=alpha_td, w=0.0)
 
-        # Define velocities (rough estimate for smooth blending)
+        # --- Step 3: Liftoff velocity via Jacobian twist mapping ---
+        # The leg's joint velocity at end of stance:
+        #   q_dot_lo ≈ (last_q - second_last_q) / dt
+        if len(self.cmd) >= 2:
+            second_last_q = np.array(self.cmd[-2])
+            q_dot_lo = (last_q - second_last_q) / self.dt
+        else:
+            q_dot_lo = np.zeros(3)
+
+        # Jacobian of FK at (last_q, alpha_td, w=0) w.r.t. joint angles
+        def fk_at_alpha_td(q_eval):
+            return self.kin.forward_kinematics(*q_eval, alpha=alpha_td, w=0.0)
+
+        J_lo = numerical_jacobian(fk_at_alpha_td, last_q, diff=1e-5)
+        v_lo_virtual = J_lo @ q_dot_lo  # 3D velocity of the material point at liftoff
+
+        # Add a vertical kick to ensure the foot lifts off the ground
         v_mag = np.linalg.norm(self.velocity)
-        v_lo = np.array([0, 0, v_mag])      # Vertical lift
-        v_td = np.array([0, 0, -v_mag / 10])  # Soft landing
+        v_lo_virtual[2] += v_mag  # Positive Z = upward kick
 
-        # Solve 3D Bezier Swing
+        # --- Step 4: Touchdown velocity ---
+        v_td = np.array([-self.velocity[0], -self.velocity[1], -v_mag / 10])
+
+        # Convert from Body Frame [X, Y, Z] to Swing Frame [Forward, Up, Lateral] → [x, z, y]
+        p_lo_swing = np.array([p_lo_virtual[0], p_lo_virtual[2], p_lo_virtual[1]])
+        p_td_swing = np.array([p_td[0], p_td[2], p_td[1]])
+        v_lo_swing = np.array([v_lo_virtual[0], v_lo_virtual[2], v_lo_virtual[1]])
+        v_td_swing = np.array([v_td[0], v_td[2], v_td[1]])
+
+        # --- Solve 3D Bezier Swing ---
         swing_duration = self.T * (1 - self.stance_duty)
+        N_steps = int(swing_duration / self.dt)
         swing_profile = self.swing_planner.solveSwingTrajectory(
-            p_lo, p_td, self.step_height, v_lo, v_td)
+            p_lo_swing, p_td_swing, self.step_height, v_lo_swing, v_td_swing)
 
-        swing_points_3d = [swing_profile.getFootendPoint(ti)
-                           for ti in np.linspace(0, 1, int(swing_duration / self.dt))]
+        # --- Step 5: Generate target points and IK (all at fixed alpha_td) ---
+        swing_points_3d = []
+        for ti in np.linspace(0, 1, N_steps):
+            pt_swing = swing_profile.getFootendPoint(ti)
+            pt_leg = np.array([pt_swing[0], pt_swing[2], pt_swing[1]])
+            swing_points_3d.append((pt_leg, alpha_td))
 
-        # Inverse Kinematics to recover joint angles for swing points
-        for p in swing_points_3d:
-            q = self.kin.inverse_kinematics(p, guess_q=np.array(self.cmd[-1]))
+        self._last_swing_target_path = swing_points_3d
+
+        # Inverse Kinematics: track the material point alpha_td throughout
+        for p, alpha_t in swing_points_3d:
+            q = self.kin.inverse_kinematics(p, guess_q=np.array(self.cmd[-1]), rim_point=(alpha_t, 0.0))
             self.cmd.append(q.tolist())
 
         return self.cmd
