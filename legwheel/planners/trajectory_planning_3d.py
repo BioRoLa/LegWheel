@@ -40,11 +40,18 @@ class TrajectoryPlanner3D:
         # 3D Kinematics model
         self.kin = CorgiLegKinematics(leg_index)
 
-        # Geometric constant: H = stand_height - R (hip-to-rim-center height)
-        self.R = self.kin.solver["foot_radius"]
-        self.H = stand_height - self.R
+        # Geometric constants for the rolling foot arc
+        self.R_arc = self.kin.solver.foot_radius  # Rolling arc radius (0.1345m)
+        self.R_link = self.kin.solver.R           # Distance from Arc Center to G (0.1m)
+
+        # H_hip: Vertical distance from Hip to Ground
+        self.H_hip = stand_height + self.kin.d_abad
+        # H_O: Vertical distance from Hip to Arc Center O_r
+        self.H_O = self.H_hip - self.R_arc
+
         self.theta0 = np.deg2rad(17)  # Initial guess, will be refined
         self.beta0 = 0.0
+        self.gamma0 = 0.0  # Initial ABAD angle for lateral offset
 
         # Derived gait distances (from unified gait equation)
         self.D_stance = 0.0  # Hip travel during stance = v_x * T * D_f
@@ -74,17 +81,17 @@ class TrajectoryPlanner3D:
         v_x = np.abs(self.velocity[0])
         target = v_x * self.T * self.stance_duty  # D_stance
 
-        # Small-angle initial guess: β ≈ D_stance / (2H)
+        # Small-angle initial guess: β ≈ D_stance / (2H_O)
         beta_guess = target / \
-            (2 * self.stand_height) if self.stand_height > 0 else 0.01
+            (2 * self.H_O) if self.H_O > 0 else 0.01
         beta_guess = np.clip(beta_guess, 0.001, np.deg2rad(40))
 
-        # Exact solve: 2(H-R)·tan(β) + 2R·β - D_stance = 0
+        # Exact solve: 2H_O·tan(β) + 2R_arc·β - D_stance = 0
         def func(b):
-            return 2 * self.H * np.tan(b) + 2 * self.R * b - target
+            return 2 * self.H_O * np.tan(b) + 2 * self.R_arc * b - target
 
         def dfunc(b):
-            return 2 * self.H / (np.cos(b) ** 2) + 2 * self.R
+            return 2 * self.H_O / (np.cos(b) ** 2) + 2 * self.R_arc
 
         solver = Solver(
             method="Secant",
@@ -95,16 +102,28 @@ class TrajectoryPlanner3D:
         )
         self.beta0 = solver.solve(0.001, beta_guess)
 
-        G_dist = self.H / np.cos(self.beta0) + self.R
+        G_dist = self.H_O / np.cos(self.beta0) + self.R_link
         self.theta0 = inv_G_dist_poly(G_dist)
 
         # Store derived gait distances
         self.D_stance = target
         self.D_swing = v_x * self.T * (1 - self.stance_duty)
 
+        # --- Lateral (Y-axis) initial ABAD angle ---
+        # Symmetric lateral motion: Δy = 2 * H_true * sin(γ₀)
+        # where H_true is the full distance from hip to contact point
+        v_y = np.abs(self.velocity[1])
+        D_lateral = v_y * self.T * self.stance_duty  # Total lateral travel during stance
+        H_true = self.H_hip  # Hip to ground (full length)
+        if D_lateral > 0 and H_true > 0:
+            sin_arg = np.clip(D_lateral / (2 * H_true), -1.0, 1.0)
+            self.gamma0 = np.arcsin(sin_arg)
+        else:
+            self.gamma0 = 0.0
+
     def solve_theta(self, beta):
         """Helper to find theta for a given beta to maintain height."""
-        G_dist = self.H / np.cos(beta) + self.kin.solver["R"]
+        G_dist = self.H_O / np.cos(beta) + self.R_link
         return inv_G_dist_poly(G_dist)
 
     def generate_trajectory(self, lateral_offset=0.0):
@@ -124,8 +143,12 @@ class TrajectoryPlanner3D:
         # 1. Stance Phase (Rolling via stance_rt_solver)
         stance_duration = self.T * self.stance_duty
 
-        # Touchdown starts in front of the hip (negative beta)
-        q = np.array([self.theta0, -self.beta0, 0.0])
+        # Touchdown: foot starts "ahead" of the body in both X and Y.
+        # For X: beta starts at -beta0 (foot forward), sweeps to +beta0 (foot backward)
+        # For Y: gamma starts at +gamma0 (foot outward), sweeps to -gamma0 (foot inward)
+        #         when vy > 0 (body moving in +Y), foot in body frame retracts in -Y.
+        gamma_sign = 1.0 if self.velocity[1] >= 0 else -1.0
+        q = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma0])
         self.cmd.append(q.tolist())
 
         for t in np.arange(self.dt, stance_duration, self.dt):
@@ -204,9 +227,29 @@ class TrajectoryPlanner3D:
         J = numerical_jacobian(rolling_fk, q, diff=1e-5)
 
         # --- DLS Velocity Resolution ---
-        # q̇_d = J^T (J J^T + λ² I)^-1 · v_target
-        # v_target is the negative of the hip velocity (foot moves opposite to body)
-        v_target = -v_hip
+        # Theoretical Insight:
+        # The rolling_fk tracks the GEOMETRIC contact point (always directly under the wheel center).
+        # In Body Frame, the geometric X coordinate is essentially H_O * tan(beta).
+        # However, the physical travel of the Hip on the ground is the sum of geometric sliding 
+        # AND the arc length rolled: dx_ground = d(H_O*tan(beta)) + R_arc*d(beta).
+        # So true speed: v_hip = beta_dot * (H_O*sec²(beta) + R_arc).
+        # The Jacobian J evaluated on rolling_fk only gives d(geom_X)/dbeta = H_O*sec²(beta).
+        # We must scale the Cartesian v_target so the solver produces the correct beta_dot.
+        #
+        # IMPORTANT: This rolling correction applies ONLY to the X-axis (sagittal rolling).
+        # The Y-axis (lateral) assumes NO rolling (soft tire contact), so v_target_y = -v_hip_y directly.
+        
+        # Scaling factor for X only: v_geom = v_hip * (H_O*sec²(beta)) / (H_O*sec²(beta) + R_arc)
+        sec2_beta = 1.0 / (np.cos(q[1]) ** 2)
+        geom_grad = self.H_O * sec2_beta
+        velocity_scale_x = geom_grad / (geom_grad + self.R_arc)
+        
+        # v_target: rolling-corrected for X, direct for Y and Z
+        v_target = np.array([
+            -v_hip[0] * velocity_scale_x,
+            -v_hip[1],
+            -v_hip[2]
+        ])
         J_star = pseudo_inverse_dls(J, damping_factor=damping)
         q_dot = J_star @ v_target
 
