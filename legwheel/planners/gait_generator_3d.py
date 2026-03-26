@@ -54,7 +54,7 @@ class GaitGenerator3D:
     """
 
     def __init__(self, stand_height=0.31, twist=np.array([0.0, 0.15, 0.0]),
-                 step_height=0.04, period=1.0, gait_type="Trot", dt=0.005):
+                 step_height=0.04, period=1.0, gait_type="Trot", dt=0.001):
 
         self.stand_height = stand_height
         self.step_height = step_height
@@ -83,13 +83,82 @@ class GaitGenerator3D:
         # v_hip_i = v_COM + omega x r_{COM -> hip_i}
         # For planar motion: omega = [0, 0, omega_z], r = [rx, ry, 0]
         # omega x r = [-omega_z * ry, omega_z * rx, 0]
-        self.hip_velocities = []
-        for r_hip in self.hip_positions:
-            v_hip_x = self.v_com[0] - self.omega_z * r_hip[1]
-            v_hip_y = self.v_com[1] + self.omega_z * r_hip[0]
-            self.hip_velocities.append(np.array([v_hip_x, v_hip_y, 0.0]))
+        def calc_hip_vels(vx, vy, wz):
+            vels = []
+            for r_hip in self.hip_positions:
+                hx = vx - wz * r_hip[1]
+                hy = vy + wz * r_hip[0]
+                vels.append(np.array([hx, hy, 0.0]))
+            return vels
 
-        # --- Initialize 4 TrajectoryPlanner3D instances with per-leg velocities ---
+        raw_hip_velocities = calc_hip_vels(self.v_com[0], self.v_com[1], self.omega_z)
+
+        # --- Workspace Guard (Global Twist Scaling) ---
+        # Instead of clamping individual legs (which tears the rigid body geometry apart),
+        # we find the worst-case violation across all 4 legs and scale the entire body twist.
+        from scipy.optimize import root_scalar
+        BETA_MAX = np.deg2rad(40)
+        GAMMA_MAX = np.deg2rad(8)
+        
+        # Calculate theoretical max D for sagittal (x) and lateral (y)
+        # using rough geometric estimates to find the scaling factor
+        H_O = stand_height - RobotParams.WHEEL_RADIUS_PITCH
+        R_link = RobotParams.WHEEL_RADIUS_PITCH * 0.2225 # approx offset
+        L1 = RobotParams.WHEEL_RADIUS_PITCH * RobotParams.L1_RATIO
+        R_arc = np.sqrt(L1**2 - R_link**2)
+        H_hip = stand_height
+
+        D_x_max = 2 * H_O * np.tan(BETA_MAX) + 2 * R_arc * BETA_MAX
+        v_x_limit = D_x_max / (self.T * self.stance_duty)
+        
+        D_y_max = 2 * H_hip * np.sin(GAMMA_MAX)
+        v_y_limit = D_y_max / (self.T * self.stance_duty)
+
+        # Find maximum required scale down across all legs
+        scale_x, scale_y = 1.0, 1.0
+        for vel in raw_hip_velocities:
+            if abs(vel[0]) > v_x_limit:
+                scale_x = min(scale_x, v_x_limit / abs(vel[0]))
+            if abs(vel[1]) > v_y_limit:
+                scale_y = min(scale_y, v_y_limit / abs(vel[1]))
+                
+        global_scale = min(scale_x, scale_y)
+        
+        if global_scale < 1.0:
+            print(f"  ⚠ Workspace guard: Scaling FULL body twist down to {global_scale*100:.1f}% "
+                  f"to prevent leg kinematic singularity.")
+            self.v_com *= global_scale
+            self.omega_z *= global_scale
+            self.twist[0] = self.omega_z
+            self.twist[1:3] = self.v_com
+            
+        # Recompute final, safe hip velocities
+        self.hip_velocities = calc_hip_vels(self.v_com[0], self.v_com[1], self.omega_z)
+
+        # --- Dynamic Global Step Height Scaling ---
+        # Find maximum beta and gamma usage among the planned safe velocities.
+        # Approximation: D_stance = v_stance * T * duty_factor
+        # beta ≈ D_stance / (2 * H_O)
+        # gamma ≈ D_lat / (2 * H_hip)
+        max_beta_ratio = 0.0
+        max_gamma_ratio = 0.0
+        for vel in self.hip_velocities:
+            d_x = abs(vel[0]) * self.T * self.stance_duty
+            beta_approx = d_x / (2 * H_O)
+            max_beta_ratio = max(max_beta_ratio, beta_approx / BETA_MAX)
+
+            d_y = abs(vel[1]) * self.T * self.stance_duty
+            gamma_approx = d_y / (2 * H_hip)
+            max_gamma_ratio = max(max_gamma_ratio, gamma_approx / GAMMA_MAX)
+
+        global_usage = max(max_beta_ratio, max_gamma_ratio)
+        global_step_scale = max(1.0 - 0.8 * global_usage, 0.2)
+
+        if global_step_scale < 1.0:
+            print(f"  ⚠ Step guard: Scaling FULL body step_height down to {global_step_scale*100:.1f}% "
+                  f"(eff_step={step_height * global_step_scale:.4f}m) to preserve swing reach radius.")
+
+        # --- Initialize 4 TrajectoryPlanner3D instances with safe per-leg velocities ---
         self.planners = [
             TrajectoryPlanner3D(
                 stand_height=stand_height,
@@ -98,7 +167,8 @@ class GaitGenerator3D:
                 period=self.T,
                 stance_duty=self.stance_duty,
                 dt=dt,
-                leg_index=i
+                leg_index=i,
+                step_scale=global_step_scale
             )
             for i in range(4)
         ]
@@ -128,6 +198,18 @@ class GaitGenerator3D:
 
         self.CMDS = cmds
         return cmds
+
+    def get_parameter_string(self) -> str:
+        """
+        Returns a string formatted with the actual (scaled) gait parameters.
+        Useful for generating unique filenames based on the executed trajectory.
+        """
+        v_x_actual = self.v_com[0]
+        v_y_actual = self.v_com[1]
+        w_z_actual = self.omega_z
+        step_actual = self.planners[0].step_height
+
+        return f"{self.gait_type}_Vx{v_x_actual:.2f}_Vy{v_y_actual:.2f}_Wz{w_z_actual:.2f}_H{self.stand_height:.2f}_S{step_actual:.3f}_P{self.T:.1f}"
 
     def print_summary(self):
         """Prints a summary of the gait configuration."""

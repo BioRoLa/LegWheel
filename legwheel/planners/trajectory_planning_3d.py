@@ -15,7 +15,7 @@ class TrajectoryPlanner3D:
     """
 
     def __init__(self, stand_height=0.3, velocity=None, step_height=0.04,
-                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0):
+                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0, step_scale=None):
         """
         Initializes the 3D trajectory planner.
 
@@ -27,7 +27,9 @@ class TrajectoryPlanner3D:
             dt (float)          :   Time step (s).                  default: 0.001 s
             stance_duty (float) :   Stance phase duty cycle (D_f).  default: 0.75
             leg_index (int)     :   Index of the leg (0-3).         default: 0
+            step_scale (float)  :   Global step height scaling override.
         """
+        self.input_step_scale = step_scale
         self.stand_height = stand_height
         self.velocity = np.array(
             velocity if velocity is not None else [0.15, 0.0, 0.0])
@@ -41,8 +43,10 @@ class TrajectoryPlanner3D:
         self.kin = CorgiLegKinematics(leg_index)
 
         # Geometric constants for the rolling foot arc
-        self.R_arc = self.kin.solver.foot_radius  # Rolling arc radius (0.1345m)
-        self.R_link = self.kin.solver.R           # Distance from Arc Center to G (0.1m)
+        # Rolling arc radius (0.1345m)
+        self.R_arc = self.kin.solver.foot_radius
+        # Distance from Arc Center to G (0.1m)
+        self.R_link = self.kin.solver.R
 
         # H_hip: Vertical distance from Hip to Ground
         self.H_hip = stand_height + self.kin.d_abad
@@ -102,39 +106,24 @@ class TrajectoryPlanner3D:
         )
         self.beta0 = solver.solve(0.001, beta_guess)
 
-        # --- Workspace Guard ---
-        # The foot contact angle α = -β on flat ground.
-        # Geometric constraint: |α| ≤ 40° → |β| ≤ 40°.
-        # As β increases, the swing Bezier arc extends further horizontally.
-        # To keep the arc within the kinematic workspace, step_height is
-        # scaled down proportionally: high speed → lower lift.
+        # Geometric constraint constants (for step-height scaling)
         BETA_MAX = np.deg2rad(40)   # From α geometric limit ±40°
-        GAMMA_MAX = np.deg2rad(8)   # Safe lateral sweep limit
-
-        velocity_was_clamped = False
-
-        if abs(self.beta0) > BETA_MAX:
-            # Scale vx so beta0 = BETA_MAX
-            D_max = 2 * self.H_O * np.tan(BETA_MAX) + 2 * self.R_arc * BETA_MAX
-            v_x_max = D_max / (self.T * self.stance_duty)
-            scale = v_x_max / (np.abs(self.velocity[0]) + 1e-9)
-            self.velocity[0] *= scale
-            self.beta0 = BETA_MAX
-            target = D_max
-            velocity_was_clamped = True
+        GAMMA_MAX = np.deg2rad(15)   # Safe lateral sweep limit
 
         G_dist = self.H_O / np.cos(self.beta0) + self.R_link
         self.theta0 = inv_G_dist_poly(G_dist)
 
         # Store derived gait distances
         self.D_stance = target
-        self.D_swing = np.abs(self.velocity[0]) * self.T * (1 - self.stance_duty)
+        self.D_swing = np.abs(
+            self.velocity[0]) * self.T * (1 - self.stance_duty)
 
         # --- Lateral (Y-axis) initial ABAD angle ---
         # Symmetric lateral motion: Δy = 2 * H_true * sin(γ₀)
         # where H_true is the full distance from hip to contact point
         v_y = np.abs(self.velocity[1])
-        D_lateral = v_y * self.T * self.stance_duty  # Total lateral travel during stance
+        # Total lateral travel during stance
+        D_lateral = v_y * self.T * self.stance_duty
         H_true = self.H_hip  # Hip to ground (full length)
         if D_lateral > 0 and H_true > 0:
             sin_arg = np.clip(D_lateral / (2 * H_true), -1.0, 1.0)
@@ -142,32 +131,19 @@ class TrajectoryPlanner3D:
         else:
             self.gamma0 = 0.0
 
-        if abs(self.gamma0) > GAMMA_MAX:
-            # Scale vy so gamma0 = GAMMA_MAX
-            D_lat_max = 2 * H_true * np.sin(GAMMA_MAX)
-            v_y_max = D_lat_max / (self.T * self.stance_duty)
-            scale_y = v_y_max / (np.abs(self.velocity[1]) + 1e-9)
-            self.velocity[1] *= scale_y
-            self.gamma0 = GAMMA_MAX
-            velocity_was_clamped = True
-
         # --- Dynamic step height scaling ---
-        # Accounts for both sagittal (β) and lateral (γ) workspace usage.
-        # The larger ratio dominates the reduction.
-        #   At 0% usage → full step_height
-        #   At 100% usage → minimum floor (20% of step_height)
-        beta_ratio = abs(self.beta0) / BETA_MAX
-        gamma_ratio = abs(self.gamma0) / GAMMA_MAX if GAMMA_MAX > 0 else 0.0
-        usage = max(beta_ratio, gamma_ratio)
-        step_scale = max(1.0 - 0.8 * usage, 0.2)
-        self.step_height = self.step_height * step_scale
+        if self.input_step_scale is not None:
+            # Override with global body usage scale
+            step_scale = self.input_step_scale
+        else:
+            # Accounts for both sagittal (β) and lateral (γ) workspace usage.
+            beta_ratio = abs(self.beta0) / BETA_MAX
+            gamma_ratio = abs(self.gamma0) / \
+                GAMMA_MAX if GAMMA_MAX > 0 else 0.0
+            usage = max(beta_ratio, gamma_ratio)
+            step_scale = max(1.0 - 0.8 * usage, 0.2)
 
-        if velocity_was_clamped:
-            leg_names = ['FL', 'FR', 'RR', 'RL']
-            print(f"  ⚠ Workspace guard [{leg_names[self.kin.leg_index]}]: "
-                  f"v_hip clamped to [{self.velocity[0]:.4f}, {self.velocity[1]:.4f}, {self.velocity[2]:.4f}] m/s "
-                  f"(β0={np.rad2deg(self.beta0):.1f}°, γ0={np.rad2deg(self.gamma0):.1f}°, "
-                  f"h_step={self.step_height:.4f}m)")
+        self.step_height = self.step_height * step_scale
 
     def solve_theta(self, beta):
         """Helper to find theta for a given beta to maintain height."""
@@ -206,7 +182,7 @@ class TrajectoryPlanner3D:
             self.cmd.append(q.tolist())
 
         # 2. Swing Phase (Bezier) — Twist-Mapped Material Point Tracking
-        # 
+        #
         # Instead of interpolating alpha across the swing, we track a SINGLE
         # material point on the rim (alpha_td) throughout the entire swing phase.
         # This ensures physical consistency: we are planning the trajectory of
@@ -226,7 +202,8 @@ class TrajectoryPlanner3D:
 
         # --- Step 2: Virtual liftoff point (alpha_td evaluated at liftoff config) ---
         last_q = np.array(self.cmd[-1])
-        p_lo_virtual = self.kin.forward_kinematics(*last_q, alpha=alpha_td, w=0.0)
+        p_lo_virtual = self.kin.forward_kinematics(
+            *last_q, alpha=alpha_td, w=0.0)
 
         # --- Step 3: Liftoff velocity via Jacobian twist mapping ---
         # The leg's joint velocity at end of stance:
@@ -252,9 +229,11 @@ class TrajectoryPlanner3D:
         v_td = np.array([-self.velocity[0], -self.velocity[1], -v_mag / 10])
 
         # Convert from Body Frame [X, Y, Z] to Swing Frame [Forward, Up, Lateral] → [x, z, y]
-        p_lo_swing = np.array([p_lo_virtual[0], p_lo_virtual[2], p_lo_virtual[1]])
+        p_lo_swing = np.array(
+            [p_lo_virtual[0], p_lo_virtual[2], p_lo_virtual[1]])
         p_td_swing = np.array([p_td[0], p_td[2], p_td[1]])
-        v_lo_swing = np.array([v_lo_virtual[0], v_lo_virtual[2], v_lo_virtual[1]])
+        v_lo_swing = np.array(
+            [v_lo_virtual[0], v_lo_virtual[2], v_lo_virtual[1]])
         v_td_swing = np.array([v_td[0], v_td[2], v_td[1]])
 
         # --- Solve 3D Bezier Swing ---
@@ -274,7 +253,8 @@ class TrajectoryPlanner3D:
 
         # Inverse Kinematics: track the material point alpha_td throughout
         for p, alpha_t in swing_points_3d:
-            q = self.kin.inverse_kinematics(p, guess_q=np.array(self.cmd[-1]), rim_point=(alpha_t, 0.0))
+            q = self.kin.inverse_kinematics(p, guess_q=np.array(
+                self.cmd[-1]), rim_point=(alpha_t, 0.0))
             self.cmd.append(q.tolist())
 
         return self.cmd
@@ -320,7 +300,7 @@ class TrajectoryPlanner3D:
         # Theoretical Insight:
         # The rolling_fk tracks the GEOMETRIC contact point (always directly under the wheel center).
         # In Body Frame, the geometric X coordinate is essentially H_O * tan(beta).
-        # However, the physical travel of the Hip on the ground is the sum of geometric sliding 
+        # However, the physical travel of the Hip on the ground is the sum of geometric sliding
         # AND the arc length rolled: dx_ground = d(H_O*tan(beta)) + R_arc*d(beta).
         # So true speed: v_hip = beta_dot * (H_O*sec²(beta) + R_arc).
         # The Jacobian J evaluated on rolling_fk only gives d(geom_X)/dbeta = H_O*sec²(beta).
@@ -328,12 +308,12 @@ class TrajectoryPlanner3D:
         #
         # IMPORTANT: This rolling correction applies ONLY to the X-axis (sagittal rolling).
         # The Y-axis (lateral) assumes NO rolling (soft tire contact), so v_target_y = -v_hip_y directly.
-        
+
         # Scaling factor for X only: v_geom = v_hip * (H_O*sec²(beta)) / (H_O*sec²(beta) + R_arc)
         sec2_beta = 1.0 / (np.cos(q[1]) ** 2)
         geom_grad = self.H_O * sec2_beta
         velocity_scale_x = geom_grad / (geom_grad + self.R_arc)
-        
+
         # v_target: rolling-corrected for X, direct for Y and Z
         v_target = np.array([
             -v_hip[0] * velocity_scale_x,

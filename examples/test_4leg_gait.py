@@ -81,8 +81,8 @@ def test_4leg_gait():
     for frame_idx in range(n_total):
         for i in range(4):
             q = cmds[frame_idx, i * 3: i * 3 + 3]
-            contact = legs[i].foot_rim_contact_fk(*q)
-            p = legs[i].forward_kinematics(*q, alpha=contact[0], w=0.0)
+            alpha, w_contact = legs[i].foot_rim_contact_fk(*q)
+            p = legs[i].forward_kinematics(*q, alpha=alpha, w=w_contact)
             foot_traces[i].append(p)
     foot_traces = [np.array(ft) for ft in foot_traces]
 
