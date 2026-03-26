@@ -162,6 +162,25 @@ def cmd_generate(args):
 
     print("⚠️  Warning: direct import of calculate module failed, ensure you are running from source repo or package has shipped 'examples'.")
 
+def cmd_ui(args):
+    import os
+    import sys
+    import subprocess
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'examples', 'generate_csv_ui.py'))
+    if os.path.isfile(script_path):
+        subprocess.run([sys.executable, script_path])
+    else:
+        print(f"⚠️  Warning: Could not find {script_path}")
+
+def cmd_view(args):
+    import os
+    import sys
+    import subprocess
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'examples', 'csv_viewer.py'))
+    if os.path.isfile(script_path):
+        subprocess.run([sys.executable, script_path, args.csv_file])
+    else:
+        print(f"⚠️  Warning: Could not find {script_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="LegWheel 機器狗運動學 CLI 工具")
@@ -197,6 +216,13 @@ def main():
     parser_gen.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
     parser_gen.add_argument("-o", "--outdir", type=str, default="outputs/csv", help="Output directory")
 
+    # Subcommand: ui
+    parser_ui = subparsers.add_parser('ui', help='開啟互動式 CSV 生成器 (Tkinter UI)')
+
+    # Subcommand: view
+    parser_view = subparsers.add_parser('view', help='開啟 3D 視覺化工具來播放 CSV 軌跡')
+    parser_view.add_argument('csv_file', type=str, help='要播放的 CSV 檔案路徑')
+
     args = parser.parse_args()
 
     # If no command is provided, print help
@@ -210,6 +236,11 @@ def main():
         cmd_ik(args)
     elif args.command == 'generate':
         cmd_generate(args)
+    elif args.command == 'ui':
+        cmd_ui(args)
+    elif args.command == 'view':
+        cmd_view(args)
 
 if __name__ == "__main__":
+
     main()
