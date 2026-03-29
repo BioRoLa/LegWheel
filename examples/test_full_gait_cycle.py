@@ -16,9 +16,10 @@ from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.planners.trajectory_planning_3d import TrajectoryPlanner3D
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 import sys
 import os
+import argparse
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -164,10 +165,10 @@ def test_full_gait_cycle():
             ax.set_box_aspect([1, 1, 1])
             ax.view_init(elev=views[i][0], azim=views[i][1])
             
-            # Equalize axes (1:1:1 scaling)
+            # Equalize axes (1:1:1 scaling) - FIXED SCALE for consistent XYZ
             # Center around hip module origin (mo) in X/Y, but offset Z to show ground
-            z_mid = (z_ground - 0.05 + mo[2] + lim) / 2
-            fixed_span = 0.6 # Total span for each axis
+            z_mid = (z_ground - 0.05 + mo[2] + 0.1) / 2
+            fixed_span = 0.5 # Total span for each axis (0.5m)
             ax.set_xlim(mo[0] - fixed_span/2, mo[0] + fixed_span/2)
             ax.set_ylim(mo[1] - fixed_span/2, mo[1] + fixed_span/2)
             ax.set_zlim(z_mid - fixed_span/2, z_mid + fixed_span/2)
@@ -185,11 +186,25 @@ def test_full_gait_cycle():
             if i == 0:
                 ax.legend(loc='upper right', fontsize=7)
 
+    parser = argparse.ArgumentParser(description="Gait Cycle Animation")
+    parser.add_argument("--save", action="store_true", help="Save animation as video")
+    parser.add_argument("--fps", type=int, default=30, help="Frames per second for saved video")
+    args = parser.parse_args()
+
     print(f"Rendering {len(anim_indices)} frames ...")
     ani = FuncAnimation(fig, update, frames=len(anim_indices),
-                        interval=DT_ANIM * 1000, repeat=True)
+                        interval=DT_ANIM * 1000, repeat=not args.save)
+    
     plt.tight_layout()
-    plt.show()
+
+    if args.save:
+        output_file = "gait_cycle.mp4"
+        print(f"Saving animation to {output_file} (FPS: {args.fps})...")
+        writer = FFMpegWriter(fps=args.fps, metadata=dict(artist='LegWheel'), bitrate=5000)
+        ani.save(output_file, writer=writer)
+        print("Done.")
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
