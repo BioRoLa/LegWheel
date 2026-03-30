@@ -32,8 +32,11 @@ def cmd_check(args):
     warnings = []
 
     # 1. Height Check (Theta limits)
-    H_O = args.height - RobotParams.WHEEL_RADIUS_PITCH
-    R_link = RobotParams.WHEEL_RADIUS_PITCH * 0.2225
+    H_hip = args.height + RobotParams.ABAD_AXIS_OFFSET
+    leg_kine = [CorgiLegKinematics(i) for i in range(4)]
+    R_arc = leg_kine[0].solver.foot_radius   # 0.1345 m
+    R_link = leg_kine[0].solver.R             # 0.100 m
+    H_O = H_hip - R_arc
     
     try:
         G_dist = H_O / np.cos(0.0) + R_link
@@ -50,18 +53,15 @@ def cmd_check(args):
         errors.append(f"Height Guard: Failed to solve initial theta for {args.height}m. Physically impossible configuration.")
 
     # 2. Twist Workspace Check
-    L1 = RobotParams.WHEEL_RADIUS_PITCH * RobotParams.L1_RATIO
-    R_arc = np.sqrt(L1**2 - R_link**2)
-    BETA_MAX = np.deg2rad(40)
-    GAMMA_MAX = np.deg2rad(8)
+    BETA_MAX = np.deg2rad(RobotParams.BETA_MAX_DEG)
+    GAMMA_GUARD = np.deg2rad(RobotParams.GAMMA_GUARD_DEG)
 
     D_x_max = 2 * H_O * np.tan(BETA_MAX) + 2 * R_arc * BETA_MAX
     v_x_limit = D_x_max / (args.period * stance_duty)
     
-    D_y_max = 2 * args.height * np.sin(GAMMA_MAX)
+    D_y_max = 2 * H_hip * np.sin(GAMMA_GUARD)
     v_y_limit = D_y_max / (args.period * stance_duty)
 
-    leg_kine = [CorgiLegKinematics(i) for i in range(4)]
     hip_positions = [leg.p_Mi_in_B for leg in leg_kine]
     
     scale_x = 1.0

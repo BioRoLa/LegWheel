@@ -6,6 +6,7 @@ from legwheel.utils.fitted_coefficient import inv_G_dist_poly
 from legwheel.utils import numerical_jacobian, pseudo_inverse_dls, rolling_arc_length
 from legwheel.utils.screw import Screw
 from legwheel.bezier import swing
+from legwheel.config import RobotParams
 
 
 class TrajectoryPlanner3D:
@@ -27,7 +28,7 @@ class TrajectoryPlanner3D:
             dt (float)          :   Time step (s).                  default: 0.001 s
             stance_duty (float) :   Stance phase duty cycle (D_f).  default: 0.75
             leg_index (int)     :   Index of the leg (0-3).         default: 0
-            step_scale (float)  :   Global step height scaling override.
+            step_scale (float)  :   Swing velocity scaling factor (1.0 = full speed).
         """
         self.input_step_scale = step_scale
         self.stand_height = stand_height
@@ -131,19 +132,26 @@ class TrajectoryPlanner3D:
         else:
             self.gamma0 = 0.0
 
-        # --- Dynamic step height scaling ---
+        # --- Swing velocity scaling ---
+        # Instead of reducing step_height (which clips clearance), we scale
+        # liftoff/touchdown velocities to produce gentler swing transitions.
+        # step_height is preserved at the commanded value.
         if self.input_step_scale is not None:
-            # Override with global body usage scale
-            step_scale = self.input_step_scale
+            self.swing_velocity_scale = self.input_step_scale
         else:
-            # Accounts for both sagittal (β) and lateral (γ) workspace usage.
             beta_ratio = abs(self.beta0) / BETA_MAX
             gamma_ratio = abs(self.gamma0) / \
                 GAMMA_MAX if GAMMA_MAX > 0 else 0.0
             usage = max(beta_ratio, gamma_ratio)
-            step_scale = max(1.0 - 0.8 * usage, 0.2)
-
-        self.step_height = self.step_height * step_scale
+            threshold = RobotParams.STEP_USAGE_THRESHOLD
+            if usage <= threshold:
+                self.swing_velocity_scale = 1.0
+            else:
+                eff_usage = (usage - threshold) / (1.0 - threshold)
+                self.swing_velocity_scale = max(
+                    1.0 - RobotParams.STEP_DECAY_COEFF * eff_usage,
+                    RobotParams.STEP_FLOOR)
+        # NOTE: self.step_height is NOT modified
 
     def solve_theta(self, beta):
         """Helper to find theta for a given beta to maintain height."""
@@ -227,6 +235,14 @@ class TrajectoryPlanner3D:
 
         # --- Step 4: Touchdown velocity ---
         v_td = np.array([-self.velocity[0], -self.velocity[1], -v_mag / 10])
+
+        # --- Apply swing velocity scaling ---
+        # Scale liftoff & touchdown velocities to reduce joint speed demands
+        # while preserving full step_height clearance.
+        svs = self.swing_velocity_scale
+        if svs < 1.0:
+            v_lo_virtual *= svs
+            v_td *= svs
 
         # Convert from Body Frame [X, Y, Z] to Swing Frame [Forward, Up, Lateral] → [x, z, y]
         p_lo_swing = np.array(

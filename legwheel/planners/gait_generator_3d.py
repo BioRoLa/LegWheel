@@ -96,22 +96,20 @@ class GaitGenerator3D:
         # --- Workspace Guard (Global Twist Scaling) ---
         # Instead of clamping individual legs (which tears the rigid body geometry apart),
         # we find the worst-case violation across all 4 legs and scale the entire body twist.
-        from scipy.optimize import root_scalar
-        BETA_MAX = np.deg2rad(40)
-        GAMMA_MAX = np.deg2rad(8)
+        from legwheel.utils.solver import Solver as _Solver
+        BETA_MAX = np.deg2rad(RobotParams.BETA_MAX_DEG)
+        GAMMA_GUARD = np.deg2rad(RobotParams.GAMMA_GUARD_DEG)  # conservative for velocity guard
         
-        # Calculate theoretical max D for sagittal (x) and lateral (y)
-        # using rough geometric estimates to find the scaling factor
-        H_O = stand_height - RobotParams.WHEEL_RADIUS_PITCH
-        R_link = RobotParams.WHEEL_RADIUS_PITCH * 0.2225 # approx offset
-        L1 = RobotParams.WHEEL_RADIUS_PITCH * RobotParams.L1_RATIO
-        R_arc = np.sqrt(L1**2 - R_link**2)
-        H_hip = stand_height
+        # Use actual geometric values from the kinematics model
+        R_arc = self.legs[0].solver.foot_radius    # 0.1345 m
+        R_link = self.legs[0].solver.R              # 0.100 m
+        H_hip = stand_height + RobotParams.ABAD_AXIS_OFFSET
+        H_O = H_hip - R_arc
 
         D_x_max = 2 * H_O * np.tan(BETA_MAX) + 2 * R_arc * BETA_MAX
         v_x_limit = D_x_max / (self.T * self.stance_duty)
         
-        D_y_max = 2 * H_hip * np.sin(GAMMA_MAX)
+        D_y_max = 2 * H_hip * np.sin(GAMMA_GUARD)
         v_y_limit = D_y_max / (self.T * self.stance_duty)
 
         # Find maximum required scale down across all legs
@@ -137,26 +135,39 @@ class GaitGenerator3D:
 
         # --- Dynamic Global Step Height Scaling ---
         # Find maximum beta and gamma usage among the planned safe velocities.
-        # Approximation: D_stance = v_stance * T * duty_factor
-        # beta ≈ D_stance / (2 * H_O)
-        # gamma ≈ D_lat / (2 * H_hip)
+        # Uses exact Secant solve for beta (not small-angle approximation).
+        GAMMA_MAX_STEP = np.deg2rad(RobotParams.GAMMA_MAX_DEG)  # 15° geometric limit for step scaling
         max_beta_ratio = 0.0
         max_gamma_ratio = 0.0
         for vel in self.hip_velocities:
             d_x = abs(vel[0]) * self.T * self.stance_duty
-            beta_approx = d_x / (2 * H_O)
-            max_beta_ratio = max(max_beta_ratio, beta_approx / BETA_MAX)
+            if d_x > 1e-6:
+                # Exact beta solve via Secant method (replaces small-angle approx)
+                def _eq(b): return 2 * H_O * np.tan(b) + 2 * R_arc * b - d_x
+                def _deq(b): return 2 * H_O / (np.cos(b)**2) + 2 * R_arc
+                _s = _Solver(method="Secant", tol=1e-6, max_iter=50,
+                             function=_eq, derivative=_deq)
+                beta_exact = _s.solve(0.001, np.clip(d_x / (2 * H_O), 0.001, 0.69))
+                max_beta_ratio = max(max_beta_ratio, beta_exact / BETA_MAX)
 
             d_y = abs(vel[1]) * self.T * self.stance_duty
             gamma_approx = d_y / (2 * H_hip)
-            max_gamma_ratio = max(max_gamma_ratio, gamma_approx / GAMMA_MAX)
+            max_gamma_ratio = max(max_gamma_ratio, gamma_approx / GAMMA_MAX_STEP)
 
         global_usage = max(max_beta_ratio, max_gamma_ratio)
-        global_step_scale = max(1.0 - 0.8 * global_usage, 0.2)
+
+        # Deadband: no step scaling when workspace usage is below threshold
+        threshold = RobotParams.STEP_USAGE_THRESHOLD
+        if global_usage <= threshold:
+            global_step_scale = 1.0
+        else:
+            effective_usage = (global_usage - threshold) / (1.0 - threshold)
+            global_step_scale = max(1.0 - RobotParams.STEP_DECAY_COEFF * effective_usage,
+                                    RobotParams.STEP_FLOOR)
 
         if global_step_scale < 1.0:
-            print(f"  ⚠ Step guard: Scaling FULL body step_height down to {global_step_scale*100:.1f}% "
-                  f"(eff_step={step_height * global_step_scale:.4f}m) to preserve swing reach radius.")
+            print(f"  ⚠ Swing guard: Scaling liftoff/touchdown velocities to {global_step_scale*100:.1f}% "
+                  f"to reduce joint speed demands. step_height={step_height:.4f}m preserved.")
 
         # --- Initialize 4 TrajectoryPlanner3D instances with safe per-leg velocities ---
         self.planners = [
