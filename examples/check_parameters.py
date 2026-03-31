@@ -86,14 +86,15 @@ def main():
     leg_kine = [CorgiLegKinematics(i) for i in range(4)]
     hip_positions = [leg.p_Mi_in_B for leg in leg_kine]
     
+    VEL_TOL = 1e-4  # 0.01% relative tolerance (must match gait_generator_3d)
     scale_x = 1.0
     scale_y = 1.0
     for r_hip in hip_positions:
         hx = args.vx - args.wz * r_hip[1]
         hy = args.vy + args.wz * r_hip[0]
-        if abs(hx) > v_x_limit:
+        if abs(hx) > v_x_limit * (1.0 + VEL_TOL):
             scale_x = min(scale_x, v_x_limit / abs(hx))
-        if abs(hy) > v_y_limit:
+        if abs(hy) > v_y_limit * (1.0 + VEL_TOL):
             scale_y = min(scale_y, v_y_limit / abs(hy))
             
     global_scale = min(scale_x, scale_y)

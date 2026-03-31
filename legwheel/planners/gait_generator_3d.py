@@ -113,11 +113,13 @@ class GaitGenerator3D:
         v_y_limit = D_y_max / (self.T * self.stance_duty)
 
         # Find maximum required scale down across all legs
+        # Use relative tolerance so values exactly on the limit don't trigger scaling
+        VEL_TOL = 1e-4  # 0.01% relative tolerance
         scale_x, scale_y = 1.0, 1.0
         for vel in raw_hip_velocities:
-            if abs(vel[0]) > v_x_limit:
+            if abs(vel[0]) > v_x_limit * (1.0 + VEL_TOL):
                 scale_x = min(scale_x, v_x_limit / abs(vel[0]))
-            if abs(vel[1]) > v_y_limit:
+            if abs(vel[1]) > v_y_limit * (1.0 + VEL_TOL):
                 scale_y = min(scale_y, v_y_limit / abs(vel[1]))
                 
         global_scale = min(scale_x, scale_y)

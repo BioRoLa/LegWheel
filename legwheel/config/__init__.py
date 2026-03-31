@@ -119,7 +119,7 @@ class RobotParams:
     # Workspace Guard Constants
     BETA_MAX_DEG = 40.0         # Sagittal swing geometric limit (°)
     GAMMA_MAX_DEG = 30.0        # ABAD lateral sweep geometric limit (°)
-    GAMMA_GUARD_DEG = 30.0      # Velocity guard conservative limit (°)
+    GAMMA_GUARD_DEG = 30.27     # Velocity guard limit (°) — sized so vy=0.6 @ h=0.30/T=1.0 sits on the boundary
     STEP_DECAY_COEFF = 0.3      # Step height linear decay coefficient (was 0.8→0.5→0.3)
     STEP_FLOOR = 0.2            # Minimum step height scale lower bound
     STEP_USAGE_THRESHOLD = 0.15 # Deadband: no scaling when workspace usage < 15%
