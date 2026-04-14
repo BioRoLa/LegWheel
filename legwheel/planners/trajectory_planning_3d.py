@@ -229,11 +229,31 @@ class TrajectoryPlanner3D:
         J_lo = numerical_jacobian(fk_at_alpha_td, last_q, diff=1e-5)
         v_lo_virtual = J_lo @ q_dot_lo  # 3D velocity of the material point at liftoff
 
-        # Add a vertical kick to ensure the foot lifts off the ground
-        v_mag = np.linalg.norm(self.velocity)
-        v_lo_virtual[2] += v_mag  # Positive Z = upward kick
+        # --- Liftoff vertical velocity correction ---
+        # BUG FIX: original code used `v_mag = |body_velocity|` as the upward kick,
+        # which has no physical relationship to the required liftoff velocity.
+        # The correct estimate is kinematic: to clear step_height h in swing time T_sw,
+        # the required vertical velocity at liftoff is v_z = 2*h / T_sw (parabolic).
+        #
+        # Additionally, the Bezier objectiveFunc_lo uses a finite-diff step of
+        # dt_norm = 0.001/T_sw. For short T_sw (high-freq gaits), this step is large
+        # enough that c2's height contribution (h) appears in v_calc, giving a natural
+        # upward v_y ≈ c2.y * B(dt_norm) / dt. This natural value already covers a
+        # significant portion of the required liftoff velocity.
+        # Setting v_z_target too high (e.g. v_mag) creates a permanent residual that
+        # the optimizer (COBYLA, 40 evals, only dL1/dL2 = x-direction params) cannot
+        # reduce, wasting evaluations and degrading x-direction convergence.
+        #
+        # Fix: use the physics-based target. The Jacobian Z component (≈0) captures
+        # the true end-of-stance vertical velocity; we ADD the kinematic estimate
+        # on top so the optimizer targets a value the Bezier can actually match.
+        T_sw = self.T * (1.0 - self.stance_duty)
+        v_z_kinematic = 2.0 * self.step_height / T_sw  # parabolic clearance target
+        # Replace the previous v_lo[2] += v_mag with a physically grounded value:
+        v_lo_virtual[2] += v_z_kinematic
 
         # --- Step 4: Touchdown velocity ---
+        v_mag = np.linalg.norm(self.velocity)  # still used for touchdown damping
         v_td = np.array([-self.velocity[0], -self.velocity[1], -v_mag / 10])
 
         # --- Apply swing velocity scaling ---
