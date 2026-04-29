@@ -2,42 +2,134 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from legwheel.models.corgi_leg import CorgiLegKinematics
+from legwheel.models.corgi_robot import CorgiRobot
+from legwheel.models.collision_model import CorgiCollisionModel
 from legwheel.config import RobotParams
 
-def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0, show_axes=True):
-    """
-    Draws the Corgi robot (chassis + legs + frames) on the provided 3D axis.
-    Reused by plotting and animation scripts.
-    """
-    # 1. Plot Robot Chassis (Octagonal Prism)
+DISPLAY_SECONDS = 30
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Chassis octagon wireframe
+# ─────────────────────────────────────────────────────────────────────────────
+
+def draw_chassis(ax, linewidth=2, color='k', alpha=0.8):
+    """Draws the octagonal-prism chassis in Body Frame {B}."""
     l = RobotParams.CHASSIS_LENGTH
     w = RobotParams.CHASSIS_WIDTH
     h = RobotParams.CHASSIS_HEIGHT
-    z_chassis = RobotParams.ABAD_AXIS_OFFSET
-    
-    # Define cross-section octagon in Y-Z plane based on view description:
-    # front view:   ____    | top view:   ____    | side view:   
-    #             /      \  |            |    |   |         _____________      
-    #            |        | |            |    |   |        |_____________|      
-    #             \ ____ /  |            |____|   |              
-    
-    c = 0.04 # Chamfer distance for cross-section
-    y_points = np.array([w/2 - c, w/2, w/2, w/2 - c, -w/2 + c, -w/2, -w/2, -w/2 + c, w/2 - c])
-    z_points = np.array([h/2, h/2 - c, -h/2 + c, -h/2, -h/2, -h/2 + c, h/2 - c, h/2, h/2]) + z_chassis
-    
-    # Plot Faces and Edges
-    ax.plot(np.full_like(y_points, l/2), y_points, z_points, 'k-', linewidth=2)
-    ax.plot(np.full_like(y_points, -l/2), y_points, z_points, 'k-', linewidth=2)
+    z0 = RobotParams.ABAD_AXIS_OFFSET
+    c = 0.04  # chamfer
+
+    y_pts = np.array([w/2-c, w/2, w/2, w/2-c, -w/2+c, -w/2, -w/2, -w/2+c])
+    z_pts = np.array([h/2, h/2-c, -h/2+c, -h/2, -h/2, -h/2+c, h/2-c, h/2]) + z0
+
+    ax.plot(np.append(np.full(8, l/2),  l/2),
+            np.append(y_pts, y_pts[0]),
+            np.append(z_pts, z_pts[0]),
+            color=color, linewidth=linewidth, alpha=alpha)
+    ax.plot(np.append(np.full(8, -l/2), -l/2),
+            np.append(y_pts, y_pts[0]),
+            np.append(z_pts, z_pts[0]),
+            color=color, linewidth=linewidth, alpha=alpha)
     for i in range(8):
-        ax.plot([l/2, -l/2], [y_points[i], y_points[i]], [z_points[i], z_points[i]], 'k-', linewidth=1)
-    
-    # 2. Plot Detailed Legs and Frames
+        ax.plot([l/2, -l/2], [y_pts[i], y_pts[i]], [z_pts[i], z_pts[i]],
+                color=color, linewidth=linewidth * 0.6, alpha=alpha * 0.7)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Collision bounds overlay (M6 studs, chassis corners, wheel contacts)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def draw_collision_bounds(ax, theta, beta, gamma_all=0.0, gamma_list=None,
+                          show_chassis_pts=True, show_m6=True,
+                          show_wheels=True, show_com=True,
+                          show_contact_pivots=True):
+    """
+    Draws the 24-point bounding-volume markers in Body Frame {B}.
+
+    Args:
+        ax: matplotlib 3D axes.
+        theta, beta: joint angles (rad) — applied to all legs if gamma_list is None.
+        gamma_all: ABAD angle (rad) applied to all legs (used when gamma_list is None).
+        gamma_list: list of 4 individual gamma values [FL, FR, RR, RL]. Overrides gamma_all.
+        show_chassis_pts: draw chassis octagon corner dots.
+        show_m6: draw M6 stud tips (red).
+        show_wheels: draw wheel contact-search lowest points (blue).
+        show_com: draw CoM position (green diamond).
+        show_contact_pivots: highlight ground-contact pivots (yellow star).
+    """
+    if gamma_list is None:
+        gamma_list = [gamma_all] * 4
+
+    q_list = [[theta, beta, g] for g in gamma_list]
+
+    robot = CorgiRobot()   # default pose = upright, {B} = {W}
+    col   = CorgiCollisionModel(robot)
+    pts   = col.get_all_collision_points(q_list)
+
+    if show_chassis_pts:
+        cp = pts["chassis"]
+        ax.scatter(cp[:, 0], cp[:, 1], cp[:, 2],
+                   c='gray', s=18, marker='s', alpha=0.5, label='Chassis corners')
+
+    if show_m6:
+        mp = pts["m6_studs"]
+        ax.scatter(mp[:, 0], mp[:, 1], mp[:, 2],
+                   c='red', s=60, marker='o', zorder=5, label='M6 studs')
+
+    if show_wheels:
+        wp = pts["wheels"]
+        ax.scatter(wp[:, 0], wp[:, 1], wp[:, 2],
+                   c='dodgerblue', s=60, marker='^', zorder=5, label='Wheel contacts')
+
+    if show_com:
+        com = np.zeros(3)  # {B} origin = CoM in default pose
+        ax.scatter(*com, c='limegreen', s=120, marker='D', zorder=6, label='CoM {B}')
+
+    if show_contact_pivots:
+        all_pts = np.vstack([pts["chassis"], pts["m6_studs"], pts["wheels"]])
+        min_z = all_pts[:, 2].min()
+        pivots = all_pts[all_pts[:, 2] <= min_z + 3e-3]
+        if len(pivots):
+            ax.scatter(pivots[:, 0], pivots[:, 1], pivots[:, 2],
+                       c='yellow', edgecolors='black', s=200, marker='*',
+                       zorder=7, label='Contact pivots')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main draw function
+# ─────────────────────────────────────────────────────────────────────────────
+
+def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0,
+                     show_axes=True, show_bounds=False,
+                     gamma_list=None):
+    """
+    Draws the Corgi robot (chassis + legs + optional collision bounds) in Body Frame {B}.
+
+    Args:
+        ax: matplotlib 3D axes.
+        theta, beta, gamma: joint angles (rad), applied uniformly to all 4 legs.
+        show_axes: show axis labels and grid.
+        show_bounds: overlay collision bounding-volume markers.
+        gamma_list: per-leg ABAD override [FL, FR, RR, RL].
+    """
+    # 1. Chassis
+    draw_chassis(ax)
+
+    # 2. Leg mechanisms
+    g_list = gamma_list if gamma_list is not None else [gamma] * 4
     for i in range(4):
         kin = CorgiLegKinematics(i)
-        kin.plot_leg_3d(theta, beta, gamma, ax)
-        kin.plot_frames(ax, gamma)
+        kin.plot_leg_3d(theta, beta, g_list[i], ax)
+        kin.plot_frames(ax, g_list[i])
 
-    # 3. Finalize Plot Style
+    # 3. Optional collision bounds
+    if show_bounds:
+        draw_collision_bounds(ax, theta, beta,
+                              gamma_all=gamma, gamma_list=gamma_list)
+
+    # 4. Style
     if show_axes:
         ax.set_xlabel('X (Front)')
         ax.set_ylabel('Y (Left)')
@@ -46,22 +138,45 @@ def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0, show_axes=Tr
     else:
         ax.set_axis_off()
         ax.grid(False)
-    
+
     max_range = 0.4
     ax.set_xlim(-max_range, max_range)
     ax.set_ylim(-max_range, max_range)
     ax.set_zlim(-0.4, 0.2)
-    ax.set_box_aspect([1,1,0.75])
+    ax.set_box_aspect([1, 1, 0.75])
 
-def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0):
-    """Creates a static 3D plot of the Corgi robot."""
+
+def plot_corgi_robot(theta=np.deg2rad(90), beta=0.0, gamma=0.0,
+                     show_bounds=False, gamma_list=None):
+    """Static 3D plot of the Corgi robot in Body Frame {B}."""
     fig = plt.figure(figsize=(12, 10))
-    ax = fig.add_subplot(111, projection='3d')
-    
-    draw_corgi_robot(ax, theta, beta, gamma)
-    
-    ax.set_title(f'Corgi Robot 3D Visualization (Body Frame {{B}})\ntheta={np.rad2deg(theta):.1f}°, beta={np.rad2deg(beta):.1f}°, gamma={np.rad2deg(gamma):.1f}°')
-    plt.show()
+    ax  = fig.add_subplot(111, projection='3d')
+
+    draw_corgi_robot(ax, theta, beta, gamma,
+                     show_bounds=show_bounds, gamma_list=gamma_list)
+
+    title = (f'Corgi Robot 3D  (Body Frame {{B}})\n'
+             f'θ={np.rad2deg(theta):.1f}°  β={np.rad2deg(beta):.1f}°  '
+             f'γ={np.rad2deg(gamma):.1f}°')
+    if show_bounds:
+        title += '  [collision bounds ON]'
+    ax.set_title(title)
+
+    if show_bounds:
+        ax.legend(fontsize=8, loc='upper right')
+
+    plt.tight_layout()
+    plt.show(block=False)
+    plt.pause(DISPLAY_SECONDS)
+    plt.close('all')
+
 
 if __name__ == "__main__":
-    plot_corgi_robot(theta=np.deg2rad(110), beta=np.deg2rad(10), gamma=np.deg2rad(15))
+    import sys
+    bounds = '--bounds' in sys.argv
+    plot_corgi_robot(
+        theta=np.deg2rad(75),
+        beta=0.0,
+        gamma=np.deg2rad(0),
+        show_bounds=bounds,
+    )
