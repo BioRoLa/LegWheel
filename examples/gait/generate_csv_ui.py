@@ -13,8 +13,8 @@ import re
 import sys
 
 # Assume this script is in LegWheel/examples/
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-GENERATOR_SCRIPT = os.path.join(BASE_DIR, "examples", "generate_hardware_csv.py")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+GENERATOR_SCRIPT = os.path.join(BASE_DIR, "examples", "gait", "generate_hardware_csv.py")
 
 class CSVGeneratorUI(tk.Tk):
     def __init__(self):
