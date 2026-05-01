@@ -116,7 +116,7 @@ class RobotParams:
     THETA0_DEG = 17.0
     BETA0_DEG = 90.0
 
-    # Workspace Guard Constants
+    # Workspace Guard Constants  only used for trajectory planning and velocity limiting
     BETA_MAX_DEG = 40.0         # Sagittal swing geometric limit (°)
     GAMMA_MAX_DEG = 30.0        # ABAD lateral sweep geometric limit (°)
     GAMMA_GUARD_DEG = 30.27     # Velocity guard limit (°) — sized so vy=0.6 @ h=0.30/T=1.0 sits on the boundary
