@@ -480,7 +480,7 @@ class CorgiLegKinematics:
         ax.text(lo[0], lo[1], lo[2] - 0.02, f'{{L{self.leg_index}}}',
                 fontsize=9, fontweight='bold', color='darkgreen')
 
-    def inverse_kinematics(self, target_pos, guess_q=None, rim_point=(0.0, 0.0)):
+    def inverse_kinematics(self, target_pos, guess_q=None, rim_point=(0.0, 0.0), tol=1e-3, max_iter=200):
         """
         3D Inverse Kinematics using numerical Gauss-Newton iteration.
         assign specific rim point to ensure the IK solution corresponds to a desired contact point on the wheel.
@@ -488,29 +488,56 @@ class CorgiLegKinematics:
             target_pos (np.ndarray): [x, y, z] target in {B}.
             guess_q (np.ndarray): Initial [theta, beta, gamma] guess.
             rim_point (tuple): (alpha, w) rim contact parameters.
+            tol (float): Tolerance for convergence (m). Default 1e-3 (1mm).
+            max_iter (int): Maximum iterations. Default 200.
 
         Returns:
             np.ndarray: Optimized joint angles.
         """
         if guess_q is None:
             guess_q = np.array([self.theta0, self.beta0, 0.0])
-        q = guess_q
+        
         alpha, w = rim_point
-        iterated = 0
-        err = target_pos - self.forward_kinematics(*q, alpha=alpha, w=w)
-        while np.linalg.norm(err) > 1e-4:
-            if iterated > 100:
-                print("IK did not converge after 100 iterations.")
-                break
-            err = target_pos - self.forward_kinematics(*q, alpha=alpha, w=w)
-            # Jacobian calculation using utils
 
-            def fk_wrapper(q_eval):
-                return self.forward_kinematics(*q_eval, alpha=alpha, w=w)
-            J = numerical_jacobian(fk_wrapper, q, diff=1e-5)
-            q += pseudo_inverse_dls(J) @ err
-            iterated += 1
-        return q
+        def solve_core(target, q_init):
+            q = np.array(q_init, dtype=float)
+            iterated = 0
+            err = target - self.forward_kinematics(*q, alpha=alpha, w=w)
+            while np.linalg.norm(err) > tol:
+                if iterated > max_iter:
+                    return q, False
+                err = target - self.forward_kinematics(*q, alpha=alpha, w=w)
+                def fk_wrapper(q_eval):
+                    return self.forward_kinematics(*q_eval, alpha=alpha, w=w)
+                J = numerical_jacobian(fk_wrapper, q, diff=1e-5)
+                # Increase damping slightly for better stability near singularities
+                q += pseudo_inverse_dls(J, damping_factor=0.05) @ err
+                iterated += 1
+            return q, True
+
+        q_opt, success = solve_core(target_pos, guess_q)
+        
+        if not success:
+            # Fallback: Midpoint interpolation strategy
+            current_pos = self.forward_kinematics(*guess_q, alpha=alpha, w=w)
+            mid_pos = (current_pos + target_pos) / 2.0
+            
+            q_mid, _ = solve_core(mid_pos, guess_q)
+            q_opt, success_final = solve_core(target_pos, q_mid)
+            
+            if not success_final:
+                final_err = np.linalg.norm(target_pos - self.forward_kinematics(*q_opt, alpha=alpha, w=w))
+                if final_err > 5e-3:  # 5mm hard limit
+                    raise RuntimeError(
+                        f"IK failed to converge for Leg {self.leg_index}. "
+                        f"Target: [{target_pos[0]:.4f}, {target_pos[1]:.4f}, {target_pos[2]:.4f}], "
+                        f"Final Error: {final_err*1000:.2f} mm > 5 mm limit. "
+                        f"Target is likely outside the reachable workspace."
+                    )
+                else:
+                    print(f"Warning: IK for Leg {self.leg_index} converged with loose tolerance (Error: {final_err*1000:.2f} mm)")
+                
+        return q_opt
 
     def set_gamma(self, gamma):
         """Updates the ABAD angle and recalculates the module position."""
