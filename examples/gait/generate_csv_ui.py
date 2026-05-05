@@ -11,6 +11,9 @@ import subprocess
 import os
 import re
 import sys
+import threading
+import queue
+import time
 
 # Assume this script is in LegWheel/examples/
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -38,6 +41,12 @@ class CSVGeneratorUI(tk.Tk):
         self.var_cycles = tk.StringVar(value="10")
         self.var_dt = tk.StringVar(value="0.001")
         self.var_outdir = tk.StringVar(value="outputs/csv")
+
+        self.is_running = False
+        self.proc_queue = queue.Queue()
+        self.generation_started_at = 0.0
+        self.last_filename = ""
+        self.status_var = tk.StringVar(value="Status: Idle")
 
         self.create_widgets()
 
@@ -88,11 +97,17 @@ class CSVGeneratorUI(tk.Tk):
         frame_btns = ttk.Frame(frame_bot)
         frame_btns.pack(fill=tk.X, pady=(0, 10))
 
-        btn_generate = ttk.Button(frame_btns, text="🚀 Generate CSV", command=self.generate_csv, style="Accent.TButton")
-        btn_generate.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=5, padx=(0, 5))
+        self.btn_generate = ttk.Button(frame_btns, text="🚀 Generate CSV", command=self.generate_csv, style="Accent.TButton")
+        self.btn_generate.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=5, padx=(0, 5))
 
         self.btn_copy = ttk.Button(frame_btns, text="📋 Copy Filename", command=self.copy_filename, state=tk.DISABLED)
         self.btn_copy.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=5, padx=(5, 0))
+
+        self.progress = ttk.Progressbar(frame_bot, mode="indeterminate")
+        self.progress.pack(fill=tk.X, pady=(0, 6))
+
+        self.lbl_status = ttk.Label(frame_bot, textvariable=self.status_var, foreground="#1f6aa5")
+        self.lbl_status.pack(anchor=tk.W, pady=(0, 8))
 
         # Log Text Box
         self.log_txt = tk.Text(frame_bot, height=12, bg="#1e1e1e", fg="#d4d4d4", font=("Consolas", 9))
@@ -138,6 +153,10 @@ class CSVGeneratorUI(tk.Tk):
             self.log("Could NOT parse parameters from filename. File might not map to standard format.")
 
     def generate_csv(self):
+        if self.is_running:
+            self.log("A generation task is already running.")
+            return
+
         # Build command
         cmd = [
             sys.executable, GENERATOR_SCRIPT,
@@ -152,37 +171,101 @@ class CSVGeneratorUI(tk.Tk):
             "-dt", self.var_dt.get(),
             "-o", self.var_outdir.get()
         ]
-        
+
+        self.is_running = True
+        self.generation_started_at = time.time()
+        self.btn_generate.config(state=tk.DISABLED)
+        self.btn_copy.config(state=tk.DISABLED)
+        self.status_var.set("Status: Running (0.0s)")
+        self.progress.start(10)
+
         self.log(f"Executing: {' '.join(cmd)}", clear=True)
         self.log("-" * 50)
-        
-        try:
-            # Run the command and capture output
-            result = subprocess.run(cmd, cwd=BASE_DIR, capture_output=True, text=True)
-            
-            # Print stdout and stderr
-            if result.stdout:
-                self.log(result.stdout)
-            if result.stderr:
-                self.log(f"[ERROR or WARNING]\n{result.stderr}")
-                
-            if result.returncode == 0:
-                self.log(f"Process completed successfully. Code {result.returncode}")
-                # Try to extract the filename from stdout
-                m = re.search(r"Saved to:\s*(.*\.csv)", result.stdout)
-                if m:
-                    filepath = m.group(1).strip()
-                    self.last_filename = os.path.basename(filepath)
-                    self.btn_copy.config(state=tk.NORMAL)
 
-                messagebox.showinfo("Success", "CSV generated successfully!\nCheck the logs for details.")
-            else:
-                self.log(f"Process failed with exit code: {result.returncode}")
-                messagebox.showerror("Error", "Generation failed. Check the logs.")
-                
+        worker = threading.Thread(target=self._run_generator, args=(cmd,), daemon=True)
+        worker.start()
+        self.after(120, self._poll_process_queue)
+
+    def _run_generator(self, cmd):
+        output_lines = []
+        try:
+            # Stream output from generator to keep UI informed while process runs.
+            process = subprocess.Popen(
+                cmd,
+                cwd=BASE_DIR,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+
+            if process.stdout is not None:
+                for raw_line in process.stdout:
+                    line = raw_line.rstrip("\n")
+                    if line:
+                        output_lines.append(line)
+                        self.proc_queue.put({"type": "log", "text": line})
+                process.stdout.close()
+
+            returncode = process.wait()
+            self.proc_queue.put(
+                {
+                    "type": "done",
+                    "returncode": returncode,
+                    "output": "\n".join(output_lines),
+                }
+            )
         except Exception as e:
-            self.log(f"Exception occurred:\n{str(e)}")
-            messagebox.showerror("Exception", str(e))
+            self.proc_queue.put({"type": "exception", "error": str(e)})
+
+    def _poll_process_queue(self):
+        while not self.proc_queue.empty():
+            event = self.proc_queue.get()
+            event_type = event.get("type")
+
+            if event_type == "log":
+                self.log(event.get("text", ""))
+            elif event_type == "done":
+                self._on_generation_done(event.get("returncode", 1), event.get("output", ""))
+                return
+            elif event_type == "exception":
+                self._on_generation_exception(event.get("error", "Unknown error"))
+                return
+
+        if self.is_running:
+            elapsed = time.time() - self.generation_started_at
+            self.status_var.set(f"Status: Running ({elapsed:.1f}s)")
+            self.after(120, self._poll_process_queue)
+
+    def _finish_running_state(self):
+        self.is_running = False
+        self.progress.stop()
+        self.btn_generate.config(state=tk.NORMAL)
+
+    def _on_generation_done(self, returncode, output_text):
+        self._finish_running_state()
+
+        if returncode == 0:
+            self.status_var.set("Status: Completed")
+            self.log(f"Process completed successfully. Code {returncode}")
+            m = re.search(r"Saved to:\s*(.*\.csv)", output_text)
+            if m:
+                filepath = m.group(1).strip()
+                self.last_filename = os.path.basename(filepath)
+                self.btn_copy.config(state=tk.NORMAL)
+                self.log(f"Generated file: {self.last_filename}")
+
+            messagebox.showinfo("Success", "CSV generated successfully!\nCheck the logs for details.")
+        else:
+            self.status_var.set("Status: Failed")
+            self.log(f"Process failed with exit code: {returncode}")
+            messagebox.showerror("Error", "Generation failed. Check the logs.")
+
+    def _on_generation_exception(self, error_text):
+        self._finish_running_state()
+        self.status_var.set("Status: Exception")
+        self.log(f"Exception occurred:\n{error_text}")
+        messagebox.showerror("Exception", error_text)
 
     def copy_filename(self):
         if hasattr(self, 'last_filename') and self.last_filename:
