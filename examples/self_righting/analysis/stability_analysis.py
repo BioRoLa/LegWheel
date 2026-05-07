@@ -16,7 +16,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyArrowPatch
 from scipy.spatial import ConvexHull
-import os
+import os, sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 DISPLAY_SECONDS = 30   # auto-close after this many seconds
 
@@ -106,8 +108,8 @@ def run_sweep(rolls, q0_list, qg_list):
 def panel_stability_margin(ax, rolls, m0, mg):
     """Panel 1: Stability margin vs Roll."""
     ax.axhline(0, color='black', lw=1.0, ls='--', zorder=1)
-    ax.plot(rolls, m0, color='steelblue', lw=1.8, label='γ=0° (all legs)', zorder=2)
-    ax.plot(rolls, mg, color='darkorange', lw=1.8, ls='--', label='γ=30° (lower legs)', zorder=2)
+    ax.plot(rolls, m0, color='steelblue', lw=1.8, label='γ=0° all legs  (β=0°, θ=75°)', zorder=2)
+    ax.plot(rolls, mg, color='darkorange', lw=1.8, ls='--', label='γ=30° lower legs  (β=0°, θ=75°)', zorder=2)
 
     ax.fill_between(rolls, m0, 0, where=np.array(m0) > 0,
                     color='steelblue', alpha=0.20, zorder=1)
@@ -138,8 +140,8 @@ def panel_com_height(ax, rolls, h0, hg):
     h0_mm = np.array(h0) * 1000
     hg_mm = np.array(hg) * 1000
 
-    ax.plot(rolls, h0_mm, color='steelblue', lw=1.8, label='γ=0° (all legs)')
-    ax.plot(rolls, hg_mm, color='darkorange', lw=1.8, ls='--', label='γ=30° (lower legs)')
+    ax.plot(rolls, h0_mm, color='steelblue', lw=1.8, label='γ=0° all legs  (β=0°, θ=75°)')
+    ax.plot(rolls, hg_mm, color='darkorange', lw=1.8, ls='--', label='γ=30° lower legs  (β=0°, θ=75°)')
 
     # Mark stable window CoM heights
     window_props = {
@@ -246,16 +248,17 @@ def panel_energy_barrier(ax, rolls, h0, hg):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    q_nom = [np.deg2rad(60), np.deg2rad(90), 0.0]
-    q_g30 = [np.deg2rad(60), np.deg2rad(90), np.deg2rad(30)]
+    # Updated to beta=0 (realistic walking / sagittal stance) and theta=75 (optimal)
+    q_nom = [np.deg2rad(75), np.deg2rad(0), 0.0]
+    q_g30 = [np.deg2rad(75), np.deg2rad(0), np.deg2rad(30)]
     q_up  = q_nom
 
-    print("Running Roll 0→180° sweep (1° resolution)...")
+    print("Running Roll 0→180° sweep (1° resolution, beta=0, theta=75)...")
     rolls = np.arange(0, 181, 1)
     h0, m0, hg, mg = run_sweep(rolls, [q_nom]*4, [q_up, q_g30, q_g30, q_up])
 
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
-    fig.suptitle("Corgi Self-Righting — Stability Windows & Energy Analysis", fontsize=13, y=1.01)
+    fig.suptitle("Corgi Self-Righting — Stability Windows & Energy Analysis  (β=0°, θ=75°)", fontsize=13, y=1.01)
 
     panel_stability_margin(ax1, rolls, m0, mg)
     panel_com_height(ax2, rolls, h0, hg)
