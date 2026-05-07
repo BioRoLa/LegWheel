@@ -20,8 +20,8 @@ DISPLAY_SECONDS = 30
 # Chassis octagon wireframe
 # ─────────────────────────────────────────────────────────────────────────────
 
-def draw_chassis(ax, linewidth=2, color='k', alpha=0.8):
-    """Draws the octagonal-prism chassis in Body Frame {B}."""
+def draw_chassis(ax, linewidth=2, color='k', alpha=0.8, robot_state=None):
+    """Draws the octagonal-prism chassis. If robot_state is provided, draws in {W}, else in {B}."""
     l = RobotParams.CHASSIS_LENGTH
     w = RobotParams.CHASSIS_WIDTH
     h = RobotParams.CHASSIS_HEIGHT
@@ -31,17 +31,43 @@ def draw_chassis(ax, linewidth=2, color='k', alpha=0.8):
     y_pts = np.array([w/2-c, w/2, w/2, w/2-c, -w/2+c, -w/2, -w/2, -w/2+c])
     z_pts = np.array([h/2, h/2-c, -h/2+c, -h/2, -h/2, -h/2+c, h/2-c, h/2]) + z0
 
-    ax.plot(np.append(np.full(8, l/2),  l/2),
-            np.append(y_pts, y_pts[0]),
-            np.append(z_pts, z_pts[0]),
-            color=color, linewidth=linewidth, alpha=alpha)
-    ax.plot(np.append(np.full(8, -l/2), -l/2),
-            np.append(y_pts, y_pts[0]),
-            np.append(z_pts, z_pts[0]),
-            color=color, linewidth=linewidth, alpha=alpha)
-    for i in range(8):
-        ax.plot([l/2, -l/2], [y_pts[i], y_pts[i]], [z_pts[i], z_pts[i]],
-                color=color, linewidth=linewidth * 0.6, alpha=alpha * 0.7)
+    if robot_state is not None:
+        # 16 vertices in Body Frame {B}
+        pts_B_front = [np.array([l/2, y, z]) for y, z in zip(y_pts, z_pts)]
+        pts_B_rear  = [np.array([-l/2, y, z]) for y, z in zip(y_pts, z_pts)]
+
+        # Transform to World Frame {W}
+        pts_W_front = np.array([robot_state.body_to_world(p) for p in pts_B_front])
+        pts_W_rear  = np.array([robot_state.body_to_world(p) for p in pts_B_rear])
+
+        # Plot Front Face
+        ax.plot(np.append(pts_W_front[:, 0], pts_W_front[0, 0]),
+                np.append(pts_W_front[:, 1], pts_W_front[0, 1]),
+                np.append(pts_W_front[:, 2], pts_W_front[0, 2]),
+                color=color, linewidth=linewidth, alpha=alpha)
+        # Plot Rear Face
+        ax.plot(np.append(pts_W_rear[:, 0], pts_W_rear[0, 0]),
+                np.append(pts_W_rear[:, 1], pts_W_rear[0, 1]),
+                np.append(pts_W_rear[:, 2], pts_W_rear[0, 2]),
+                color=color, linewidth=linewidth, alpha=alpha)
+        # Plot Connecting edges
+        for i in range(8):
+            ax.plot([pts_W_front[i, 0], pts_W_rear[i, 0]],
+                    [pts_W_front[i, 1], pts_W_rear[i, 1]],
+                    [pts_W_front[i, 2], pts_W_rear[i, 2]],
+                    color=color, linewidth=linewidth * 0.6, alpha=alpha * 0.7)
+    else:
+        ax.plot(np.append(np.full(8, l/2),  l/2),
+                np.append(y_pts, y_pts[0]),
+                np.append(z_pts, z_pts[0]),
+                color=color, linewidth=linewidth, alpha=alpha)
+        ax.plot(np.append(np.full(8, -l/2), -l/2),
+                np.append(y_pts, y_pts[0]),
+                np.append(z_pts, z_pts[0]),
+                color=color, linewidth=linewidth, alpha=alpha)
+        for i in range(8):
+            ax.plot([l/2, -l/2], [y_pts[i], y_pts[i]], [z_pts[i], z_pts[i]],
+                    color=color, linewidth=linewidth * 0.6, alpha=alpha * 0.7)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -53,9 +79,10 @@ def draw_collision_bounds(ax, theta, beta, gamma_all=0.0, gamma_list=None,
                           show_wheels=True, show_com=True,
                           show_contact_pivots=True,
                           show_support_polygon=False,
-                          contact_tol=3e-3):
+                          contact_tol=3e-3, robot_state=None):
     """
-    Draws the 24-point bounding-volume markers in Body Frame {B}.
+    Draws the 24-point bounding-volume markers. If robot_state is provided, transforms to World Frame.
+
 
     Args:
         ax: matplotlib 3D axes.
@@ -79,6 +106,12 @@ def draw_collision_bounds(ax, theta, beta, gamma_all=0.0, gamma_list=None,
     col = CorgiCollisionModel(robot)
     pts = col.get_all_collision_points(q_list)
 
+    if robot_state:
+        # Transform the generated dictionaries
+        pts["chassis"] = np.array([robot_state.body_to_world(p) for p in pts["chassis"]])
+        pts["m6_studs"] = np.array([robot_state.body_to_world(p) for p in pts["m6_studs"]])
+        pts["wheels"] = np.array([robot_state.body_to_world(p) for p in pts["wheels"]])
+
     if show_chassis_pts:
         cp = pts["chassis"]
         ax.scatter(cp[:, 0], cp[:, 1], cp[:, 2],
@@ -100,7 +133,15 @@ def draw_collision_bounds(ax, theta, beta, gamma_all=0.0, gamma_list=None,
 
     if show_com:
         com = np.zeros(3)  # {B} origin = CoM in default pose
-        ax.scatter(*com, c='limegreen', s=120, marker='D', zorder=6, label='CoM {B}')
+        if robot_state:
+            # Transform all points from Body to World
+            com_W = robot_state.body_to_world(com)
+            ax.scatter(*com_W, c='limegreen', s=120, marker='D', zorder=6, label='CoM {W}')
+            # Draw line from CoM to ground
+            ax.plot([com_W[0], com_W[0]], [com_W[1], com_W[1]], [com_W[2], min_z], 
+                    color='gray', linestyle=':')
+        else:
+            ax.scatter(*com, c='limegreen', s=120, marker='D', zorder=6, label='CoM {B}')
 
     if show_contact_pivots and len(pivots):
         ax.scatter(pivots[:, 0], pivots[:, 1], pivots[:, 2],
@@ -144,7 +185,7 @@ def draw_collision_bounds(ax, theta, beta, gamma_all=0.0, gamma_list=None,
 
 def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0,
                      show_axes=True, show_bounds=False, show_cones=True,
-                     gamma_list=None, show_support_polygon=False):
+                     gamma_list=None, show_support_polygon=False, robot_state=None):
     """
     Draws the Corgi robot (chassis + legs + optional collision bounds) in Body Frame {B}.
 
@@ -156,9 +197,10 @@ def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0,
         show_cones: overlay thick cone geometry when bounds are enabled.
         gamma_list: per-leg ABAD override [FL, FR, RR, RL].
         show_support_polygon: draw contact support polygon/line when bounds are on.
+        robot_state: optional CorgiRobot instance to draw chassis in World Frame {W}.
     """
     # 1. Chassis
-    draw_chassis(ax)
+    draw_chassis(ax, robot_state=robot_state)
 
     if show_bounds and show_cones:
         # Local import avoids circular import with plot_leg_envelope -> draw_chassis.
@@ -196,6 +238,7 @@ def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0,
             gamma_all=gamma,
             gamma_list=gamma_list,
             show_support_polygon=show_support_polygon,
+            robot_state=robot_state
         )
 
     # 4. Style
