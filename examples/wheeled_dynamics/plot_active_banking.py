@@ -95,11 +95,8 @@ def plot_active_banking_performance():
         _, z_off, _, q_list = banking.calculate_induced_roll(theta_nom, beta_nom, g_bank)
         robot.base_pos = np.array([0, 0, -z_off])
         
-        # Set up the 3D plot
+        # Set up the 3D plot view angle
         ax_r.view_init(elev=15, azim=180) # View from the front
-        ax_r.set_xlim(-0.25, 0.25)
-        ax_r.set_ylim(-0.35, 0.35)
-        ax_r.set_zlim(0, 0.5)
         
         # Extract individual gammas for drawing
         gamma_list = [q[2] for q in q_list]
@@ -107,6 +104,10 @@ def plot_active_banking_performance():
         draw_corgi_robot(ax_r, theta=np.deg2rad(theta_nom), beta=np.deg2rad(beta_nom), 
                          gamma=0.0, show_bounds=True, gamma_list=gamma_list, show_support_polygon=True, robot_state=robot)
         
+        # Override limits after draw_corgi_robot sets them
+        ax_r.set_xlim(-0.25, 0.25)
+        ax_r.set_ylim(-0.35, 0.35)
+        ax_r.set_zlim(0, 0.5)
         
         # Draw a line representing the Centrifugal Force and Gravity vector from CoM
         com_y = res["com_y"]
