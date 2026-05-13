@@ -1,5 +1,9 @@
+import os
+
 import numpy as np
 import pandas as pd
+
+from legwheel.cbase.dls import dls_solve_3x3_c
 
 
 def create_command_csv_phi(theta_command, beta_command, file_name, transform=True):  # 4*n, 4*n
@@ -209,6 +213,27 @@ def pseudo_inverse_dls(J, damping_factor=1e-2):
     I = np.eye(m)
     J_star = J.T @ np.linalg.inv(J @ J.T + (damping_factor**2) * I)
     return J_star
+
+
+def dls_solve(J, rhs, damping_factor=1e-2):
+    """
+    Solve q_dot = J* rhs using DLS with optional C backend.
+
+    When LEGWHEEL_USE_CBASE=1 and J/rhs are 3x3/3x1, this dispatches to a
+    compiled C kernel. Otherwise it falls back to NumPy DLS.
+    """
+    J = np.array(J, dtype=float)
+    rhs = np.array(rhs, dtype=float).reshape(-1)
+
+    use_c = os.getenv("LEGWHEEL_USE_CBASE", "0") == "1"
+    if use_c and J.shape == (3, 3) and rhs.shape == (3,):
+        try:
+            return dls_solve_3x3_c(J, rhs, damping_factor)
+        except Exception:
+            # Keep fallback silent so benchmarking can proceed even if C backend is unavailable.
+            pass
+
+    return pseudo_inverse_dls(J, damping_factor=damping_factor) @ rhs
 
 
 def rolling_arc_length(delta_alpha, radius):

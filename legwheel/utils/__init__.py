@@ -5,4 +5,4 @@ from legwheel.utils.solver import Solver
 from legwheel.utils.screw import Screw
 
 __all__ = ["Solver", "Screw", "numerical_jacobian",
-           "pseudo_inverse_dls", "rolling_arc_length"]
+           "pseudo_inverse_dls", "dls_solve", "rolling_arc_length"]
