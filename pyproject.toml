@@ -63,3 +63,7 @@ python_functions = ["test_*"]
 
 [project.scripts]
 legwheel = "legwheel.cli:main"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
