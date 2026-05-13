@@ -6,7 +6,7 @@ class WheeledDynamics:
     2D / 3D Wheeled Dynamics model for the Corgi Leg-Wheel robot.
     Handles differential drive mapping, skid-steering, and lateral forces.
     """
-    def __init__(self, mu_lat=0.6, mass=15.0):
+    def __init__(self, mu_lat=0.6, mass=30.0):
         """
         Initialize the WheeledDynamics model.
         
