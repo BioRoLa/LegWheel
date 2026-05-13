@@ -35,7 +35,7 @@ class ActiveBankingDynamics:
                             If > 0 (Left Turn), Left legs abduct (+gamma), Right legs adduct (-gamma).
                             
         Returns:
-            tuple: (roll_deg, min_z_clearance, wheel_contact_pts_W)
+            tuple: (roll_deg, min_z_clearance, wheel_contact_pts_W, q_list)
         """
         theta = np.deg2rad(theta_deg)
         beta = np.deg2rad(beta_deg)
@@ -73,7 +73,7 @@ class ActiveBankingDynamics:
         for pt in wheel_pts_W:
             pt[2] -= min_z
             
-        return induced_roll_deg, min_z, wheel_pts_W
+        return induced_roll_deg, min_z, wheel_pts_W, q_list
 
     def calculate_cornering_stability(self, theta_deg=75.0, beta_deg=0.0, gamma_bank_deg=0.0, turn_radius=2.0):
         """
@@ -87,7 +87,7 @@ class ActiveBankingDynamics:
         Returns:
             dict: Containing roll, CoM, margin, max velocity, and max lat. accel.
         """
-        roll_deg, z_offset, wheel_pts = self.calculate_induced_roll(theta_deg, beta_deg, gamma_bank_deg)
+        roll_deg, z_offset, wheel_pts, q_list = self.calculate_induced_roll(theta_deg, beta_deg, gamma_bank_deg)
         
         # 1. Calculate true CoM position in World Frame
         # Base was internally shifted by z_offset to touch Z=0
@@ -118,7 +118,9 @@ class ActiveBankingDynamics:
         return {
             "induced_roll_deg": roll_deg,
             "com_z": z_com,
+            "com_y": y_com,
             "y_margin": y_margin,
             "a_lat_max_g": a_lat_max / self.g, # in units of g
-            "v_max": v_max
+            "v_max": v_max,
+            "q_list": q_list
         }
