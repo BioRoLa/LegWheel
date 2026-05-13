@@ -202,6 +202,12 @@ def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0,
     # 1. Chassis
     draw_chassis(ax, robot_state=robot_state)
 
+    g_list = gamma_list if gamma_list is not None else [gamma] * 4
+
+    point_transform = None
+    if robot_state is not None:
+        point_transform = robot_state.body_to_world
+
     if show_bounds and show_cones:
         # Local import avoids circular import with plot_leg_envelope -> draw_chassis.
         try:
@@ -217,17 +223,39 @@ def draw_corgi_robot(ax, theta=np.deg2rad(90), beta=0.0, gamma=0.0,
                 theta,
                 beta,
                 gamma_max_deg=RobotParams.GAMMA_MAX_DEG,
-                n_gamma_slices=4,
+                n_gamma_slices=1,
                 N_alpha=40,
                 N_t=8,
+                point_transform=point_transform,
+                gamma_samples_deg=[np.rad2deg(g_list[i])],
+                rim_outline_gamma_deg=np.rad2deg(g_list[i]),
             )
 
     # 2. Leg mechanisms
-    g_list = gamma_list if gamma_list is not None else [gamma] * 4
     for i in range(4):
         kin = CorgiLegKinematics(i)
-        kin.plot_leg_3d(theta, beta, g_list[i], ax)
-        kin.plot_frames(ax, g_list[i])
+
+        if robot_state is None:
+            kin.plot_leg_3d(theta, beta, g_list[i], ax)
+            kin.plot_frames(ax, g_list[i])
+            continue
+
+        # Make leg geometry and frames use the same world transform as chassis/bounds.
+        orig_transform = kin._transform_to_body
+
+        def _transform_to_world(p_L, gamma=None, type="pos"):
+            p_B = orig_transform(p_L, gamma=gamma, type=type)
+            if type == "vec":
+                R_W = robot_state._rot_matrix(robot_state.base_ori)
+                return R_W @ p_B
+            return robot_state.body_to_world(p_B)
+
+        kin._transform_to_body = _transform_to_world
+        try:
+            kin.plot_leg_3d(theta, beta, g_list[i], ax)
+            kin.plot_frames(ax, g_list[i])
+        finally:
+            kin._transform_to_body = orig_transform
 
     # 3. Optional collision bounds
     if show_bounds:

@@ -54,7 +54,8 @@ def cone_surface(leg: CorgiLegKinematics,
                  alpha_lo: float, alpha_hi: float,
                  N_alpha: int = 40, N_t: int = 8,
                  mirror: bool = False,
-                 point_transform=None) -> tuple:
+                 point_transform=None,
+                 rim_w: float | None = None) -> tuple:
     """
     Returns (X, Y, Z) mesh arrays, shape (N_t, N_alpha), in Body Frame {B}.
     t=0 row = apex repeated; t=1 row = rim points.
@@ -69,9 +70,14 @@ def cone_surface(leg: CorgiLegKinematics,
     # Apex in {B}
     apex_B = leg._M_to_B(APEX_M, gamma=gamma)   # shape (3,)
 
+    if rim_w is None:
+        # Use the wheel outer edge as cone base reference.
+        half_w = leg.wheel_thickness / 2.0
+        rim_w = half_w if leg.is_left else -half_w
+
     # Rim points in {B}
     rim_B  = np.array([leg.forward_kinematics(theta, beta, gamma,
-                                               alpha=float(a), w=0.0)
+                                               float(a), rim_w)
                        for a in alphas])         # shape (N_alpha, 3)
 
     if point_transform is not None:
@@ -93,13 +99,15 @@ def draw_cone_section(ax, leg: CorgiLegKinematics,
                       color: str, alpha_surf: float = 0.30,
                       N_alpha: int = 40, N_t: int = 8,
                       label: str = "",
-                      point_transform=None):
+                      point_transform=None,
+                      rim_w: float | None = None):
     """Draws the cone surface (apex→rim) for one arc section."""
     for mirror in [False, True] if alpha_lo > 0 else [False]:
         X, Y, Z = cone_surface(leg, theta, beta, gamma,
                                 alpha_lo, alpha_hi,
                                 N_alpha=N_alpha, N_t=N_t, mirror=mirror,
-                                point_transform=point_transform)
+                                point_transform=point_transform,
+                                rim_w=rim_w)
         surf = ax.plot_surface(X, Y, Z,
                                color=color, alpha=alpha_surf,
                                linewidth=0, antialiased=True,
@@ -138,7 +146,8 @@ def draw_leg_envelope(ax,
                       gamma_samples_deg=None,
                       show_apex: bool = True,
                       show_rim_outline: bool = True,
-                      rim_outline_gamma_deg=None):
+                      rim_outline_gamma_deg=None,
+                      rim_w: float | None = None):
     """
     Draws the cone geometry for one leg at n_gamma_slices gamma positions.
     Each slice is shown with decreasing transparency away from gamma=0.
@@ -174,7 +183,8 @@ def draw_leg_envelope(ax,
                               alpha_surf=alpha_surf,
                               N_alpha=N_alpha, N_t=N_t,
                               label=lbl,
-                              point_transform=point_transform)
+                              point_transform=point_transform,
+                              rim_w=rim_w)
 
         # Apex marker at each gamma
         if show_apex:
@@ -191,8 +201,12 @@ def draw_leg_envelope(ax,
             gamma_ref = 0.0
 
         alphas_full = np.linspace(-170, 170, 180)
+        rim_w_ref = rim_w
+        if rim_w_ref is None:
+            half_w = leg.wheel_thickness / 2.0
+            rim_w_ref = half_w if leg.is_left else -half_w
         rim_ref = np.array([
-            leg.forward_kinematics(theta, beta, gamma_ref, alpha=float(a))
+            leg.forward_kinematics(theta, beta, gamma_ref, float(a), rim_w_ref)
             for a in alphas_full
         ])
         if point_transform is not None:
