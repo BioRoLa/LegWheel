@@ -3,7 +3,7 @@ from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.models.leg_model import LegModel
 from legwheel.utils.solver import Solver
 from legwheel.utils.fitted_coefficient import inv_G_dist_poly
-from legwheel.utils import numerical_jacobian, pseudo_inverse_dls, rolling_arc_length
+from legwheel.utils import dls_solve, numerical_jacobian, rolling_arc_length
 from legwheel.utils.screw import Screw
 from legwheel.bezier import swing
 from legwheel.config import RobotParams
@@ -356,8 +356,7 @@ class TrajectoryPlanner3D:
             -v_hip[1],
             -v_hip[2]
         ])
-        J_star = pseudo_inverse_dls(J, damping_factor=damping)
-        q_dot = J_star @ v_target
+        q_dot = dls_solve(J, v_target, damping_factor=damping)
 
         # --- Forward Integration ---
         q_next = q + q_dot * self.dt

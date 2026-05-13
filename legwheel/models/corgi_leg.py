@@ -1,7 +1,7 @@
 import numpy as np
 from typing import overload
 from legwheel.config import RobotParams
-from legwheel.utils import numerical_jacobian, pseudo_inverse_dls
+from legwheel.utils import dls_solve, numerical_jacobian
 
 
 class CorgiLegKinematics:
@@ -514,7 +514,7 @@ class CorgiLegKinematics:
                     return self.forward_kinematics(*q_eval, alpha=alpha, w=w)
                 J = numerical_jacobian(fk_wrapper, q, diff=1e-5)
                 # Increase damping slightly for better stability near singularities
-                q += pseudo_inverse_dls(J, damping_factor=0.05) @ err
+                q += dls_solve(J, err, damping_factor=0.05)
                 iterated += 1
             return q, True
 
