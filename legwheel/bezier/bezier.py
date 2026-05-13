@@ -1,6 +1,9 @@
 import numpy as np
+import os
 from math import pow
 import matplotlib.pyplot as plt
+
+from legwheel.cbase.kernels import bezier_point_3d_12_c
 
 
 class Bezier:
@@ -79,21 +82,37 @@ class Bezier:
         Returns:
             np.ndarray: The [x, y, (z)] position on the curve.
         """
+        use_c = os.getenv("LEGWHEEL_USE_CBASE", "0") == "1"
+        if use_c and len(self.control_pts) == 12 and len(self.control_pts[0]) == 3:
+            try:
+                return bezier_point_3d_12_c(
+                    np.asarray(self.control_pts, dtype=float),
+                    np.asarray(self.bz_cff, dtype=float),
+                    t,
+                    offset_x,
+                    offset_y,
+                    offset_z,
+                )
+            except Exception:
+                pass
+
         bzt_cff = self.bzt_coeff(self.control_pts, t)
-        
+
         # Determine dimensionality from the first control point
         dim = len(self.control_pts[0])
         point = np.zeros(dim)
-        
+
         for i in range(len(self.control_pts)):
             weight = bzt_cff[i] * self.bz_cff[i]
             point += weight * self.control_pts[i]
-        
+
         # Apply offsets
         point[0] += offset_x
-        if dim > 1: point[1] += offset_y
-        if dim > 2: point[2] += offset_z
-            
+        if dim > 1:
+            point[1] += offset_y
+        if dim > 2:
+            point[2] += offset_z
+
         return point
 
 

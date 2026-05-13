@@ -1,4 +1,7 @@
 import numpy as np
+import os
+
+from legwheel.cbase.kernels import screw_exp6_c
 
 class Screw:
     """
@@ -56,6 +59,13 @@ class Screw:
         """
         omega = self.omega
         v = self.v
+
+        use_c = os.getenv("LEGWHEEL_USE_CBASE", "0") == "1"
+        if use_c:
+            try:
+                return screw_exp6_c(omega, v, theta)
+            except Exception:
+                pass
         
         if np.linalg.norm(omega) < 1e-9:
             # Pure translation
