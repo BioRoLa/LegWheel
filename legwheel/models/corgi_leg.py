@@ -101,10 +101,13 @@ class CorgiLegKinematics:
         """
         Defines the rotation matrices for coordinate frame mapping.
 
-        Mapping logic:
-        - X_L (Leg primary axis) -> -Y_M (pointing 'Down' relative to hip)
-        - Y_L (Sagittal symmetry) -> +Z_M (pointing 'Front')
-        - Z_L (Sagittal thickness) -> +X_M (pointing 'Lateral Outward')
+        Mapping logic (implemented by the side-specific R_L_to_M matrices):
+        - Left legs:  X_L -> -Z_M, Y_L -> +Y_M, Z_L -> +X_M
+        - Right legs: X_L -> +Z_M, Y_L -> -Y_M, Z_L -> -X_M
+
+        The side-specific sign convention keeps the sagittal leg plane mirrored
+        between left and right limbs while preserving the Body Frame convention
+        (+X front, +Y left, +Z up).
         """
         if gamma is None:
             gamma = self.gamma
