@@ -1,12 +1,14 @@
 # Self-Righting Examples
 
+> **Current planning basis (2026-05-25)**: self-righting is now manual-keyframe/FSM first. The quasi-static scripts remain useful for contact, support polygon, CoM margin, and energy diagnostics, but they are no longer the primary trajectory planner. Next LegWheel target: add a `keyframe_evaluator.py` that reads the manual FSM states and exports metric reports for Webots/hardware validation.
+
 ```
 self_righting/
 ├── plot_window_states.py          ← legacy entry-point (delegates to boundary_states/)
 ├── boundary_states/               ← ordered S0-S4 rendering + beta comparison
 ├── analysis/                      ← stability analysis, gamma scans, gap analysis
 ├── viz/                           ← collision model and recovery strategy plots
-├── planning/                      ← quasi-static path planner
+├── planning/                      ← diagnostic quasi-static scans (not primary planner)
 └── verify/                        ← verification and debug scripts
 ```
 
@@ -37,7 +39,7 @@ Stability margin analysis, ABAD gamma scans, gap crossing analysis, and upper-re
 | `s4_support_gamma_scan.py` | Gamma scan for S4 (upside-down) support polygon |
 | `extended_gamma_analysis.py` | Extended ABAD gamma analysis |
 | `independent_gamma_scan.py` | Per-leg independent gamma sweep |
-| `quasi_static_gap_analysis.py` | Gap-crossing quasi-static analysis |
+| `quasi_static_gap_analysis.py` | Diagnostic gap-crossing analysis for scoring manual keyframes |
 | `gap1_crossing_analysis.py` | Analysis of gap-1 transitions |
 | `floating_leg_com_analysis.py` | CoM analysis with floating leg |
 | `full_scan_all_same.py` | Full scan with symmetric leg configs |
@@ -51,7 +53,7 @@ Stability margin analysis, ABAD gamma scans, gap crossing analysis, and upper-re
 | Script | Purpose |
 |--------|---------|
 | `plot_collision_model.py` | 3D visualisation of the collision model |
-| `plot_recovery_strategy.py` | Recovery strategy animation/plot |
+| `plot_recovery_strategy.py` | Legacy quasi-static recovery strategy plot; use as diagnostic visualization only |
 
 ---
 
@@ -59,7 +61,7 @@ Stability margin analysis, ABAD gamma scans, gap crossing analysis, and upper-re
 
 | Script | Purpose |
 |--------|---------|
-| `quasi_static_path_planner.py` | Quasi-static path planner for self-righting |
+| `quasi_static_path_planner.py` | Archived/diagnostic Roll × γ × θ scan; not the primary planner |
 
 ---
 
