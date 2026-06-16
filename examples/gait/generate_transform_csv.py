@@ -22,6 +22,74 @@ import numpy as np
 LEG_NAMES = ("FL", "FR", "RR", "RL")
 
 
+def _get_safety_limits_deg():
+    """Get actuator safety limits in degrees.
+
+    Returns:
+        dict: Limit ranges for theta, beta, and gamma in degrees.
+    """
+    from legwheel.config import RobotParams
+
+    return {
+        "theta": (RobotParams.MIN_THETA_DEG, RobotParams.MAX_THETA_DEG),
+        "beta": (-RobotParams.BETA_MAX_DEG, RobotParams.BETA_MAX_DEG),
+        "gamma": (-RobotParams.GAMMA_MAX_DEG, RobotParams.GAMMA_MAX_DEG),
+    }
+
+
+def _as_degrees(values, unit):
+    """Represent input angles in degrees for validation.
+
+    Args:
+        values (list[float]): Angle values.
+        unit (str): Input angle unit, either ``deg`` or ``rad``.
+
+    Returns:
+        np.ndarray: Angle values in degrees.
+    """
+    arr = np.asarray(values, dtype=float)
+    if unit == "rad":
+        return np.rad2deg(arr)
+    return arr
+
+
+def validate_pose_limits(theta, beta, gamma, unit="deg"):
+    """Validate actuator target values against conservative hardware limits.
+
+    Args:
+        theta (list[float]): Extension actuator values for FL, FR, RR, RL.
+        beta (list[float]): Swing actuator values for FL, FR, RR, RL.
+        gamma (list[float]): Hip-roll / ABAD actuator values for FL, FR, RR, RL.
+        unit (str): Input angle unit, either ``deg`` or ``rad``.
+
+    Raises:
+        ValueError: If any actuator target is outside the configured safety limits.
+    """
+    limits = _get_safety_limits_deg()
+    commands = {
+        "theta": _as_degrees(theta, unit),
+        "beta": _as_degrees(beta, unit),
+        "gamma": _as_degrees(gamma, unit),
+    }
+
+    errors = []
+    for joint_name, values in commands.items():
+        lower, upper = limits[joint_name]
+        if values.shape != (4,):
+            errors.append("{} must contain exactly four values".format(joint_name))
+            continue
+        for leg_name, value in zip(LEG_NAMES, values):
+            if value < lower or value > upper:
+                errors.append(
+                    "{}_{}={:.3f} deg outside [{:.3f}, {:.3f}] deg".format(
+                        leg_name, joint_name, value, lower, upper
+                    )
+                )
+
+    if errors:
+        raise ValueError("Actuator safety check failed: " + "; ".join(errors))
+
+
 def _convert_angles(values, unit):
     """Convert angle values to radians.
 
@@ -105,6 +173,9 @@ def generate_transform_csv(
     start_theta = start_theta if start_theta is not None else [17.0, 17.0, 17.0, 17.0]
     start_beta = start_beta if start_beta is not None else [0.0, 0.0, 0.0, 0.0]
     start_gamma = start_gamma if start_gamma is not None else [0.0, 0.0, 0.0, 0.0]
+
+    validate_pose_limits(start_theta, start_beta, start_gamma, unit=unit)
+    validate_pose_limits(target_theta, target_beta, target_gamma, unit=unit)
 
     start_pose = build_hw_pose(start_theta, start_beta, start_gamma, unit=unit)
     target_pose = build_hw_pose(target_theta, target_beta, target_gamma, unit=unit)

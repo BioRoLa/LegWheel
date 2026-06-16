@@ -162,6 +162,43 @@ def cmd_generate(args):
 
     print("⚠️  Warning: direct import of calculate module failed, ensure you are running from source repo or package has shipped 'examples'.")
 
+def cmd_transform(args):
+    import os
+    import sys
+
+    examples_gait_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "gait")
+    )
+    if os.path.isdir(examples_gait_dir):
+        sys.path.append(examples_gait_dir)
+        try:
+            from generate_transform_csv import generate_transform_csv
+
+            filepath = generate_transform_csv(
+                target_theta=args.theta,
+                target_beta=args.beta,
+                target_gamma=args.gamma,
+                start_theta=args.start_theta,
+                start_beta=args.start_beta,
+                start_gamma=args.start_gamma,
+                unit=args.unit,
+                duration=args.duration,
+                hold_time=args.hold,
+                dt=args.dt,
+                output_path=args.output,
+            )
+            print("[SUCCESS] Generated actuator transform CSV")
+            print(f"Saved to: {filepath}")
+            return
+        except ValueError as exc:
+            print(f"❌ ERROR: {exc}")
+            sys.exit(2)
+        except ImportError:
+            pass
+
+    print("⚠️  Warning: could not import examples/gait/generate_transform_csv.py")
+
+
 def cmd_ui(args):
     import os
     import sys
@@ -171,6 +208,27 @@ def cmd_ui(args):
         subprocess.run([sys.executable, script_path])
     else:
         print(f"⚠️  Warning: Could not find {script_path}")
+
+
+def cmd_transform_ui(args):
+    import os
+    import sys
+    import subprocess
+
+    script_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "examples",
+            "gait",
+            "generate_transform_csv_ui.py",
+        )
+    )
+    if os.path.isfile(script_path):
+        subprocess.run([sys.executable, script_path])
+    else:
+        print(f"⚠️  Warning: Could not find {script_path}")
+
 
 def cmd_view(args):
     import os
@@ -216,8 +274,57 @@ def main():
     parser_gen.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
     parser_gen.add_argument("-o", "--outdir", type=str, default="outputs/csv", help="Output directory")
 
+    # Subcommand: transform
+    parser_transform = subparsers.add_parser(
+        'transform', help='產生單純致動器定位 transform CSV'
+    )
+    parser_transform.add_argument(
+        "--theta", nargs=4, type=float, required=True, help="Target theta for FL FR RR RL"
+    )
+    parser_transform.add_argument(
+        "--beta", nargs=4, type=float, required=True, help="Target beta for FL FR RR RL"
+    )
+    parser_transform.add_argument(
+        "--gamma", nargs=4, type=float, required=True, help="Target gamma for FL FR RR RL"
+    )
+    parser_transform.add_argument(
+        "--start-theta",
+        nargs=4,
+        type=float,
+        default=[17.0, 17.0, 17.0, 17.0],
+        help="Start theta for FL FR RR RL",
+    )
+    parser_transform.add_argument(
+        "--start-beta",
+        nargs=4,
+        type=float,
+        default=[0.0, 0.0, 0.0, 0.0],
+        help="Start beta for FL FR RR RL",
+    )
+    parser_transform.add_argument(
+        "--start-gamma",
+        nargs=4,
+        type=float,
+        default=[0.0, 0.0, 0.0, 0.0],
+        help="Start gamma for FL FR RR RL",
+    )
+    parser_transform.add_argument(
+        "--unit", choices=("deg", "rad"), default="deg", help="Input angle unit"
+    )
+    parser_transform.add_argument(
+        "--duration", type=float, default=5.0, help="Transform duration (s)"
+    )
+    parser_transform.add_argument(
+        "--hold", type=float, default=0.0, help="Final target hold time (s)"
+    )
+    parser_transform.add_argument("--dt", type=float, default=0.001, help="Time step (s)")
+    parser_transform.add_argument("-o", "--output", default=None, help="Output CSV path")
+
     # Subcommand: ui
     parser_ui = subparsers.add_parser('ui', help='開啟互動式 CSV 生成器 (Tkinter UI)')
+
+    # Subcommand: transform-ui
+    subparsers.add_parser('transform-ui', help='開啟致動器定位 CSV 生成器 (Tkinter UI)')
 
     # Subcommand: view
     parser_view = subparsers.add_parser('view', help='開啟 3D 視覺化工具來播放 CSV 軌跡')
@@ -236,8 +343,12 @@ def main():
         cmd_ik(args)
     elif args.command == 'generate':
         cmd_generate(args)
+    elif args.command == 'transform':
+        cmd_transform(args)
     elif args.command == 'ui':
         cmd_ui(args)
+    elif args.command == 'transform-ui':
+        cmd_transform_ui(args)
     elif args.command == 'view':
         cmd_view(args)
 
