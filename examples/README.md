@@ -66,6 +66,20 @@ To keep the `self_righting/` page readable, use this grouping:
   - `verify_phase3_minimal.py`
   - `verify_phase3_quick.py`
 
+## Optional Plotly Viewer
+
+The first Plotly-based viewer lives under `render/` because it renders the full robot rather
+than a single example trajectory:
+
+```bash
+uv sync --extra plotly
+uv run python render/plotly_corgi_robot.py \
+  --theta 75 --beta 0 --gamma 0 \
+  --html outputs/plotly/corgi_robot.html
+```
+
+This is an optional interactive HTML backend. Existing Matplotlib examples remain available.
+
 ## Notes
 
 - The current structure intentionally keeps script paths stable.

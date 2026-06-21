@@ -54,6 +54,26 @@ uv run legwheel generate --gait Walk --vx 0.1 --cycles 5
 
 ---
 
+## Plotly Viewer (Optional)
+
+Install the optional Plotly backend first:
+
+```bash
+uv sync --extra plotly
+```
+
+Generate an interactive 3D robot HTML viewer:
+
+```bash
+uv run python render/plotly_corgi_robot.py \
+  --theta 75 --beta 0 --gamma 0 \
+  --html outputs/plotly/corgi_robot.html
+```
+
+Use `--show` to open the figure in a browser after writing the HTML file.
+
+---
+
 ## Python API
 
 ```python

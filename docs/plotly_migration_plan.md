@@ -232,6 +232,8 @@ cd LegWheel && uv run python -c "from legwheel.visualization.plotly_renderer imp
 
 ## Task 4: Add static Plotly Corgi robot viewer
 
+**Status:** Implemented as `LegWheel/render/plotly_corgi_robot.py` with HTML export and optional browser display.
+
 **Files:**
 
 - Add: `LegWheel/render/plotly_corgi_robot.py`
