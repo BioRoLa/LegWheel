@@ -68,27 +68,35 @@ To keep the `self_righting/` page readable, use this grouping:
 
 ## Optional Plotly Viewer
 
-The first Plotly-based viewer lives under `render/` because it renders the full robot rather
-than a single example trajectory:
+Install once, then use via CLI:
 
 ```bash
 uv sync --extra plotly
-uv run python render/plotly_corgi_robot.py \
-  --theta 75 --beta 0 --gamma 0 \
-  --html outputs/plotly/corgi_robot.html
 ```
 
-Plotly CSV trajectory viewer:
+**Robot 3D viewer:**
 
 ```bash
-uv sync --extra plotly
-uv run python examples/gait/csv_viewer_plotly.py outputs/csv/<trajectory>.csv \
-  --html outputs/plotly/gait_viewer.html
+uv run python -m legwheel.cli render --theta 75 --beta 0 --gamma 0 \
+  --html outputs/plotly/corgi_robot.html --show
 ```
 
-Use `--frame-step` and `--max-frames` for large hardware CSV files.
+**Gait CSV trajectory viewer** (frame slider + play/pause):
 
-This is an optional interactive HTML backend. Existing Matplotlib examples remain available.
+```bash
+uv run python -m legwheel.cli view outputs/csv/<trajectory>.csv \
+  --backend plotly --html outputs/plotly/gait_viewer.html \
+  --frame-step 10 --max-frames 200 --show
+```
+
+The underlying package modules are importable directly for scripting:
+
+```python
+from legwheel.visualization.plotly_robot import build_figure
+from legwheel.visualization.plotly_csv_viewer import build_figure as csv_build_figure
+```
+
+This is an optional interactive HTML backend. Existing Matplotlib examples remain unchanged.
 
 ## Notes
 

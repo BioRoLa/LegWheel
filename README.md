@@ -62,24 +62,31 @@ Install the optional Plotly backend first:
 uv sync --extra plotly
 ```
 
-Generate an interactive 3D robot HTML viewer:
+**Robot 3D viewer** — static snapshot of the Corgi mechanism at given joint angles:
 
 ```bash
-uv run python render/plotly_corgi_robot.py \
-  --theta 75 --beta 0 --gamma 0 \
-  --html outputs/plotly/corgi_robot.html
+uv run python -m legwheel.cli render --theta 75 --beta 0 --gamma 0 \
+  --html outputs/plotly/corgi_robot.html --show
 ```
 
-Use `--show` to open the figure in a browser after writing the HTML file.
-
-Generate an interactive gait CSV trajectory HTML viewer:
+**Gait CSV trajectory viewer** — animated frame slider over a hardware CSV:
 
 ```bash
-uv run python examples/gait/csv_viewer_plotly.py outputs/csv/<trajectory>.csv \
-  --html outputs/plotly/gait_viewer.html
+uv run python -m legwheel.cli view outputs/csv/<trajectory>.csv \
+  --backend plotly --html outputs/plotly/gait_viewer.html \
+  --frame-step 10 --max-frames 200 --show
 ```
 
-Use `--frame-step` and `--max-frames` to keep large CSV files responsive.
+Both commands write a standalone HTML file and optionally open it in the browser (`--show`). Use `--frame-step` and `--max-frames` to keep large CSV files responsive.
+
+> **Note:** On `fuseblk` mounts (e.g. Windows NTFS drives mounted in WSL), use `uv run python -m legwheel.cli` instead of `uv run legwheel` — the filesystem does not preserve executable bits on console scripts.
+
+**Matplotlib vs Plotly responsibilities:**
+
+| Backend | Use for |
+|---|---|
+| Matplotlib (default) | Static publication figures, legacy scripts, animation export |
+| Plotly | Interactive 3D inspection, HTML sharing, trajectory slider |
 
 ---
 
@@ -120,7 +127,7 @@ LegWheel/
 │   │   ├── corgi_robot.py      # Full 4-leg robot
 │   │   └── collision_model.py  # 24-point bounding volume
 │   ├── planners/               # Trajectory & gait generators
-│   ├── visualization/          # 2D PlotLeg engine
+│   ├── visualization/          # PlotLeg (2D) + Plotly robot/CSV viewers
 │   ├── config/                 # RobotParams, GaitParams
 │   └── cli.py
 │
