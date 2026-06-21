@@ -12,7 +12,7 @@ class LegModel:
     2D Kinematics model for the Leg-Wheel mechanism.
     Handles joint positions calculation and rim point mapping.
     """
-    def __init__(self):
+    def __init__(self, g_offset=0.0):
         #### Constant values from Config ####
         self.max_theta = np.deg2rad(RobotParams.MAX_THETA_DEG)
         self.min_theta = np.deg2rad(RobotParams.MIN_THETA_DEG)
@@ -26,6 +26,11 @@ class LegModel:
         self.r = 0.019 # Default linkage radius
         self.radius = self.R + self.r
         
+        # G point structural offset (positive = toward origin, shortens ring arm by this amount)
+        self.g_offset = g_offset
+        # Lower rim arc half-width override (None = use self.r, the default)
+        self.lower_rim_offset = None
+
         # Foot design parameters
         self.foot_offset = 0.02225  # 22.25 mm
         self.tyre_thickness = 0.01225 # 12.25 mm
@@ -92,13 +97,16 @@ class LegModel:
             self.C_l = self.B_l + (self.D_l - self.B_l) * np.exp( -1j*(self.ang_DBC) ) * (self.l3 / self.l_BD)
             self.F_l = self.C_l + (self.B_l - self.C_l) * np.exp( -1j*(self.ang_BCF) ) * (self.l7 / self.l3)
             self.ang_OGF = np.arcsin(np.abs(self.F_l.imag) / self.l8)
-            self.G = self.F_l.real - self.l8 * np.cos(self.ang_OGF)
+            G_mech = self.F_l.real - self.l8 * np.cos(self.ang_OGF)  # linkage-determined G (no offset)
+            # g_offset shifts G toward origin; O_r compensates so wheel center is unchanged.
+            self.G = G_mech + self.g_offset
             self.U_l = self.B_l + (self.C_l - self.B_l) * np.exp( 1j*(self.ang_UBC) ) * (self.R / self.l3)
-            self.L_l = self.F_l + (self.G - self.F_l) * np.exp( 1j*(self.ang_LFG) ) * (self.R / self.l8)
+            # L uses G_mech so arc curvature is independent of g_offset
+            self.L_l = self.F_l + (G_mech - self.F_l) * np.exp( 1j*(self.ang_LFG) ) * (self.R / self.l8)
             self.H_l = self.U_l + (self.B_l - self.U_l) * np.exp( -1j*(self.theta0) )
-            
-            # Foot characteristics
-            self.O_r = self.G.real + self.R
+
+            # Foot characteristics — O_r stays fixed by subtracting g_offset from the arm
+            self.O_r = self.G.real + (self.R - self.g_offset)
             self.I_l = self.O_r + (self.R + self.foot_offset) * np.exp( 1j*(np.deg2rad(180-40)) )
             self.ang_OC = np.angle(self.C_l)
             self.J_l = self.U_l + (self.R + self.foot_offset) * np.exp( 1j*(np.deg2rad(140)+np.angle(self.H_l - self.U_l)))

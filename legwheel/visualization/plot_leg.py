@@ -10,8 +10,8 @@ class PlotLeg(LegModel):
     Visualization tool for the Leg-Wheel mechanism.
     Inherits kinematics from LegModel and provides Matplotlib plotting.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, g_offset=0.0):
+        super().__init__(g_offset=g_offset)
         # Origin of leg in plot coordinate system
         self.O = np.array([0, 0])
         # Inner class to manage geometric shapes
@@ -62,10 +62,15 @@ class PlotLeg(LegModel):
             lm = self.leg_model
             # Arcs
             c = 0.0012 # Clearance
+            lr_off = (lm.lower_rim_offset if lm.lower_rim_offset is not None else lm.r) - c
             self.upper_rim_r = self.RimObj(*self._make_arc(lm.F_r, lm.H_r, lm.U_r, lm.r-c, 'Upper_Rim'))
             self.upper_rim_l = self.RimObj(*self._make_arc(lm.H_l, lm.F_l, lm.U_l, lm.r-c, 'Upper_Rim'))
-            self.lower_rim_r = self.RimObj(*self._make_arc(lm.G,   lm.F_r, lm.L_r, lm.r-c, 'Lower_Rim'))
-            self.lower_rim_l = self.RimObj(*self._make_arc(lm.F_l, lm.G,   lm.L_l, lm.r-c, 'Lower_Rim'))
+            # lower_rim_r: start angle from G (shifted), but radius from |F_r - L_r| = R
+            # This matches lower_rim_l which uses |F_l - L_l| = R, keeping both arcs symmetric.
+            _fr, _lr = self._to_xy(lm.F_r), self._to_xy(lm.L_r)
+            self.lower_rim_r = self.RimObj(*self._make_arc(lm.G, lm.F_r, lm.L_r, lr_off, 'Lower_Rim',
+                                                            radius=float(np.linalg.norm(_fr - _lr))))
+            self.lower_rim_l = self.RimObj(*self._make_arc(lm.F_l, lm.G,   lm.L_l, lr_off,  'Lower_Rim'))
             self.foot_rim    = self.RimObj(*self._make_arc(lm.I_l, lm.I_r, lm.O_r, lm.tyre_thickness, 'Foot_Rim'))
             self.upper_rim_r_f = self.RimObj(*self._make_arc(lm.J_r, lm.H_extend_r, lm.U_r, lm.tyre_thickness-c, 'Upper_Tyre', z_off=0.0002))
             self.upper_rim_l_f = self.RimObj(*self._make_arc(lm.H_extend_l, lm.J_l, lm.U_l, lm.tyre_thickness-c, 'Upper_Tyre', z_off=0.0002))
@@ -76,7 +81,7 @@ class PlotLeg(LegModel):
             self.lower_joint_r = self._make_circle(lm.F_r, lm.r, 'Lower_Rim')
             self.lower_joint_l = self._make_circle(lm.F_l, lm.r, 'Lower_Rim')
             self.G_joint       = self._make_circle(lm.G,   lm.r, 'Foot_Rim')
-            self.foot_joint    = self._make_circle(lm.G,   lm.foot_offset + lm.tyre_thickness, 'Foot_Rim')
+            self.foot_joint    = self._make_circle(lm.G,   lm.foot_offset + lm.tyre_thickness + lm.g_offset, 'Foot_Rim')
             self.I_joint_l     = self._make_circle(lm.I_l, lm.tyre_thickness, 'Foot_Rim')
             self.I_joint_r     = self._make_circle(lm.I_r, lm.tyre_thickness, 'Foot_Rim')
             self.J_joint_l     = self._make_circle(lm.J_l, lm.tyre_thickness, 'Upper_Tyre', z_off=0.0002)
@@ -98,11 +103,11 @@ class PlotLeg(LegModel):
                 return np.array([p.real, p.imag])
             return np.array(p)
 
-        def _make_arc(self, p1, p2, o, offset, color_key, z_off=0.0):
+        def _make_arc(self, p1, p2, o, offset, color_key, z_off=0.0, radius=None):
             p1, p2, o = self._to_xy(p1), self._to_xy(p2), self._to_xy(o)
             start = np.degrees(np.arctan2((p1-o)[1], (p1-o)[0]))
             end = np.degrees(np.arctan2((p2-o)[1], (p2-o)[0]))
-            radius = np.linalg.norm(p1-o)
+            radius = np.linalg.norm(p1-o) if radius is None else radius
             color = self.color_label[color_key]
             
             # Standard matplotlib Arc/Wedge
