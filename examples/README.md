@@ -66,6 +66,38 @@ To keep the `self_righting/` page readable, use this grouping:
   - `verify_phase3_minimal.py`
   - `verify_phase3_quick.py`
 
+## Optional Plotly Viewer
+
+Install once, then use via CLI:
+
+```bash
+uv sync --extra plotly
+```
+
+**Robot 3D viewer:**
+
+```bash
+uv run python -m legwheel.cli render --theta 75 --beta 0 --gamma 0 \
+  --html outputs/plotly/corgi_robot.html --show
+```
+
+**Gait CSV trajectory viewer** (frame slider + play/pause):
+
+```bash
+uv run python -m legwheel.cli view outputs/csv/<trajectory>.csv \
+  --backend plotly --html outputs/plotly/gait_viewer.html \
+  --frame-step 10 --max-frames 200 --show
+```
+
+The underlying package modules are importable directly for scripting:
+
+```python
+from legwheel.visualization.plotly_robot import build_figure
+from legwheel.visualization.plotly_csv_viewer import build_figure as csv_build_figure
+```
+
+This is an optional interactive HTML backend. Existing Matplotlib examples remain unchanged.
+
 ## Notes
 
 - The current structure intentionally keeps script paths stable.

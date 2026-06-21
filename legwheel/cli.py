@@ -232,13 +232,73 @@ def cmd_transform_ui(args):
 
 def cmd_view(args):
     import os
-    import sys
     import subprocess
-    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'examples', 'csv_viewer.py'))
-    if os.path.isfile(script_path):
-        subprocess.run([sys.executable, script_path, args.csv_file])
+    backend = getattr(args, "backend", "matplotlib")
+    if backend == "plotly":
+        from legwheel.visualization.plotly_csv_viewer import (
+            build_figure,
+            load_hardware_csv,
+            select_frame_indices,
+        )
+        import numpy as np
+
+        data = load_hardware_csv(args.csv_file)
+        frame_step = getattr(args, "frame_step", 20)
+        max_frames = getattr(args, "max_frames", 200)
+        frame_indices = select_frame_indices(data.shape[0], frame_step, max_frames)
+        csv_name = os.path.basename(args.csv_file).replace(".csv", "")
+        print(f"Loaded {data.shape[0]} raw rows from {args.csv_file}")
+        print(f"Rendering {len(frame_indices)} Plotly frames")
+        figure = build_figure(data, frame_indices, title=f"Corgi CSV Trajectory Viewer: {csv_name}")
+        html_path = getattr(args, "html", "outputs/plotly/gait_viewer.html")
+        os.makedirs(os.path.dirname(html_path) or ".", exist_ok=True)
+        figure.write_html(html_path, include_plotlyjs="cdn", auto_open=False)
+        print(f"Saved Plotly CSV viewer -> {html_path}")
+        if getattr(args, "show", False):
+            figure.show()
     else:
-        print(f"⚠️  Warning: Could not find {script_path}")
+        script_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "examples", "gait", "csv_viewer.py")
+        )
+        if os.path.isfile(script_path):
+            subprocess.run([sys.executable, script_path, args.csv_file])
+        else:
+            print(f"⚠️  Warning: Could not find {script_path}")
+
+
+def cmd_render(args):
+    import os
+    import subprocess
+    import numpy as np
+
+    backend = getattr(args, "backend", "plotly")
+    theta = np.deg2rad(args.theta)
+    beta = np.deg2rad(args.beta)
+    gamma = np.deg2rad(args.gamma)
+
+    if backend == "plotly":
+        from legwheel.visualization.plotly_robot import build_figure
+
+        figure = build_figure(theta, beta, gamma)
+        html_path = getattr(args, "html", "outputs/plotly/corgi_robot.html")
+        os.makedirs(os.path.dirname(html_path) or ".", exist_ok=True)
+        figure.write_html(html_path, include_plotlyjs="cdn", auto_open=False)
+        print(f"Saved Plotly robot viewer -> {html_path}")
+        if getattr(args, "show", False):
+            figure.show()
+    else:
+        script_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "render", "plot_corgi_robot.py")
+        )
+        if os.path.isfile(script_path):
+            subprocess.run([
+                sys.executable, script_path,
+                "--theta", str(args.theta),
+                "--beta", str(args.beta),
+                "--gamma", str(args.gamma),
+            ])
+        else:
+            print(f"⚠️  Warning: Could not find {script_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="LegWheel 機器狗運動學 CLI 工具")
@@ -329,6 +389,32 @@ def main():
     # Subcommand: view
     parser_view = subparsers.add_parser('view', help='開啟 3D 視覺化工具來播放 CSV 軌跡')
     parser_view.add_argument('csv_file', type=str, help='要播放的 CSV 檔案路徑')
+    parser_view.add_argument(
+        '--backend', choices=['matplotlib', 'plotly'], default='matplotlib',
+        help='視覺化後端 (預設: matplotlib)'
+    )
+    parser_view.add_argument('--html', default='outputs/plotly/gait_viewer.html',
+                             help='Plotly HTML 輸出路徑 (plotly backend only)')
+    parser_view.add_argument('--frame-step', type=int, default=20,
+                             help='CSV row stride (plotly backend only)')
+    parser_view.add_argument('--max-frames', type=int, default=200,
+                             help='最大 rendered frames (plotly backend only)')
+    parser_view.add_argument('--show', action='store_true',
+                             help='在瀏覽器開啟 (plotly backend only)')
+
+    # Subcommand: render
+    parser_render = subparsers.add_parser('render', help='輸出 Corgi robot 3D 靜態視圖')
+    parser_render.add_argument('--theta', type=float, default=75.0, help='Theta (degrees)')
+    parser_render.add_argument('--beta', type=float, default=0.0, help='Beta (degrees)')
+    parser_render.add_argument('--gamma', type=float, default=0.0, help='Gamma (degrees)')
+    parser_render.add_argument(
+        '--backend', choices=['matplotlib', 'plotly'], default='plotly',
+        help='視覺化後端 (預設: plotly)'
+    )
+    parser_render.add_argument('--html', default='outputs/plotly/corgi_robot.html',
+                               help='Plotly HTML 輸出路徑 (plotly backend only)')
+    parser_render.add_argument('--show', action='store_true',
+                               help='在瀏覽器開啟 (plotly backend only)')
 
     args = parser.parse_args()
 
@@ -351,6 +437,8 @@ def main():
         cmd_transform_ui(args)
     elif args.command == 'view':
         cmd_view(args)
+    elif args.command == 'render':
+        cmd_render(args)
 
 if __name__ == "__main__":
 

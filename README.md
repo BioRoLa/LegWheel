@@ -31,8 +31,10 @@ uv run python examples/kinematics/basic_usage.py
 ```
 
 ### Requirements
-- Python >= 3.7
+- Python >= 3.10
 - NumPy, SciPy, Matplotlib, Pandas, Nlopt (pinned in `uv.lock`)
+- **Optional visualization backend**: Plotly 6.x via `uv sync --extra plotly`
+- **Optional notebook tools**: Jupyter via `uv sync --extra notebook`
 - **Optional**: [FFmpeg](https://ffmpeg.org/) — required for MP4 animation export
 
 ---
@@ -49,6 +51,42 @@ uv run legwheel ik --leg 0 --x 0.2 --y 0.1 --z -0.25
 # Generate hardware-ready trajectory CSV
 uv run legwheel generate --gait Walk --vx 0.1 --cycles 5
 ```
+
+---
+
+## Plotly Viewer (Optional)
+
+Install the optional Plotly backend first:
+
+```bash
+uv sync --extra plotly
+```
+
+**Robot 3D viewer** — static snapshot of the Corgi mechanism at given joint angles:
+
+```bash
+uv run python -m legwheel.cli render --theta 75 --beta 0 --gamma 0 \
+  --html outputs/plotly/corgi_robot.html --show
+```
+
+**Gait CSV trajectory viewer** — animated frame slider over a hardware CSV:
+
+```bash
+uv run python -m legwheel.cli view outputs/csv/<trajectory>.csv \
+  --backend plotly --html outputs/plotly/gait_viewer.html \
+  --frame-step 10 --max-frames 200 --show
+```
+
+Both commands write a standalone HTML file and optionally open it in the browser (`--show`). Use `--frame-step` and `--max-frames` to keep large CSV files responsive.
+
+> **Note:** On `fuseblk` mounts (e.g. Windows NTFS drives mounted in WSL), use `uv run python -m legwheel.cli` instead of `uv run legwheel` — the filesystem does not preserve executable bits on console scripts.
+
+**Matplotlib vs Plotly responsibilities:**
+
+| Backend | Use for |
+|---|---|
+| Matplotlib (default) | Static publication figures, legacy scripts, animation export |
+| Plotly | Interactive 3D inspection, HTML sharing, trajectory slider |
 
 ---
 
@@ -89,7 +127,7 @@ LegWheel/
 │   │   ├── corgi_robot.py      # Full 4-leg robot
 │   │   └── collision_model.py  # 24-point bounding volume
 │   ├── planners/               # Trajectory & gait generators
-│   ├── visualization/          # 2D PlotLeg engine
+│   ├── visualization/          # PlotLeg (2D) + Plotly robot/CSV viewers
 │   ├── config/                 # RobotParams, GaitParams
 │   └── cli.py
 │
