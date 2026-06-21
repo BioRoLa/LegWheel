@@ -31,7 +31,7 @@ uv run python examples/kinematics/basic_usage.py
 ```
 
 ### Requirements
-- Python >= 3.7
+- Python >= 3.10
 - NumPy, SciPy, Matplotlib, Pandas, Nlopt (pinned in `uv.lock`)
 - **Optional**: [FFmpeg](https://ffmpeg.org/) — required for MP4 animation export
 
