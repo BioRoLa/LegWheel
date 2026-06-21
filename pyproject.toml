@@ -36,7 +36,12 @@ dev = [
     "pytest>=6.0",
     "black>=21.0",
     "flake8>=3.9",
+]
+notebook = [
     "jupyter>=1.0",
+]
+plotly = [
+    "plotly[kaleido]>=6,<7",
 ]
 
 [project.urls]

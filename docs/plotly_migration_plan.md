@@ -49,7 +49,7 @@ Cons:
 - Changes the supported runtime baseline.
 - May affect older Docker, ROS, or lab machines.
 
-**Current branch decision:** Upgrade LegWheel to Python `>=3.10`. This makes Plotly 6.x compatible from a Python-version perspective, while Plotly itself should still be added later as an optional extra rather than a mandatory runtime dependency.
+**Current branch decision:** Upgrade LegWheel to Python `>=3.10` and add Plotly as an optional extra. Plotly remains outside mandatory runtime dependencies.
 
 ---
 
@@ -57,7 +57,7 @@ Cons:
 
 ### Dependency and documentation
 
-- `LegWheel/pyproject.toml`: add optional Plotly dependency group.
+- `LegWheel/pyproject.toml`: add optional Plotly dependency group (`plotly[kaleido]>=6,<7`).
 - `LegWheel/uv.lock`: update with `uv` after dependency changes.
 - `LegWheel/README.md`: document installation and usage.
 - `LegWheel/examples/README.md`: document Plotly examples.
@@ -88,7 +88,70 @@ Cons:
 
 ---
 
+## Optional dependency split candidates
+
+This section records which packages could reasonably become optional extras after the Python `>=3.10` baseline upgrade. The current implementation only adds the `plotly` extra; the other splits should be handled separately because they can affect imports and CLI behavior.
+
+### Keep in core dependencies
+
+| Package | Recommendation | Reason |
+|---|---|---|
+| `numpy` | Keep core | Used across almost every model, planner, utility, and example. It is fundamental to kinematics and trajectory computation. |
+| `scipy` | Keep core for now | `legwheel.models.leg_model` uses `scipy.optimize.fsolve`, and `legwheel.planners.com_stability` uses `ConvexHull` / `gaussian_filter1d`. Moving SciPy would require isolating optimization and stability features first. |
+| `nlopt` | Keep core for now, candidate for `planning` later | `legwheel.bezier.swing` imports `nlopt` directly and swing planning is part of gait generation. It can become optional only if swing planning imports are made lazy or if a fallback planner is added. |
+
+### Strong candidates for extras
+
+| Package | Proposed extra | Reason | Required refactor |
+|---|---|---|---|
+| `matplotlib` | `viz-mpl` or `matplotlib` | Used primarily by `legwheel.visualization`, `render/`, and many example/demo scripts. Core FK/IK can run without it if plotting imports are isolated. | Move top-level plotting imports out of core modules such as `trajectory_planning.py`, `gait_generator.py`, `bezier/bezier.py`, and `com_stability.py`, or make plotting methods lazy-import Matplotlib. |
+| `pandas` | `csv` or `export` | Used for CSV/dataframe export in gait utilities and legacy planners. Core kinematics does not require it. | Replace simple CSV writes with stdlib `csv` where practical, or lazy-import pandas only inside export methods. |
+| `plotly[kaleido]` | `plotly` | Interactive visualization and static export support. Not required for core kinematics or trajectory generation. | Already added as an optional extra with `plotly[kaleido]>=6,<7`. Future Plotly renderer should handle missing extra with a clear error. |
+| `jupyter` | `notebook` | Used for notebooks and exploratory analysis, not runtime. | Implemented: `jupyter>=1.0` is split from `dev` into the `notebook` extra. |
+
+### Possible future extra layout
+
+```toml
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black>=21.0",
+    "flake8>=3.9",
+]
+notebook = [
+    "jupyter>=1.0",
+]
+viz-mpl = [
+    "matplotlib>=3.3.0",
+]
+plotly = [
+    "plotly[kaleido]>=6,<7",
+]
+export = [
+    "pandas>=1.1.0",
+]
+planning = [
+    "nlopt>=2.6.0",
+]
+all = [
+    "legwheel[dev,notebook,viz-mpl,plotly,export,planning]",
+]
+```
+
+### Recommended staged split
+
+1. Keep `numpy`, `scipy`, and `nlopt` in core for now.
+2. Add only `plotly` extra first, because it is new and does not break existing imports. **Implemented.**
+3. Split `jupyter` out of `dev` into `notebook`, because it is low risk and reduces dev install weight. **Implemented.**
+4. Next candidate: split `pandas` into `export`, after CSV/export code paths use lazy imports or stdlib alternatives.
+5. Hardest candidate: split `matplotlib` into `viz-mpl`, because current plotting imports are spread across library modules, examples, and `render/` scripts.
+6. Defer `nlopt` split until planning APIs can handle missing optimization backend cleanly.
+
+---
+
 ## Task 1: Add optional Plotly dependency
+
+**Status:** Implemented on `feature/plotly-version-policy` after the Python `>=3.10` baseline commit.
 
 **Files:**
 
@@ -98,7 +161,7 @@ Cons:
 
 **Steps:**
 
-1. Add a `plotly` optional dependency group.
+1. Add a `plotly` optional dependency group with `plotly[kaleido]>=6,<7`.
 2. Update the lock file with `uv sync --extra plotly`.
 3. Document installation and a planned example command.
 
