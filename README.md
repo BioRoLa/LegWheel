@@ -72,6 +72,15 @@ uv run python render/plotly_corgi_robot.py \
 
 Use `--show` to open the figure in a browser after writing the HTML file.
 
+Generate an interactive gait CSV trajectory HTML viewer:
+
+```bash
+uv run python examples/gait/csv_viewer_plotly.py outputs/csv/<trajectory>.csv \
+  --html outputs/plotly/gait_viewer.html
+```
+
+Use `--frame-step` and `--max-frames` to keep large CSV files responsive.
+
 ---
 
 ## Python API

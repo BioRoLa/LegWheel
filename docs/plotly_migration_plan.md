@@ -313,6 +313,8 @@ cd LegWheel && uv run legwheel render --help
 
 ## Task 6: Add Plotly CSV trajectory viewer
 
+**Status:** Implemented as `LegWheel/examples/gait/csv_viewer_plotly.py` with HTML export, frame slider, play/pause controls, `--frame-step`, and `--max-frames`.
+
 **Files:**
 
 - Add: `LegWheel/examples/gait/csv_viewer_plotly.py`

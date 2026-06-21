@@ -78,6 +78,16 @@ uv run python render/plotly_corgi_robot.py \
   --html outputs/plotly/corgi_robot.html
 ```
 
+Plotly CSV trajectory viewer:
+
+```bash
+uv sync --extra plotly
+uv run python examples/gait/csv_viewer_plotly.py outputs/csv/<trajectory>.csv \
+  --html outputs/plotly/gait_viewer.html
+```
+
+Use `--frame-step` and `--max-frames` for large hardware CSV files.
+
 This is an optional interactive HTML backend. Existing Matplotlib examples remain available.
 
 ## Notes
