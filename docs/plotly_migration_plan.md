@@ -2,7 +2,9 @@
 
 **Goal:** Add Plotly as an interactive visualization backend for LegWheel without breaking the existing Matplotlib workflow.
 
-**Current state:** LegWheel currently uses Matplotlib for 2D linkage plots, 3D robot rendering, workspace diagnostics, CSV trajectory viewing, and animation scripts. Matplotlib remains valuable for static publication-oriented figures and legacy examples, while Plotly is attractive for interactive 3D inspection and HTML sharing.
+**Current state (updated 2026-06-21):** Plotly optional dependency is installed and verified. Package modules (`legwheel/visualization/plotly_robot.py`, `legwheel/visualization/plotly_csv_viewer.py`) are extracted and tested (7 tests pass). CLI wrappers (`render/plotly_corgi_robot.py`, `examples/gait/csv_viewer_plotly.py`) are thin entry points into those modules. Tasks 1, 4, and 6 are complete; the extraction step (new) is complete. Next milestone is CLI backend selection (Task 5).
+
+LegWheel currently uses Matplotlib for 2D linkage plots, 3D robot rendering, workspace diagnostics, CSV trajectory viewing, and animation scripts. Matplotlib remains valuable for static publication-oriented figures and legacy examples, while Plotly is attractive for interactive 3D inspection and HTML sharing.
 
 **Recommended direction:** Keep Matplotlib as the default/static backend and introduce Plotly as an optional interactive backend first. On the `feature/plotly-version-policy` branch, the LegWheel Python baseline is upgraded to Python `>=3.10`, which makes Plotly 6.x a viable future dependency while still avoiding a Plotly-only migration until the interactive workflow is proven useful.
 
@@ -180,83 +182,36 @@ cd LegWheel && uv run python -c "import kaleido"
 
 ## Task 2: Add renderer-neutral primitives
 
-**Files:**
-
-- Add: `LegWheel/legwheel/visualization/primitives.py`
-- Add: `LegWheel/tests/test_visualization_primitives.py`
-
-**Steps:**
-
-1. Define minimal primitive classes such as `Line3D`, `Point3D`, `Mesh3D`, and `FrameAxes`.
-2. Keep the API Python 3.7 compatible.
-3. Validate array shapes and raise `ValueError` for invalid geometry.
-
-**Verification:**
-
-```bash
-cd LegWheel && uv run pytest tests/test_visualization_primitives.py -q
-```
-
-**Risk:** Over-engineering the abstraction.
-
-**Mitigation:** Only model primitives required by the first Corgi robot viewer.
+**Status:** Deferred — replaced by script-first extraction (see below). The primitives abstraction (`Line3D`, `Point3D`, `Mesh3D`) was planned but skipped because the Plotly robot and CSV viewer were first built as standalone scripts and then extracted directly into package modules without a shared primitive layer. Revisit only if a third Plotly viewer needs to share geometry helpers with the existing two.
 
 ---
 
 ## Task 3: Add Plotly renderer
 
-**Files:**
-
-- Add: `LegWheel/legwheel/visualization/plotly_renderer.py`
-- Add: `LegWheel/tests/test_plotly_renderer.py`
-
-**Steps:**
-
-1. Convert primitives into Plotly `Scatter3d`, `Mesh3d`, or `Surface` traces.
-2. Provide `make_figure(primitives, title=None)`.
-3. Provide `save_html(fig, path, auto_open=False)`.
-4. If Plotly is missing, raise a clear error explaining to install the Plotly extra.
-
-**Verification:**
-
-```bash
-cd LegWheel && uv run pytest tests/test_plotly_renderer.py -q
-cd LegWheel && uv run python -c "from legwheel.visualization.plotly_renderer import make_figure; print('ok')"
-```
-
-**Risk:** Plotly 3D aspect ratio may not match Matplotlib exactly.
-
-**Mitigation:** Add visual comparison against the existing Matplotlib renderer during the spike.
+**Status:** Deferred — replaced by script-first extraction. Instead of a generic `plotly_renderer.py` layer, rendering logic lives directly in the specialized modules (`plotly_robot.py`, `plotly_csv_viewer.py`). Extract a shared renderer layer only when two or more viewers share enough trace-building code to justify the abstraction.
 
 ---
 
 ## Task 4: Add static Plotly Corgi robot viewer
 
-**Status:** Implemented as `LegWheel/render/plotly_corgi_robot.py` with HTML export and optional browser display.
+**Status:** Implemented and extracted into package module.
+
+- `LegWheel/render/plotly_corgi_robot.py` — thin CLI wrapper (HTML export, optional browser display).
+- `LegWheel/legwheel/visualization/plotly_robot.py` — extracted package module with reusable robot figure builder.
+- `LegWheel/tests/test_plotly_robot.py` — unit tests for frame selection, gamma parsing, and non-empty figure construction; all pass.
 
 **Files:**
 
-- Add: `LegWheel/render/plotly_corgi_robot.py`
+- Add: `LegWheel/render/plotly_corgi_robot.py` ✅
+- Add: `LegWheel/legwheel/visualization/plotly_robot.py` ✅
+- Add: `LegWheel/tests/test_plotly_robot.py` ✅
 - Reuse: `LegWheel/render/plot_corgi_robot.py`
 - Reuse: `LegWheel/legwheel/models/corgi_leg.py`
-
-**Steps:**
-
-1. Build chassis wireframe primitives.
-2. Use existing kinematics to generate four-leg linkage segments.
-3. Add optional collision/contact markers after the base robot view works.
-4. Support CLI arguments:
-   - `--theta`
-   - `--beta`
-   - `--gamma`
-   - `--html`
-   - `--show` / `--no-show`
-   - `--bounds`
 
 **Verification:**
 
 ```bash
-cd LegWheel && uv run python render/plotly_corgi_robot.py \
+cd LegWheel && uv run python -m legwheel.visualization.plotly_robot \
   --theta 75 --beta 0 --gamma 0 \
   --html outputs/plotly/corgi_robot.html \
   --no-show
@@ -264,15 +219,13 @@ cd LegWheel && uv run python render/plotly_corgi_robot.py \
 cd LegWheel && test -s outputs/plotly/corgi_robot.html
 ```
 
+> **Note:** On `fuseblk` mounts the filesystem does not preserve executable bits. Use `uv run python -m <module>` instead of the console script entry point when the script lacks execute permission.
+
 Backward compatibility check:
 
 ```bash
 cd LegWheel && uv run python render/plot_corgi_robot.py --theta 75 --no-show
 ```
-
-**Risk:** Existing `plot_leg_3d(ax, ...)` is Matplotlib-bound.
-
-**Mitigation:** Prefer existing geometry-returning helpers such as `get_detailed_linkage`; add a geometry helper only if necessary.
 
 ---
 
@@ -313,37 +266,32 @@ cd LegWheel && uv run legwheel render --help
 
 ## Task 6: Add Plotly CSV trajectory viewer
 
-**Status:** Implemented as `LegWheel/examples/gait/csv_viewer_plotly.py` with HTML export, frame slider, play/pause controls, `--frame-step`, and `--max-frames`.
+**Status:** Implemented and extracted into package module.
+
+- `LegWheel/examples/gait/csv_viewer_plotly.py` — thin CLI wrapper (HTML export, frame slider, play/pause, `--frame-step`, `--max-frames`, `--no-browser`).
+- `LegWheel/legwheel/visualization/plotly_csv_viewer.py` — extracted package module with reusable CSV row conversion and viewer builder.
+- `LegWheel/tests/test_plotly_csv_viewer.py` — unit tests for CSV row conversion, frame index selection, and non-empty figure construction; all pass.
 
 **Files:**
 
-- Add: `LegWheel/examples/gait/csv_viewer_plotly.py`
+- Add: `LegWheel/examples/gait/csv_viewer_plotly.py` ✅
+- Add: `LegWheel/legwheel/visualization/plotly_csv_viewer.py` ✅
+- Add: `LegWheel/tests/test_plotly_csv_viewer.py` ✅
 - Reuse: `LegWheel/examples/gait/csv_viewer.py`
 - Later modify: `LegWheel/legwheel/cli.py`
 
-**Steps:**
-
-1. Reuse CSV parsing and hardware-to-kinematics order conversion.
-2. Precompute foot traces as in the Matplotlib viewer.
-3. Generate Plotly frames and slider controls.
-4. Support:
-   - `--html`
-   - `--frame-step`
-   - `--max-frames`
-   - `--no-browser`
-
 **Verification:**
 
-Generate or select a hardware CSV, then run:
-
 ```bash
-cd LegWheel && uv run python examples/gait/csv_viewer_plotly.py \
+cd LegWheel && uv run python -m legwheel.visualization.plotly_csv_viewer \
   outputs/csv/<generated>.csv \
   --html outputs/plotly/gait_viewer.html \
   --no-browser
 
 cd LegWheel && test -s outputs/plotly/gait_viewer.html
 ```
+
+> **Note:** Same `fuseblk` console script caveat as Task 4 — use `uv run python -m` when executable bits are absent.
 
 **Risk:** Large Plotly HTML files for long trajectories.
 
@@ -440,15 +388,18 @@ cd LegWheel && uv run legwheel ik --leg 0 --x 0.2 --y 0.1 --z -0.25
 
 ## Recommended order
 
-1. Add optional Plotly dependency.
-2. Add renderer-neutral primitives.
-3. Add Plotly renderer.
-4. Add static Plotly Corgi robot HTML viewer.
-5. Review generated HTML manually.
-6. Add CLI backend integration.
-7. Add Plotly CSV trajectory viewer.
-8. Update docs and `legwheel-cli` skill.
-9. Optionally migrate workspace/envelope plots.
+Steps marked ✅ are complete; the rest are pending.
+
+1. ✅ Add optional Plotly dependency (Task 1).
+2. ~~Add renderer-neutral primitives (Task 2).~~ — Skipped; script-first extraction used instead.
+3. ~~Add Plotly renderer abstraction (Task 3).~~ — Deferred; see Task 3 note.
+4. ✅ Add static Plotly Corgi robot HTML viewer (Task 4).
+5. ✅ Extract viewer into `legwheel/visualization/plotly_robot.py` + tests.
+6. ✅ Add Plotly CSV trajectory viewer (Task 6).
+7. ✅ Extract viewer into `legwheel/visualization/plotly_csv_viewer.py` + tests.
+8. Add CLI backend selection (Task 5). ← **next milestone**
+9. Update docs and `legwheel-cli` skill (Task 8).
+10. Optionally migrate workspace/envelope plots (Task 7).
 
 ---
 
