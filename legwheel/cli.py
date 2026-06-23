@@ -199,6 +199,54 @@ def cmd_transform(args):
     print("⚠️  Warning: could not import examples/gait/generate_transform_csv.py")
 
 
+def cmd_lean(args):
+    """Generate a hardware lean/pose CSV directly via PosePlanner."""
+    import os
+    import sys
+
+    examples_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "examples", "gait")
+    )
+    if os.path.isdir(examples_dir):
+        sys.path.append(examples_dir)
+        try:
+            from generate_lean_csv import generate_lean_csv
+            generate_lean_csv(
+                roll_deg=args.roll,
+                pitch_deg=args.pitch,
+                yaw_deg=args.yaw,
+                stand_height=args.height,
+                height_compensation=args.compensation,
+                n_steps=args.steps,
+                return_to_neutral=not args.no_return,
+                dt=args.dt,
+                output_dir=args.outdir,
+                prep_time=args.prep,
+            )
+            return
+        except ImportError:
+            pass
+    print("⚠️  Warning: could not import examples/gait/generate_lean_csv.py")
+
+
+def cmd_lean_ui(args):
+    """Open the Tkinter lean-pose CSV generator UI."""
+    import os
+    import sys
+    import subprocess
+
+    script_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..", "examples", "gait", "generate_lean_csv_ui.py",
+        )
+    )
+    if os.path.isfile(script_path):
+        subprocess.run([sys.executable, script_path])
+    else:
+        print(f"⚠️  Warning: Could not find {script_path}")
+
+
 def cmd_ui(args):
     import os
     import sys
@@ -380,6 +428,31 @@ def main():
     parser_transform.add_argument("--dt", type=float, default=0.001, help="Time step (s)")
     parser_transform.add_argument("-o", "--output", default=None, help="Output CSV path")
 
+    # Subcommand: lean
+    parser_lean = subparsers.add_parser('lean', help='產生全身靜態 lean/pose 軌跡 CSV')
+    parser_lean.add_argument("--roll",  type=float, default=0.0,
+                             help="Target roll  (deg, + = left side up)")
+    parser_lean.add_argument("--pitch", type=float, default=0.0,
+                             help="Target pitch (deg, + = nose down)")
+    parser_lean.add_argument("--yaw",   type=float, default=0.0,
+                             help="Target yaw   (deg)")
+    parser_lean.add_argument("-z", "--height", type=float, default=0.30,
+                             help="Stand height (m)")
+    parser_lean.add_argument("--compensation", type=float, default=0.0,
+                             help="Height compensation (m/rad), use 0.15-0.2 for large angles")
+    parser_lean.add_argument("-n", "--steps", type=int, default=500,
+                             help="IK samples per ramp segment")
+    parser_lean.add_argument("--no-return", action="store_true",
+                             help="Skip return-to-neutral ramp")
+    parser_lean.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
+    parser_lean.add_argument("--prep", type=float, default=3.0,
+                             help="Prep sequence duration (s)")
+    parser_lean.add_argument("-o", "--outdir", type=str, default="outputs/csv",
+                             help="Output directory")
+
+    # Subcommand: lean-ui
+    subparsers.add_parser('lean-ui', help='開啟 Lean Pose CSV 生成器 (Tkinter UI)')
+
     # Subcommand: ui
     parser_ui = subparsers.add_parser('ui', help='開啟互動式 CSV 生成器 (Tkinter UI)')
 
@@ -429,6 +502,10 @@ def main():
         cmd_ik(args)
     elif args.command == 'generate':
         cmd_generate(args)
+    elif args.command == 'lean':
+        cmd_lean(args)
+    elif args.command == 'lean-ui':
+        cmd_lean_ui(args)
     elif args.command == 'transform':
         cmd_transform(args)
     elif args.command == 'ui':

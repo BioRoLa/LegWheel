@@ -153,10 +153,29 @@ class PosePlanner:
                     p_foot_B, guess_q=q_guess[i], rim_point=(0.0, 0.0)
                 )
             except RuntimeError:
-                # Warm-start guess may have led to a poor basin; retry from neutral.
-                q_result[i] = kin.inverse_kinematics(
-                    p_foot_B, guess_q=self._q_neutral[i], rim_point=(0.0, 0.0)
-                )
+                try:
+                    # Warm-start may have led to a poor basin; retry from neutral.
+                    q_result[i] = kin.inverse_kinematics(
+                        p_foot_B, guess_q=self._q_neutral[i], rim_point=(0.0, 0.0)
+                    )
+                except RuntimeError:
+                    # Target is near or outside workspace boundary.  Clamp to the
+                    # closest reachable point by interpolating toward the flat-body
+                    # foot target (zero rotation, same height — guaranteed reachable).
+                    p_flat_B = self._p_feet_W[i] - p_body_W   # no rotation
+                    p_clamped = 0.5 * (p_foot_B + p_flat_B)
+                    try:
+                        q_result[i] = kin.inverse_kinematics(
+                            p_clamped, guess_q=self._q_neutral[i], rim_point=(0.0, 0.0)
+                        )
+                        print(
+                            f"  ⚠ Leg {i}: clamped to 50% of requested lean "
+                            f"(target outside workspace). Use height_compensation "
+                            f"to reach larger lean angles."
+                        )
+                    except RuntimeError:
+                        q_result[i] = self._q_neutral[i].copy()
+                        print(f"  ⚠ Leg {i}: IK failed — using neutral pose.")
         return q_result
 
     # ------------------------------------------------------------------
