@@ -41,6 +41,10 @@ class CSVGeneratorUI(tk.Tk):
         self.var_cycles = tk.StringVar(value="10")
         self.var_dt = tk.StringVar(value="0.001")
         self.var_outdir = tk.StringVar(value="outputs/csv")
+        # Launch control
+        self.var_launch = tk.BooleanVar(value=False)
+        self.var_ramp_cycles = tk.StringVar(value="3")
+        self.var_ramp_floor = tk.StringVar(value="0.10")
 
         self.is_running = False
         self.proc_queue = queue.Queue()
@@ -90,6 +94,33 @@ class CSVGeneratorUI(tk.Tk):
         add_field("Resolution / dt (s):", self.var_dt, 9)
         add_field("Output Dir (-o):", self.var_outdir, 10)
 
+        # --- Launch Control Section ---
+        frame_launch = ttk.LabelFrame(self, text=" Launch Control ", padding=(15, 10))
+        frame_launch.pack(fill=tk.X, pady=(0, 12))
+
+        ttk.Checkbutton(frame_launch, text="Enable launch ramp",
+                        variable=self.var_launch,
+                        command=self._toggle_launch_fields).grid(
+            row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 6))
+
+        ttk.Label(frame_launch, text="Ramp cycles:").grid(
+            row=1, column=0, sticky=tk.W, pady=3)
+        self.ent_ramp_cycles = ttk.Entry(frame_launch, textvariable=self.var_ramp_cycles, width=8)
+        self.ent_ramp_cycles.grid(row=1, column=1, sticky=tk.W, padx=10)
+
+        ttk.Label(frame_launch, text="Ramp floor (0–1):").grid(
+            row=2, column=0, sticky=tk.W, pady=3)
+        self.ent_ramp_floor = ttk.Entry(frame_launch, textvariable=self.var_ramp_floor, width=8)
+        self.ent_ramp_floor.grid(row=2, column=1, sticky=tk.W, padx=10)
+
+        self.lbl_launch_hint = ttk.Label(
+            frame_launch,
+            text="e.g. 3 cycles, floor=0.1 → v ramps 10%→55%→100% of target",
+            foreground="gray")
+        self.lbl_launch_hint.grid(row=3, column=0, columnspan=2, sticky=tk.W)
+
+        self._toggle_launch_fields()   # set initial enabled state
+
         # --- Bottom Section: Action & Logs ---
         frame_bot = ttk.Frame(self)
         frame_bot.pack(fill=tk.BOTH, expand=True)
@@ -112,6 +143,11 @@ class CSVGeneratorUI(tk.Tk):
         # Log Text Box
         self.log_txt = tk.Text(frame_bot, height=12, bg="#1e1e1e", fg="#d4d4d4", font=("Consolas", 9))
         self.log_txt.pack(fill=tk.BOTH, expand=True)
+
+    def _toggle_launch_fields(self):
+        state = tk.NORMAL if self.var_launch.get() else tk.DISABLED
+        self.ent_ramp_cycles.config(state=state)
+        self.ent_ramp_floor.config(state=state)
 
     def log(self, text, clear=False):
         if clear:
@@ -169,8 +205,14 @@ class CSVGeneratorUI(tk.Tk):
             "-p", self.var_period.get(),
             "-c", self.var_cycles.get(),
             "-dt", self.var_dt.get(),
-            "-o", self.var_outdir.get()
+            "-o", self.var_outdir.get(),
         ]
+        if self.var_launch.get():
+            cmd += [
+                "--launch",
+                "--ramp-cycles", self.var_ramp_cycles.get(),
+                "--ramp-floor",  self.var_ramp_floor.get(),
+            ]
 
         self.is_running = True
         self.generation_started_at = time.time()

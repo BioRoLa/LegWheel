@@ -154,7 +154,10 @@ def cmd_generate(args):
                 period=args.period,
                 dt=args.dt,
                 n_cycles=args.cycles,
-                output_dir=args.outdir
+                output_dir=args.outdir,
+                with_launch=getattr(args, 'launch', False),
+                n_ramp=getattr(args, 'ramp_cycles', 3),
+                ramp_floor=getattr(args, 'ramp_floor', 0.1),
             )
             return
         except ImportError:
@@ -381,6 +384,12 @@ def main():
     parser_gen.add_argument("-c", "--cycles", type=int, default=10, help="Number of gait cycles")
     parser_gen.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
     parser_gen.add_argument("-o", "--outdir", type=str, default="outputs/csv", help="Output directory")
+    parser_gen.add_argument("--launch", action="store_true",
+                            help="Prepend launch ramp sequence (phase-shifted to all-stance start)")
+    parser_gen.add_argument("--ramp-cycles", type=int, default=3,
+                            help="Number of velocity-ramp cycles before steady gait")
+    parser_gen.add_argument("--ramp-floor", type=float, default=0.1,
+                            help="First ramp cycle velocity fraction (default: 0.1 = 10%%)")
 
     # Subcommand: transform
     parser_transform = subparsers.add_parser(
