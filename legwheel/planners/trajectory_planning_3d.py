@@ -119,18 +119,30 @@ class TrajectoryPlanner3D:
         self.D_swing = np.abs(
             self.velocity[0]) * self.T * (1 - self.stance_duty)
 
-        # --- Lateral (Y-axis) initial ABAD angle ---
-        # Symmetric lateral motion: Δy = 2 * H_true * sin(γ₀)
-        # where H_true is the full distance from hip to contact point
+        # --- Lateral (Y-axis) ABAD sweep ---
+        # Lateral travel comes from the ABAD tilt sweeping the contact: Δy = H·Δsin(γ).
+        #
+        # ONE-SIDED sweep (not symmetric ±γ₀ about upright). The leg touches down at
+        # the outer tilt extreme γ_td and rolls inward to a small floor γ_floor > 0,
+        # so the LOADED wheel never crosses γ = 0. Crossing upright would flip the
+        # ground-contact tread edge (center of pressure jumps side to side) at mid-
+        # stance, which causes wobble. Staying one-sided keeps contact on a single
+        # tread edge for the whole stance.
+        #
+        #   Δy = H·(sin γ_td − sin γ_floor)  ⇒  sin γ_td = sin γ_floor + Δy / H
+        #
+        # γ0 (symmetric half-amplitude) is retained for reference / workspace ratios.
         v_y = np.abs(self.velocity[1])
-        # Total lateral travel during stance
-        D_lateral = v_y * self.T * self.stance_duty
+        D_lateral = v_y * self.T * self.stance_duty   # total lateral travel during stance
         H_true = self.H_hip  # Hip to ground (full length)
+        self.gamma_floor = np.deg2rad(RobotParams.GAMMA_FLOOR_DEG)
         if D_lateral > 0 and H_true > 0:
-            sin_arg = np.clip(D_lateral / (2 * H_true), -1.0, 1.0)
-            self.gamma0 = np.arcsin(sin_arg)
+            self.gamma0 = np.arcsin(np.clip(D_lateral / (2 * H_true), -1.0, 1.0))
+            sin_td = np.clip(np.sin(self.gamma_floor) + D_lateral / H_true, -1.0, 1.0)
+            self.gamma_td = np.arcsin(sin_td)
         else:
             self.gamma0 = 0.0
+            self.gamma_td = 0.0
 
         # --- Swing velocity scaling ---
         # Instead of reducing step_height (which clips clearance), we scale
@@ -140,7 +152,9 @@ class TrajectoryPlanner3D:
             self.swing_velocity_scale = self.input_step_scale
         else:
             beta_ratio = abs(self.beta0) / BETA_MAX
-            gamma_ratio = abs(self.gamma0) / \
+            # One-sided sweep peaks at γ_td (≈2·γ0), so workspace usage is measured
+            # against the touchdown extreme, not the symmetric half-amplitude.
+            gamma_ratio = abs(self.gamma_td) / \
                 GAMMA_MAX if GAMMA_MAX > 0 else 0.0
             usage = max(beta_ratio, gamma_ratio)
             threshold = RobotParams.STEP_USAGE_THRESHOLD
@@ -176,16 +190,15 @@ class TrajectoryPlanner3D:
         stance_duration = self.T * self.stance_duty
 
         # Touchdown: foot starts "ahead" of the body in both X and Y.
-        # For X: beta starts at -beta0 (foot forward), sweeps to +beta0 (foot backward)
-        # For Y: gamma starts at ±gamma0 and sweeps symmetrically THROUGH zero to ∓gamma0.
-        #   The sign MUST be mirrored per leg side (self.kin.sy): left and right ABAD
-        #   are mirror-imaged, so for a given body +Y velocity the left leg sweeps γ
-        #   one way and the right leg the opposite way. Using the same sign for all
-        #   legs (the old bug) made one side sweep symmetrically about zero (full
-        #   lateral travel) while the other side swept away from zero (tiny travel),
-        #   so a diagonal stance pair moved unequal lateral distances → body yaw.
+        # For X: beta starts at -beta0 (foot forward), sweeps to +beta0 (foot backward).
+        # For Y: gamma starts at the outer tilt extreme γ_td and rolls ONE-SIDED inward
+        #   toward the floor γ_floor (never crossing upright under load — see γ_td above).
+        #   The sign MUST be mirrored per leg side (self.kin.sy): left and right ABAD are
+        #   mirror-imaged, so for a given body +Y velocity the left leg sweeps γ one way
+        #   and the right leg the opposite way. Using the same sign for all legs (the old
+        #   bug) made a diagonal stance pair cover unequal lateral distances → body yaw.
         gamma_sign = (1.0 if self.velocity[1] >= 0 else -1.0) * self.kin.sy
-        q = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma0])
+        q = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma_td])
         self.cmd.append(q.tolist())
 
         for t in np.arange(self.dt, stance_duration, self.dt):
@@ -209,7 +222,7 @@ class TrajectoryPlanner3D:
         #   5. IK tracks all swing points at fixed alpha_td (no interpolation)
 
         # --- Step 1: Touchdown target ---
-        q_td = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma0])
+        q_td = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma_td])
         alpha_td, _ = self.kin.foot_rim_contact_fk(*q_td)
         p_td = self.kin.forward_kinematics(*q_td, alpha=alpha_td, w=0.0)
 

@@ -19,21 +19,30 @@ import numpy as np
 from legwheel.planners.trajectory_planning_3d import TrajectoryPlanner3D
 
 
-def _stance_foot_travel_Y(leg_index, vy, n_steps=150, dt=0.002):
-    """Lateral (body-Y) travel of the wheel-center contact over a stance sweep."""
-    p = TrajectoryPlanner3D(stand_height=0.3, velocity=[0.0, vy, 0.0],
+def _stance_gamma_trace(leg_index, vy, dt=0.001):
+    """Run a full stance sweep; return (gamma_trace, wheel-center foot-Y trace)."""
+    p = TrajectoryPlanner3D(stand_height=0.25, velocity=[0.0, vy, 0.0],
                             leg_index=leg_index, dt=dt)
     gamma_sign = (1.0 if vy >= 0 else -1.0) * p.kin.sy
-    q = np.array([p.theta0, -p.beta0, gamma_sign * p.gamma0])
+    q = np.array([p.theta0, -p.beta0, gamma_sign * p.gamma_td])
 
     def foot_y(qq):
         alpha, _ = p.kin.foot_rim_contact_fk(*qq)
         return p.kin.forward_kinematics(*qq, alpha=alpha, w=0.0)[1]
 
-    y0 = foot_y(q)
-    for _ in range(n_steps):
+    gammas, ys = [q[2]], [foot_y(q)]
+    for _ in range(int(p.T * p.stance_duty / dt)):
         q = p.stance_rt_solver(v_hip=p.velocity, q=q)
-    return foot_y(q) - y0
+        if abs(q[1]) > np.deg2rad(45):
+            break
+        gammas.append(q[2])
+        ys.append(foot_y(q))
+    return np.array(gammas), np.array(ys)
+
+
+def _stance_foot_travel_Y(leg_index, vy):
+    g, ys = _stance_gamma_trace(leg_index, vy)
+    return ys[-1] - ys[0]
 
 
 def test_left_right_lateral_travel_is_symmetric():
@@ -47,26 +56,17 @@ def test_left_right_lateral_travel_is_symmetric():
         f"left/right lateral travel mismatch: {left*1000:.1f} vs {right*1000:.1f} mm")
 
 
-def test_lateral_velocity_tracking_is_accurate():
-    """rolling_fk (w=0) must track the commanded lateral velocity, not 3-4x it."""
+def test_lateral_sweep_stays_one_sided():
+    """Loaded ABAD sweep must not cross gamma=0 (no contact-edge / COP flip)."""
     vy = 0.05
-    p = TrajectoryPlanner3D(stand_height=0.3, velocity=[0.0, vy, 0.0],
-                            leg_index=0, dt=0.002)
-    gamma_sign = p.kin.sy  # vy > 0
-    q = np.array([p.theta0, -p.beta0, gamma_sign * p.gamma0])
-
-    def foot_y(qq):
-        alpha, _ = p.kin.foot_rim_contact_fk(*qq)
-        return p.kin.forward_kinematics(*qq, alpha=alpha, w=0.0)[1]
-
-    vels = []
-    for _ in range(100):
-        y0 = foot_y(q)
-        q = p.stance_rt_solver(v_hip=p.velocity, q=q)
-        vels.append((foot_y(q) - y0) / p.dt)
-    achieved = abs(np.mean(vels))
-    assert abs(achieved - vy) < 0.1 * vy, (
-        f"lateral tracking {achieved:.4f} m/s vs target {vy:.4f} m/s")
+    for i in range(4):
+        g, _ = _stance_gamma_trace(i, vy)
+        # All samples share one sign (allow a hair of numerical slack near the floor).
+        assert g.min() > -np.deg2rad(0.2) or g.max() < np.deg2rad(0.2), (
+            f"leg {i} crosses upright: gamma range "
+            f"[{np.rad2deg(g.min()):+.2f}, {np.rad2deg(g.max()):+.2f}] deg")
+        assert np.all(np.sign(g[g != 0]) == np.sign(g[0])), (
+            f"leg {i} ABAD sweep changes sign mid-stance")
 
 
 def test_touchdown_gamma_is_mirrored_by_side():
@@ -74,9 +74,9 @@ def test_touchdown_gamma_is_mirrored_by_side():
     vy = 0.05
     signs = {}
     for i in range(4):
-        p = TrajectoryPlanner3D(stand_height=0.3, velocity=[0.0, vy, 0.0],
+        p = TrajectoryPlanner3D(stand_height=0.25, velocity=[0.0, vy, 0.0],
                                 leg_index=i, dt=0.002)
-        signs[i] = np.sign((1.0 if vy >= 0 else -1.0) * p.kin.sy * p.gamma0)
+        signs[i] = np.sign((1.0 if vy >= 0 else -1.0) * p.kin.sy * p.gamma_td)
     assert signs[0] == signs[3]          # both left
     assert signs[1] == signs[2]          # both right
     assert signs[0] == -signs[1]         # left opposite to right

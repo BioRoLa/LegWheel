@@ -110,7 +110,11 @@ class GaitGenerator3D:
         D_x_max = 2 * H_O * np.tan(BETA_MAX) + 2 * R_arc * BETA_MAX
         v_x_limit = D_x_max / (self.T * self.stance_duty)
         
-        D_y_max = 2 * H_hip * np.sin(GAMMA_GUARD)
+        # One-sided lateral sweep: the contact rolls from the touchdown extreme γ_td
+        # down to a small floor (~0), so peak tilt γ_td hits GAMMA_GUARD when
+        # sin(γ_td) = D_y/H_hip (NOT D_y/(2·H_hip) as for a symmetric ±γ sweep). The
+        # usable lateral travel per stance is therefore H_hip·sin(GAMMA_GUARD).
+        D_y_max = H_hip * np.sin(GAMMA_GUARD)
         v_y_limit = D_y_max / (self.T * self.stance_duty)
 
         # Find maximum required scale down across all legs
@@ -154,7 +158,8 @@ class GaitGenerator3D:
                 max_beta_ratio = max(max_beta_ratio, beta_exact / BETA_MAX)
 
             d_y = abs(vel[1]) * self.T * self.stance_duty
-            gamma_approx = d_y / (2 * H_hip)
+            # One-sided sweep peaks at γ_td with sin(γ_td) ≈ d_y / H_hip.
+            gamma_approx = np.arcsin(np.clip(d_y / H_hip, -1.0, 1.0))
             max_gamma_ratio = max(max_gamma_ratio, gamma_approx / GAMMA_MAX_STEP)
 
         global_usage = max(max_beta_ratio, max_gamma_ratio)
