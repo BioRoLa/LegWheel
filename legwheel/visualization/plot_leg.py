@@ -62,20 +62,20 @@ class PlotLeg(LegModel):
             lm = self.leg_model
             # Arcs
             c = 0.0012 # Clearance
-            self.upper_rim_r = self.RimObj(*self._make_arc(lm.F_r, lm.H_r, lm.U_r, lm.r-c, 'Upper_Rim'))
-            self.upper_rim_l = self.RimObj(*self._make_arc(lm.H_l, lm.F_l, lm.U_l, lm.r-c, 'Upper_Rim'))
-            self.lower_rim_r = self.RimObj(*self._make_arc(lm.G,   lm.F_r, lm.L_r, lm.r-c, 'Lower_Rim'))
-            self.lower_rim_l = self.RimObj(*self._make_arc(lm.F_l, lm.G,   lm.L_l, lm.r-c, 'Lower_Rim'))
+            self.upper_rim_r = self.RimObj(*self._make_arc(lm.F_r, lm.H_r, lm.U_r, lm.r/2-c, 'Upper_Rim'))
+            self.upper_rim_l = self.RimObj(*self._make_arc(lm.H_l, lm.F_l, lm.U_l, lm.r/2-c, 'Upper_Rim'))
+            self.lower_rim_r = self.RimObj(*self._make_arc(lm.G,   lm.F_r, lm.L_r, lm.r/2-c, 'Lower_Rim'))
+            self.lower_rim_l = self.RimObj(*self._make_arc(lm.F_l, lm.G,   lm.L_l, lm.r/2-c, 'Lower_Rim'))
             self.foot_rim    = self.RimObj(*self._make_arc(lm.I_l, lm.I_r, lm.O_r, lm.tyre_thickness, 'Foot_Rim'))
             self.upper_rim_r_f = self.RimObj(*self._make_arc(lm.J_r, lm.H_extend_r, lm.U_r, lm.tyre_thickness-c, 'Upper_Tyre', z_off=0.0002))
             self.upper_rim_l_f = self.RimObj(*self._make_arc(lm.H_extend_l, lm.J_l, lm.U_l, lm.tyre_thickness-c, 'Upper_Tyre', z_off=0.0002))
 
             # Joints
-            self.upper_joint_r = self._make_circle(lm.H_r, lm.r, 'Upper_Rim')
-            self.upper_joint_l = self._make_circle(lm.H_l, lm.r, 'Upper_Rim')
-            self.lower_joint_r = self._make_circle(lm.F_r, lm.r, 'Lower_Rim')
-            self.lower_joint_l = self._make_circle(lm.F_l, lm.r, 'Lower_Rim')
-            self.G_joint       = self._make_circle(lm.G,   lm.r, 'Foot_Rim')
+            self.upper_joint_r = self._make_circle(lm.H_r, lm.r/2, 'Upper_Rim')
+            self.upper_joint_l = self._make_circle(lm.H_l, lm.r/2, 'Upper_Rim')
+            self.lower_joint_r = self._make_circle(lm.F_r, lm.r/2, 'Lower_Rim')
+            self.lower_joint_l = self._make_circle(lm.F_l, lm.r/2, 'Lower_Rim')
+            self.G_joint       = self._make_circle(lm.G,   lm.r/2, 'Foot_Rim')
             self.foot_joint    = self._make_circle(lm.G,   lm.foot_offset + lm.tyre_thickness, 'Foot_Rim')
             self.I_joint_l     = self._make_circle(lm.I_l, lm.tyre_thickness, 'Foot_Rim')
             self.I_joint_r     = self._make_circle(lm.I_r, lm.tyre_thickness, 'Foot_Rim')
@@ -92,11 +92,25 @@ class PlotLeg(LegModel):
             self.CD_bar_r = self._make_line(lm.C_r, lm.D_r, 'Driven_Link')
             self.CD_bar_l = self._make_line(lm.C_l, lm.D_l, 'Driven_Link')
 
+            # Construction lines (only when Construction=True)
+            if self.Construction:
+                self.U_L_Construction_bar_1 = self._make_dashed_line(lm.U_l, lm.H_extend_l, 'Construction_Line')
+                self.U_L_Construction_bar_2 = self._make_dashed_line(lm.U_l, lm.J_l, 'Construction_Line')
+                self.U_R_Construction_bar_1 = self._make_dashed_line(lm.U_r, lm.H_extend_r, 'Construction_Line')
+                self.U_R_Construction_bar_2 = self._make_dashed_line(lm.U_r, lm.J_r, 'Construction_Line')
+                self.foot_Construction_bar_1 = self._make_dashed_line(lm.I_l, lm.O_r, 'Construction_Line')
+                self.foot_Construction_bar_2 = self._make_dashed_line(lm.I_r, lm.O_r, 'Construction_Line')
+                g = self._to_xy(lm.G)
+                self.center_Construction_axis_bar = self._make_dashed_line(g * 1.3, -g * 1.1, 'Axis', linestyle='dashdot')
+
         def _to_xy(self, p):
-            """Ensures point is [x, y] regardless of complex/vector source."""
+            """Ensures point is [x, y] regardless of complex/vector/scalar source."""
             if isinstance(p, (complex, np.complex128)):
                 return np.array([p.real, p.imag])
-            return np.array(p)
+            p = np.asarray(p, dtype=float)
+            if p.ndim == 0:   # scalar float, e.g. O_r = G.real + R
+                return np.array([float(p), 0.0])
+            return p
 
         def _make_arc(self, p1, p2, o, offset, color_key, z_off=0.0):
             p1, p2, o = self._to_xy(p1), self._to_xy(p2), self._to_xy(o)
@@ -120,6 +134,12 @@ class PlotLeg(LegModel):
             p1, p2 = self._to_xy(p1), self._to_xy(p2)
             return Line2D(self.O[0] + [p1[0], p2[0]], self.O[1] + [p1[1], p2[1]], marker='o', markersize=self.mark_size, color=self.color_label[color_key], linewidth=self.line_width, zorder=self.zorder)
 
+        def _make_dashed_line(self, p1, p2, color_key, linestyle='--'):
+            p1, p2 = self._to_xy(p1), self._to_xy(p2)
+            return Line2D(self.O[0] + [p1[0], p2[0]], self.O[1] + [p1[1], p2[1]],
+                          linestyle=linestyle, color=self.color_label[color_key],
+                          linewidth=self.line_width * 0.8, zorder=self.zorder + 1)
+
     def plot_leg(self, theta, beta, O, ax):
         """Updates kinematics and renders leg on axis."""
         self.forward(theta, beta, vector=False) # PlotLeg uses complex internals for consistency
@@ -132,7 +152,11 @@ class PlotLeg(LegModel):
             elif "joint" in key:
                 ax.add_patch(val)
             elif "bar" in key:
-                ax.add_line(val)
+                if "construction" in key:
+                    if self.leg_shape.Construction:
+                        ax.add_line(val)
+                else:
+                    ax.add_line(val)
         return ax
 
     def plot_by_angle(self, theta=None, beta=0.0, O=[0,0], ax=None):
