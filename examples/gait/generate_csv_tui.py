@@ -11,11 +11,15 @@ Usage:
 
 Keys:
     ↑ / ↓ / Tab / Shift+Tab   Navigate fields
+    j / k                      Navigate fields (vim)
     ← / → / Space              Toggle booleans, cycle choices
-    Enter                      Begin editing a text field
+    h / l                      Toggle / cycle (vim)
+    gg / G                     Jump to first / last field (vim)
+    Enter / i / a              Begin editing a text field
     Enter / Esc                Confirm / cancel edit
     F5  / Ctrl+G               Generate CSV
     1 / 2                      Switch Gait / Lean mode
+    F1                         Show / hide key-binding help
     Ctrl+L                     Clear log
     q / Ctrl+C / Ctrl+Q        Quit
 """
@@ -35,7 +39,9 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.layout.containers import ConditionalContainer, HSplit, VSplit, Window
+from prompt_toolkit.layout.containers import (
+    ConditionalContainer, Float, FloatContainer, HSplit, VSplit, Window,
+)
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.dimension import D
 from prompt_toolkit.styles import Style
@@ -46,6 +52,35 @@ GAIT_SCRIPT = os.path.join(SCRIPT_DIR, "generate_hardware_csv.py")
 LEAN_SCRIPT = os.path.join(SCRIPT_DIR, "generate_lean_csv.py")
 
 GAIT_CHOICES = ["Walk", "Trot", "Pace", "Bound", "Pronk"]
+
+HELP_TEXT = """\
+ ╔══════════════ Key Bindings ═══════════════╗
+ ║                                           ║
+ ║  Navigation                               ║
+ ║  ↑ / ↓            Prev / Next field      ║
+ ║  j / k            Prev / Next  (vim)     ║
+ ║  Tab / Shift+Tab  Prev / Next field      ║
+ ║  gg               Jump to first field    ║
+ ║  G                Jump to last field     ║
+ ║                                           ║
+ ║  Toggle / Cycle                           ║
+ ║  ← / → / Space    Toggle / cycle fwd     ║
+ ║  h / l            Toggle / cycle  (vim)  ║
+ ║                                           ║
+ ║  Edit text field                          ║
+ ║  Enter / i / a    Enter edit mode        ║
+ ║  Enter            Confirm value          ║
+ ║  Esc              Cancel edit            ║
+ ║                                           ║
+ ║  Commands                                 ║
+ ║  F5 / Ctrl+G      Generate CSV           ║
+ ║  1 / 2            Gait / Lean mode       ║
+ ║  Ctrl+L           Clear log              ║
+ ║  F1 / Esc         Close this help        ║
+ ║  q / Ctrl+C       Quit                   ║
+ ║                                           ║
+ ╚═══════════════════════════════════════════╝
+"""
 
 # ──────────────────────────────────────────────────────────
 # Field model
@@ -146,6 +181,7 @@ class CSVGeneratorTUI:
         self.last_path   = ""
         self.status      = "Idle"
         self.edit_mode   = False
+        self.show_help   = False
         self.edit_buffer = Buffer(name="edit", multiline=False)
         self._app        = self._build_app()
 
@@ -187,9 +223,10 @@ class CSVGeneratorTUI:
             cur = " ▶ " if foc else "   "
             out += [(ls, f"{cur}{f.label.ljust(LABEL_W)}"), (vs, f" {f.display()}\n")]
         out += [
-            ("class:hint", "\n  Tab/↑↓  Navigate    ←→/Spc  Toggle\n"),
-            ("class:hint",   "  Enter   Edit text   F5      Generate\n"),
-            ("class:hint",   "  1/2     Gait/Lean   q       Quit\n"),
+            ("class:hint", "\n  Tab/↑↓/jk  Navigate     ←→/Spc/hl  Toggle\n"),
+            ("class:hint",   "  Enter/i/a  Edit text    F5          Generate\n"),
+            ("class:hint",   "  gg/G       First/Last   1/2         Gait/Lean\n"),
+            ("class:hint",   "  F1         Key help     q           Quit\n"),
         ]
         return out
 
@@ -282,6 +319,9 @@ class CSVGeneratorTUI:
         label = f.label if f else "?"
         return [("class:ed.lbl", f"  ✏  {label}: ")]
 
+    def _render_help(self):
+        return [("class:help", HELP_TEXT)]
+
     # ── layout construction ───────────────────────────────
 
     def _build_app(self) -> Application:
@@ -322,22 +362,38 @@ class CSVGeneratorTUI:
             filter=in_edit,
         )
 
+        help_filter = Condition(lambda: self.show_help)
+
         layout = Layout(
-            HSplit([
-                Window(
-                    content=FormattedTextControl(self._render_title),
-                    height=1, style="class:title",
-                ),
-                Window(height=1, char="─", style="class:border"),
-                VSplit([
-                    self._fields_win,
-                    Window(width=1, char="│", style="class:border"),
-                    right_win,
+            FloatContainer(
+                content=HSplit([
+                    Window(
+                        content=FormattedTextControl(self._render_title),
+                        height=1, style="class:title",
+                    ),
+                    Window(height=1, char="─", style="class:border"),
+                    VSplit([
+                        self._fields_win,
+                        Window(width=1, char="│", style="class:border"),
+                        right_win,
+                    ]),
+                    Window(height=1, char="─", style="class:border"),
+                    edit_bar,
+                    status_bar,
                 ]),
-                Window(height=1, char="─", style="class:border"),
-                edit_bar,
-                status_bar,
-            ]),
+                floats=[
+                    Float(
+                        content=ConditionalContainer(
+                            content=Window(
+                                content=FormattedTextControl(self._render_help),
+                                style="class:help",
+                            ),
+                            filter=help_filter,
+                        ),
+                        top=2, left=4, width=47, height=29,
+                    ),
+                ],
+            ),
             focused_element=self._fields_win,
         )
 
@@ -361,6 +417,7 @@ class CSVGeneratorTUI:
             "ed.lbl":   "bg:#00213f #7799bb",
             "st":       "bg:#0d0d0d #445566",
             "st.run":   "bg:#0d0d0d #ffaa00 bold",
+            "help":     "bg:#001830 #99ccff",
         })
 
         return Application(
@@ -379,39 +436,68 @@ class CSVGeneratorTUI:
         in_edit  = Condition(lambda: self.edit_mode)
         not_run  = Condition(lambda: not self.is_running)
 
+        not_help = Condition(lambda: not self.show_help)
+        in_help  = Condition(lambda: self.show_help)
+        nav_mode = not_edit & not_help   # navigation: no edit, no help overlay
+
         # Quit — always active
         @kb.add("c-c")
         @kb.add("c-q")
         def _quit(ev): ev.app.exit()
 
-        @kb.add("q", filter=not_edit)
+        @kb.add("q", filter=nav_mode)
         def _q(ev): ev.app.exit()
 
+        # Help overlay — F1 toggles; Esc closes when open
+        @kb.add("f1")
+        def _toggle_help(ev):
+            self.show_help = not self.show_help
+            ev.app.invalidate()
+
+        @kb.add("escape", filter=in_help & not_edit)
+        def _close_help(ev):
+            self.show_help = False
+            ev.app.invalidate()
+
         # Mode switch
-        @kb.add("1", filter=not_edit)
+        @kb.add("1", filter=nav_mode)
         def _m1(ev):
             self.mode = "gait"; self.focus_idx = 0; ev.app.invalidate()
 
-        @kb.add("2", filter=not_edit)
+        @kb.add("2", filter=nav_mode)
         def _m2(ev):
             self.mode = "lean"; self.focus_idx = 0; ev.app.invalidate()
 
-        # Navigation
-        @kb.add("down",    filter=not_edit)
-        @kb.add("tab",     filter=not_edit)
+        # Navigation — arrow keys + vim j/k
+        @kb.add("down",  filter=nav_mode)
+        @kb.add("tab",   filter=nav_mode)
+        @kb.add("j",     filter=nav_mode)
         def _next(ev):
             self.focus_idx = (self.focus_idx + 1) % len(self._fields())
             ev.app.invalidate()
 
-        @kb.add("up",      filter=not_edit)
-        @kb.add("s-tab",   filter=not_edit)
+        @kb.add("up",    filter=nav_mode)
+        @kb.add("s-tab", filter=nav_mode)
+        @kb.add("k",     filter=nav_mode)
         def _prev(ev):
             self.focus_idx = (self.focus_idx - 1) % len(self._fields())
             ev.app.invalidate()
 
-        # Toggle / cycle
-        @kb.add("right", filter=not_edit)
-        @kb.add("space", filter=not_edit)
+        # vim gg → first field, G → last field
+        @kb.add("g", "g", filter=nav_mode)
+        def _first(ev):
+            self.focus_idx = 0
+            ev.app.invalidate()
+
+        @kb.add("G", filter=nav_mode)
+        def _last(ev):
+            self.focus_idx = len(self._fields()) - 1
+            ev.app.invalidate()
+
+        # Toggle / cycle — arrow keys + vim h/l
+        @kb.add("right", filter=nav_mode)
+        @kb.add("space", filter=nav_mode)
+        @kb.add("l",     filter=nav_mode)
         def _fwd(ev):
             f = self._focused()
             if f:
@@ -421,7 +507,8 @@ class CSVGeneratorTUI:
                     f.cycle(1)
             ev.app.invalidate()
 
-        @kb.add("left", filter=not_edit)
+        @kb.add("left", filter=nav_mode)
+        @kb.add("h",    filter=nav_mode)
         def _bwd(ev):
             f = self._focused()
             if f:
@@ -431,9 +518,8 @@ class CSVGeneratorTUI:
                     f.cycle(-1)
             ev.app.invalidate()
 
-        # Enter in nav mode: start editing text, or toggle bool/choice
-        @kb.add("enter", filter=not_edit)
-        def _enter_nav(ev):
+        # Enter edit mode — Enter, i, a (vim insert)
+        def _start_edit(ev):
             f = self._focused()
             if not f:
                 return
@@ -449,6 +535,11 @@ class CSVGeneratorTUI:
             elif f.type == "choice":
                 f.cycle(1)
             ev.app.invalidate()
+
+        @kb.add("enter", filter=nav_mode)
+        @kb.add("i",     filter=nav_mode)
+        @kb.add("a",     filter=nav_mode)
+        def _enter_nav(ev): _start_edit(ev)
 
         # Confirm edit
         @kb.add("enter", filter=in_edit, eager=True)
@@ -468,8 +559,8 @@ class CSVGeneratorTUI:
             ev.app.invalidate()
 
         # Generate
-        @kb.add("f5",  filter=not_edit & not_run)
-        @kb.add("c-g", filter=not_edit & not_run)
+        @kb.add("f5",  filter=nav_mode & not_run)
+        @kb.add("c-g", filter=nav_mode & not_run)
         def _gen(ev):
             threading.Thread(target=self._run_gen, args=(ev.app,), daemon=True).start()
 
