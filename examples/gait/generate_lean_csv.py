@@ -51,7 +51,7 @@ def generate_lean_csv(
     return_to_neutral: bool = True,
     dt: float = 0.001,
     output_dir: str = "outputs/csv",
-    prep_time: float = 3.0,
+    prep_time: float = 5.0,
 ) -> str:
     """
     Generate a hardware lean trajectory CSV.
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-return", action="store_true",
                         help="Do NOT append a return-to-neutral ramp")
     parser.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
-    parser.add_argument("--prep", type=float, default=3.0,
+    parser.add_argument("--prep", type=float, default=5.0,
                         help="Prep sequence duration (s)")
     parser.add_argument("-o", "--outdir", type=str, default="outputs/csv",
                         help="Output directory")

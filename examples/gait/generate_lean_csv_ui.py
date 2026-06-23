@@ -85,7 +85,7 @@ class LeanCSVUI(tk.Tk):
         self.var_steps  = tk.IntVar(value=500)
         self.var_return = tk.BooleanVar(value=True)
         self.var_dt     = tk.DoubleVar(value=0.001)
-        self.var_prep   = tk.DoubleVar(value=3.0)
+        self.var_prep   = tk.DoubleVar(value=5.0)
         self.var_outdir = tk.StringVar(value="outputs/csv")
 
         self.is_running = False
