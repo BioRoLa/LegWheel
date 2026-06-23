@@ -1427,6 +1427,7 @@ dependencies = [
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "prompt-toolkit" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
@@ -1454,6 +1455,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.19.0" },
     { name = "pandas", specifier = ">=1.1.0" },
     { name = "plotly", extras = ["kaleido"], marker = "extra == 'plotly'", specifier = ">=6,<7" },
+    { name = "prompt-toolkit", specifier = ">=3.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "scipy", specifier = ">=1.5.0" },
 ]

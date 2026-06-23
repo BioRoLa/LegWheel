@@ -82,11 +82,12 @@ class LeanCSVUI(tk.Tk):
         self.var_yaw    = tk.DoubleVar(value=0.0)
         self.var_height = tk.DoubleVar(value=0.30)
         self.var_comp   = tk.DoubleVar(value=0.0)
-        self.var_steps  = tk.IntVar(value=500)
-        self.var_return = tk.BooleanVar(value=True)
-        self.var_dt     = tk.DoubleVar(value=0.001)
-        self.var_prep   = tk.DoubleVar(value=5.0)
-        self.var_outdir = tk.StringVar(value="outputs/csv")
+        self.var_steps   = tk.IntVar(value=500)
+        self.var_return  = tk.BooleanVar(value=True)
+        self.var_repeats = tk.IntVar(value=1)
+        self.var_dt      = tk.DoubleVar(value=0.001)
+        self.var_prep    = tk.DoubleVar(value=5.0)
+        self.var_outdir  = tk.StringVar(value="outputs/csv")
 
         self.is_running = False
         self.proc_queue: queue.Queue = queue.Queue()
@@ -124,8 +125,10 @@ class LeanCSVUI(tk.Tk):
                   0.0, 0.4, row=1, fmt="{:.2f}")
         SliderRow(frm_params, "Steps / Segment:", self.var_steps,
                   50, 2000, row=2, fmt="{:.0f}")
+        SliderRow(frm_params, "Repeats:", self.var_repeats,
+                  1, 10, row=3, fmt="{:.0f}")
         SliderRow(frm_params, "Prep Duration (s):", self.var_prep,
-                  0.0, 10.0, row=3, fmt="{:.1f}")
+                  0.0, 10.0, row=4, fmt="{:.1f}")
 
         # ---- Checkboxes + extras ----
         frm_misc = ttk.Frame(self)
@@ -145,13 +148,14 @@ class LeanCSVUI(tk.Tk):
         # ---- Estimated duration label ----
         self.lbl_est = ttk.Label(self, text="", foreground="gray")
         self.lbl_est.pack(anchor=tk.W, pady=(0, 6))
-        self.var_roll.trace_add("write",  lambda *_: self._update_estimate())
-        self.var_pitch.trace_add("write", lambda *_: self._update_estimate())
-        self.var_yaw.trace_add("write",   lambda *_: self._update_estimate())
-        self.var_steps.trace_add("write", lambda *_: self._update_estimate())
-        self.var_return.trace_add("write", lambda *_: self._update_estimate())
-        self.var_dt.trace_add("write",    lambda *_: self._update_estimate())
-        self.var_prep.trace_add("write",  lambda *_: self._update_estimate())
+        self.var_roll.trace_add("write",    lambda *_: self._update_estimate())
+        self.var_pitch.trace_add("write",   lambda *_: self._update_estimate())
+        self.var_yaw.trace_add("write",     lambda *_: self._update_estimate())
+        self.var_steps.trace_add("write",   lambda *_: self._update_estimate())
+        self.var_return.trace_add("write",  lambda *_: self._update_estimate())
+        self.var_repeats.trace_add("write", lambda *_: self._update_estimate())
+        self.var_dt.trace_add("write",      lambda *_: self._update_estimate())
+        self.var_prep.trace_add("write",    lambda *_: self._update_estimate())
         self._update_estimate()
 
         # ---- Buttons ----
@@ -185,12 +189,14 @@ class LeanCSVUI(tk.Tk):
     def _update_estimate(self):
         try:
             n = int(self.var_steps.get())
-            segs = 2 if self.var_return.get() else 1
+            reps = int(self.var_repeats.get())
+            segs_per_rep = 2 if self.var_return.get() else 1
+            total_segs = reps * segs_per_rep
             dt = float(self.var_dt.get())
             prep = float(self.var_prep.get())
-            total_s = (n * segs * dt) + prep
+            total_s = (n * total_segs * dt) + prep
             self.lbl_est.config(
-                text=f"Estimated duration: {total_s:.1f} s  ({n * segs} IK steps)")
+                text=f"Estimated duration: {total_s:.1f} s  ({n * total_segs} IK steps, {reps}x)")
         except Exception:
             self.lbl_est.config(text="")
 
@@ -212,15 +218,16 @@ class LeanCSVUI(tk.Tk):
 
         cmd = [
             sys.executable, GENERATOR_SCRIPT,
-            "--roll",  str(self.var_roll.get()),
-            "--pitch", str(self.var_pitch.get()),
-            "--yaw",   str(self.var_yaw.get()),
-            "-z",      str(self.var_height.get()),
+            "--roll",    str(self.var_roll.get()),
+            "--pitch",   str(self.var_pitch.get()),
+            "--yaw",     str(self.var_yaw.get()),
+            "-z",        str(self.var_height.get()),
             "--compensation", str(self.var_comp.get()),
-            "-n",      str(int(self.var_steps.get())),
-            "-dt",     str(self.var_dt.get()),
-            "--prep",  str(self.var_prep.get()),
-            "-o",      self.var_outdir.get(),
+            "-n",        str(int(self.var_steps.get())),
+            "--repeats", str(int(self.var_repeats.get())),
+            "-dt",       str(self.var_dt.get()),
+            "--prep",    str(self.var_prep.get()),
+            "-o",        self.var_outdir.get(),
         ]
         if not self.var_return.get():
             cmd.append("--no-return")

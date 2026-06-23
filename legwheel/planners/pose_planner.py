@@ -256,10 +256,11 @@ class PosePlanner:
         n_steps: int = 200,
         return_to_neutral: bool = True,
         height_compensation: float = 0.0,
+        n_repeats: int = 1,
     ) -> np.ndarray:
         """
         Convenience wrapper: ramp from neutral to a target lean pose,
-        optionally hold, then return to neutral.
+        optionally hold, then return to neutral.  Repeat N times.
 
         Args:
             roll   (float): Target roll (rad).
@@ -267,21 +268,28 @@ class PosePlanner:
             yaw    (float): Target yaw (rad).
             height (float | None): Target height; defaults to stand_height.
             n_steps (int): Steps for each ramp segment.
-            return_to_neutral (bool): Append a return ramp if True.
+            return_to_neutral (bool): Append a return ramp after the last rep.
+            height_compensation (float): Lower body height per rad of lean (m/rad).
+            n_repeats (int): Number of lean cycles (neutral→target→neutral per cycle).
+                             Must be >= 1.
 
         Returns:
             np.ndarray: (N, 12) trajectory array.
         """
+        if n_repeats < 1:
+            raise ValueError("n_repeats must be >= 1")
         h = height if height is not None else self.stand_height
         neutral = {"height": self.stand_height, "roll": 0.0, "pitch": 0.0, "yaw": 0.0}
         target  = {"height": h, "roll": roll, "pitch": pitch, "yaw": yaw}
 
-        wps = [neutral, target]
-        steps = [n_steps]
-        if return_to_neutral:
+        wps = [neutral]
+        for _ in range(n_repeats):
+            wps.append(target)
             wps.append(neutral)
-            steps.append(n_steps)
+        if not return_to_neutral:
+            wps = wps[:-1]
 
+        steps = [n_steps] * (len(wps) - 1)
         return self.plan_sequence(wps, n_steps=steps,
                                   height_compensation=height_compensation)
 

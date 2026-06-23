@@ -49,6 +49,7 @@ def generate_lean_csv(
     height_compensation: float = 0.0,
     n_steps: int = 500,
     return_to_neutral: bool = True,
+    n_repeats: int = 1,
     dt: float = 0.001,
     output_dir: str = "outputs/csv",
     prep_time: float = 5.0,
@@ -63,7 +64,8 @@ def generate_lean_csv(
         stand_height (float): Nominal body height above ground (m).
         height_compensation (float): Auto-lower body per rad of lean. 0.15–0.2 for large angles.
         n_steps (int): IK samples for each ramp segment (ramp-up, ramp-down).
-        return_to_neutral (bool): Append a return-to-neutral ramp if True.
+        return_to_neutral (bool): Append a return-to-neutral ramp after the last rep.
+        n_repeats (int): Number of lean cycles (neutral→target→neutral). Must be >= 1.
         dt (float): Time step (s).
         output_dir (str): Output directory for the CSV file.
         prep_time (float): Cosine ramp from home θ=17° to neutral pose (seconds).
@@ -82,6 +84,7 @@ def generate_lean_csv(
     print(f"  Yaw               : {yaw_deg:+.1f}°")
     print(f"  Height comp.      : {height_compensation:.2f} m/rad")
     print(f"  Steps per segment : {n_steps}")
+    print(f"  Repeats           : {n_repeats}")
     print(f"  Return to neutral : {return_to_neutral}")
     print(f"  dt                : {dt*1000:.1f} ms")
     print()
@@ -98,6 +101,7 @@ def generate_lean_csv(
         n_steps=n_steps,
         return_to_neutral=return_to_neutral,
         height_compensation=height_compensation,
+        n_repeats=n_repeats,
     )
 
     hw_cmds = _to_hw_order(cmds)
@@ -125,6 +129,7 @@ def generate_lean_csv(
         f"_H{stand_height:.2f}"
         f"_C{height_compensation:.2f}"
         f"_N{n_steps}"
+        f"_x{n_repeats}"
         f"_prep{prep_time:.1f}"
         f"_dt{dt:g}"
         f"{'_ret' if return_to_neutral else ''}.csv"
@@ -155,6 +160,8 @@ if __name__ == "__main__":
                         help="IK samples per ramp segment")
     parser.add_argument("--no-return", action="store_true",
                         help="Do NOT append a return-to-neutral ramp")
+    parser.add_argument("-r", "--repeats", type=int, default=1,
+                        help="Number of lean cycles (neutral→target→neutral)")
     parser.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
     parser.add_argument("--prep", type=float, default=5.0,
                         help="Prep sequence duration (s)")
@@ -170,6 +177,7 @@ if __name__ == "__main__":
         height_compensation=a.compensation,
         n_steps=a.steps,
         return_to_neutral=not a.no_return,
+        n_repeats=a.repeats,
         dt=a.dt,
         output_dir=a.outdir,
         prep_time=a.prep,
