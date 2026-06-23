@@ -260,6 +260,26 @@ def cmd_lean_ui(args):
         print(f"⚠️  Warning: Could not find {script_path}")
 
 
+def cmd_tui(args):
+    """Launch the full-screen terminal TUI (Gait + Lean modes)."""
+    import os
+    import sys
+
+    script_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..", "examples", "gait", "generate_csv_tui.py",
+        )
+    )
+    if os.path.isfile(script_path):
+        # Import and run directly so the TUI shares the current terminal
+        sys.path.insert(0, os.path.dirname(script_path))
+        from generate_csv_tui import main as tui_main
+        tui_main()
+    else:
+        print(f"⚠️  Warning: Could not find {script_path}")
+
+
 def cmd_ui(args):
     import os
     import sys
@@ -474,6 +494,9 @@ def main():
     # Subcommand: lean-ui
     subparsers.add_parser('lean-ui', help='開啟 Lean Pose CSV 生成器 (Tkinter UI)')
 
+    # Subcommand: tui
+    subparsers.add_parser('tui', help='開啟全螢幕終端機 TUI (Gait + Lean 雙模式)')
+
     # Subcommand: ui
     parser_ui = subparsers.add_parser('ui', help='開啟互動式 CSV 生成器 (Tkinter UI)')
 
@@ -527,6 +550,8 @@ def main():
         cmd_lean(args)
     elif args.command == 'lean-ui':
         cmd_lean_ui(args)
+    elif args.command == 'tui':
+        cmd_tui(args)
     elif args.command == 'transform':
         cmd_transform(args)
     elif args.command == 'ui':
