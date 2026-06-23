@@ -136,6 +136,16 @@ def cmd_ik(args):
     except Exception as e:
         print(f"❌ ERROR: IK failed to converge. {e}")
 
+def _resolve_n_ramp(args) -> int:
+    """Return ramp cycle count from --ramp-seconds (priority) or --ramp-cycles (default 3)."""
+    import math
+    ramp_secs = getattr(args, 'ramp_seconds', None)
+    if ramp_secs is not None:
+        period = getattr(args, 'period', 1.0)
+        return max(1, math.ceil(ramp_secs / period))
+    return getattr(args, 'ramp_cycles', None) or 3
+
+
 def cmd_generate(args):
     import os
     import sys
@@ -156,7 +166,7 @@ def cmd_generate(args):
                 n_cycles=args.cycles,
                 output_dir=args.outdir,
                 with_launch=getattr(args, 'launch', False),
-                n_ramp=getattr(args, 'ramp_cycles', 3),
+                n_ramp=_resolve_n_ramp(args),
                 ramp_floor=getattr(args, 'ramp_floor', 0.1),
             )
             return
@@ -386,8 +396,10 @@ def main():
     parser_gen.add_argument("-o", "--outdir", type=str, default="outputs/csv", help="Output directory")
     parser_gen.add_argument("--launch", action="store_true",
                             help="Prepend launch ramp sequence (phase-shifted to all-stance start)")
-    parser_gen.add_argument("--ramp-cycles", type=int, default=3,
-                            help="Number of velocity-ramp cycles before steady gait")
+    parser_gen.add_argument("--ramp-cycles", type=int, default=None,
+                            help="Number of velocity-ramp cycles before steady gait (default: 3)")
+    parser_gen.add_argument("--ramp-seconds", type=float, default=None,
+                            help="Ramp duration in seconds (converted to cycles via period; overrides --ramp-cycles)")
     parser_gen.add_argument("--ramp-floor", type=float, default=0.1,
                             help="First ramp cycle velocity fraction (default: 0.1 = 10%%)")
 

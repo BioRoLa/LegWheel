@@ -5,6 +5,7 @@ This is a standalone Tkinter application that acts as an interactive GUI
 wrapper for `generate_hardware_csv.py`.
 """
 
+import math
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import subprocess
@@ -43,7 +44,9 @@ class CSVGeneratorUI(tk.Tk):
         self.var_outdir = tk.StringVar(value="outputs/csv")
         # Launch control
         self.var_launch = tk.BooleanVar(value=False)
+        self.var_ramp_mode = tk.StringVar(value="cycles")   # "cycles" | "seconds"
         self.var_ramp_cycles = tk.StringVar(value="3")
+        self.var_ramp_seconds = tk.StringVar(value="3.0")
         self.var_ramp_floor = tk.StringVar(value="0.10")
 
         self.is_running = False
@@ -103,21 +106,31 @@ class CSVGeneratorUI(tk.Tk):
                         command=self._toggle_launch_fields).grid(
             row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 6))
 
-        ttk.Label(frame_launch, text="Ramp cycles:").grid(
-            row=1, column=0, sticky=tk.W, pady=3)
+        # Ramp duration: choose cycles or seconds via radio buttons
+        self.rb_cycles = ttk.Radiobutton(
+            frame_launch, text="Ramp cycles:", variable=self.var_ramp_mode,
+            value="cycles", command=self._toggle_launch_fields)
+        self.rb_cycles.grid(row=1, column=0, sticky=tk.W, pady=3)
         self.ent_ramp_cycles = ttk.Entry(frame_launch, textvariable=self.var_ramp_cycles, width=8)
         self.ent_ramp_cycles.grid(row=1, column=1, sticky=tk.W, padx=10)
 
+        self.rb_seconds = ttk.Radiobutton(
+            frame_launch, text="Ramp seconds:", variable=self.var_ramp_mode,
+            value="seconds", command=self._toggle_launch_fields)
+        self.rb_seconds.grid(row=2, column=0, sticky=tk.W, pady=3)
+        self.ent_ramp_seconds = ttk.Entry(frame_launch, textvariable=self.var_ramp_seconds, width=8)
+        self.ent_ramp_seconds.grid(row=2, column=1, sticky=tk.W, padx=10)
+
         ttk.Label(frame_launch, text="Ramp floor (0–1):").grid(
-            row=2, column=0, sticky=tk.W, pady=3)
+            row=3, column=0, sticky=tk.W, pady=3)
         self.ent_ramp_floor = ttk.Entry(frame_launch, textvariable=self.var_ramp_floor, width=8)
-        self.ent_ramp_floor.grid(row=2, column=1, sticky=tk.W, padx=10)
+        self.ent_ramp_floor.grid(row=3, column=1, sticky=tk.W, padx=10)
 
         self.lbl_launch_hint = ttk.Label(
             frame_launch,
             text="e.g. 3 cycles, floor=0.1 → v ramps 10%→55%→100% of target",
             foreground="gray")
-        self.lbl_launch_hint.grid(row=3, column=0, columnspan=2, sticky=tk.W)
+        self.lbl_launch_hint.grid(row=4, column=0, columnspan=2, sticky=tk.W)
 
         self._toggle_launch_fields()   # set initial enabled state
 
@@ -145,9 +158,16 @@ class CSVGeneratorUI(tk.Tk):
         self.log_txt.pack(fill=tk.BOTH, expand=True)
 
     def _toggle_launch_fields(self):
-        state = tk.NORMAL if self.var_launch.get() else tk.DISABLED
-        self.ent_ramp_cycles.config(state=state)
-        self.ent_ramp_floor.config(state=state)
+        enabled = self.var_launch.get()
+        if enabled:
+            mode = self.var_ramp_mode.get()
+            self.ent_ramp_cycles.config(state=tk.NORMAL if mode == "cycles" else tk.DISABLED)
+            self.ent_ramp_seconds.config(state=tk.NORMAL if mode == "seconds" else tk.DISABLED)
+            self.ent_ramp_floor.config(state=tk.NORMAL)
+        else:
+            self.ent_ramp_cycles.config(state=tk.DISABLED)
+            self.ent_ramp_seconds.config(state=tk.DISABLED)
+            self.ent_ramp_floor.config(state=tk.DISABLED)
 
     def log(self, text, clear=False):
         if clear:
@@ -208,9 +228,19 @@ class CSVGeneratorUI(tk.Tk):
             "-o", self.var_outdir.get(),
         ]
         if self.var_launch.get():
+            if self.var_ramp_mode.get() == "seconds":
+                try:
+                    ramp_secs = float(self.var_ramp_seconds.get())
+                    period = float(self.var_period.get())
+                    n_ramp = max(1, math.ceil(ramp_secs / period))
+                except ValueError:
+                    n_ramp = 3
+                ramp_cycles_str = str(n_ramp)
+            else:
+                ramp_cycles_str = self.var_ramp_cycles.get()
             cmd += [
                 "--launch",
-                "--ramp-cycles", self.var_ramp_cycles.get(),
+                "--ramp-cycles", ramp_cycles_str,
                 "--ramp-floor",  self.var_ramp_floor.get(),
             ]
 
