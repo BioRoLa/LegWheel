@@ -172,6 +172,32 @@ class TrajectoryPlanner3D:
         G_dist = self.H_O / np.cos(beta) + self.R_link
         return inv_G_dist_poly(G_dist)
 
+    def _level_touchdown_q(self):
+        """Touchdown joint angles via IK to a LEVEL, motion-leading foot target.
+
+        The foot is placed at the nominal stance height (constant Z, so no body
+        roll) with a lateral lead of one full stride D_y in the body's direction of
+        travel; the stance solver then sweeps the contact back -Y while holding Z,
+        landing near upright (gamma≈0) at liftoff (one-sided, no mid-stance edge flip).
+
+        Why IK instead of open-loop [theta0, -beta0, ±gamma]: with a prescribed gamma
+        the foot's Z depends on the per-leg ABAD tilt, so mirrored left/right gammas
+        touched down at DIFFERENT heights (≈21 mm at vy=0.05). stance_rt_solver holds
+        vz=0, so that height offset was locked in for the whole stance and the body
+        had to roll (~5°) to keep all feet on the ground — which then prevented the
+        feet from reaching their targets and induced phase lag. Specifying the level
+        foot POSITION and solving IK keeps every foot at -stand_height regardless of
+        the tilt it ends up using.
+        """
+        alpha0, _ = self.kin.foot_rim_contact_fk(self.theta0, -self.beta0, 0.0)
+        nom = self.kin.forward_kinematics(
+            self.theta0, -self.beta0, 0.0, alpha=alpha0, w=0.0)
+        D_lat = np.abs(self.velocity[1]) * self.T * self.stance_duty
+        lead_y = np.sign(self.velocity[1]) * D_lat
+        target = np.array([nom[0], nom[1] + lead_y, nom[2]])
+        return self.kin.inverse_kinematics(
+            target, guess_q=np.array([self.theta0, -self.beta0, 0.0]))
+
     def generate_trajectory(self, lateral_offset=0.0):
         """
         Generates the full gait cycle commands for the leg.
@@ -189,16 +215,10 @@ class TrajectoryPlanner3D:
         # 1. Stance Phase (Rolling via stance_rt_solver)
         stance_duration = self.T * self.stance_duty
 
-        # Touchdown: foot starts "ahead" of the body in both X and Y.
-        # For X: beta starts at -beta0 (foot forward), sweeps to +beta0 (foot backward).
-        # For Y: gamma starts at the outer tilt extreme γ_td and rolls ONE-SIDED inward
-        #   toward the floor γ_floor (never crossing upright under load — see γ_td above).
-        #   The sign MUST be mirrored per leg side (self.kin.sy): left and right ABAD are
-        #   mirror-imaged, so for a given body +Y velocity the left leg sweeps γ one way
-        #   and the right leg the opposite way. Using the same sign for all legs (the old
-        #   bug) made a diagonal stance pair cover unequal lateral distances → body yaw.
-        gamma_sign = (1.0 if self.velocity[1] >= 0 else -1.0) * self.kin.sy
-        q = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma_td])
+        # Touchdown: foot leads the body in its direction of travel and is placed at
+        # a LEVEL height (see _level_touchdown_q). The stance solver then sweeps it
+        # back holding Z, so the body stays level the whole stance.
+        q = self._level_touchdown_q()
         self.cmd.append(q.tolist())
 
         for t in np.arange(self.dt, stance_duration, self.dt):
@@ -222,7 +242,7 @@ class TrajectoryPlanner3D:
         #   5. IK tracks all swing points at fixed alpha_td (no interpolation)
 
         # --- Step 1: Touchdown target ---
-        q_td = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma_td])
+        q_td = self._level_touchdown_q()
         alpha_td, _ = self.kin.foot_rim_contact_fk(*q_td)
         p_td = self.kin.forward_kinematics(*q_td, alpha=alpha_td, w=0.0)
 
