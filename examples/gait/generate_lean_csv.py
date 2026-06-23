@@ -125,6 +125,8 @@ def generate_lean_csv(
         f"_H{stand_height:.2f}"
         f"_C{height_compensation:.2f}"
         f"_N{n_steps}"
+        f"_prep{prep_time:.1f}"
+        f"_dt{dt:g}"
         f"{'_ret' if return_to_neutral else ''}.csv"
     )
     filepath = os.path.join(output_dir, filename)

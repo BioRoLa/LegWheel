@@ -113,7 +113,7 @@ def generate_hardware_csv(
     final_cmds = np.vstack(segments)
 
     # 5. Filename
-    suffix = f"_L{n_ramp}" if with_launch else ""
+    suffix = f"_L{n_ramp}F{int(ramp_floor * 100)}" if with_launch else ""
     filename = f"{gait.get_parameter_string()}{suffix}.csv"
     filepath = os.path.join(output_dir, filename)
 

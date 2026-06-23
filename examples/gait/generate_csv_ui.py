@@ -191,7 +191,7 @@ class CSVGeneratorUI(tk.Tk):
 
         # Pattern: Walk_Vx0.10_Vy0.00_Wz0.00_H0.25_S0.029_P1.0.csv
         # Pattern can handle negative numbers e.g. Vx-0.10
-        pattern = r"(?P<gait>[A-Za-z]+)_Vx(?P<vx>[\d\.\-]+)_Vy(?P<vy>[\d\.\-]+)_Wz(?P<wz>[\d\.\-]+)_H(?P<h>[\d\.\-]+)_S(?P<s>[\d\.\-]+)_P(?P<p>[\d\.\-]+)\.csv$"
+        pattern = r"(?P<gait>[A-Za-z]+)_Vx(?P<vx>[\d\.\-]+)_Vy(?P<vy>[\d\.\-]+)_Wz(?P<wz>[\d\.\-]+)_H(?P<h>[\d\.\-]+)_S(?P<s>[\d\.\-]+)_P(?P<p>[\d\.\-]+)(?:_C\d+)?(?:_dt[\d\.]+)?(?:_L\d+F\d+)?\.csv$"
         match = re.match(pattern, filename)
         if match:
             d = match.groupdict()

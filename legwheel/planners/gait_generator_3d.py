@@ -60,6 +60,7 @@ class GaitGenerator3D:
         self.step_height = step_height
         self.T = period
         self.dt = dt
+        self.n_cycles: int | None = None   # set by generate_full_gait()
 
         # Validate gait type
         if gait_type not in GAIT_LIBRARY:
@@ -195,6 +196,7 @@ class GaitGenerator3D:
         Returns:
             np.ndarray: (N, 12) array of [theta, beta, gamma] * 4 legs.
         """
+        self.n_cycles = n_cycles
         # 1. Generate base trajectories for each leg (one cycle)
         all_leg_trajs = [np.array(p.generate_trajectory())
                          for p in self.planners]
@@ -222,7 +224,13 @@ class GaitGenerator3D:
         w_z_actual = self.omega_z
         step_actual = self.planners[0].step_height
 
-        return f"{self.gait_type}_Vx{v_x_actual:.2f}_Vy{v_y_actual:.2f}_Wz{w_z_actual:.2f}_H{self.stand_height:.2f}_S{step_actual:.3f}_P{self.T:.1f}"
+        cycles_str = f"_C{self.n_cycles}" if self.n_cycles is not None else ""
+        return (
+            f"{self.gait_type}"
+            f"_Vx{v_x_actual:.2f}_Vy{v_y_actual:.2f}_Wz{w_z_actual:.2f}"
+            f"_H{self.stand_height:.2f}_S{step_actual:.3f}"
+            f"_P{self.T:.1f}{cycles_str}_dt{self.dt:g}"
+        )
 
     def print_summary(self):
         """Prints a summary of the gait configuration."""
