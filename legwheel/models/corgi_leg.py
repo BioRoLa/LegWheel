@@ -54,6 +54,11 @@ class CorgiLegKinematics:
         # wheel_thickness: Thickness of the wheel for visualization and collision purposes.
         self.wheel_thickness = RobotParams.WHEEL_THICKNESS
 
+        # Rim edge fillet radius (R4 mm rounded tread edge) and the pressure-center
+        # transition band, used by foot_rim_contact_fk for a continuous lateral contact.
+        self.wheel_fillet_radius = RobotParams.WHEEL_FILLET_RADIUS
+        self.contact_cop_band = np.deg2rad(RobotParams.CONTACT_COP_BAND_DEG)
+
         # sx, sy: "Sign X" and "Sign Y".
         # Used as multipliers to determine frame origin positions in {B} based on symmetry.
         self.sx = 1.0 if self.is_front else -1.0
@@ -299,8 +304,23 @@ class CorgiLegKinematics:
 
     def foot_rim_contact_fk(self, theta, beta, gamma=None, ground_slope=0.0):
         """
-        Specialized FK to calculate the foot contact point on the rim, accounting for ground slope
-        and wheel thickness. In 3D move, if the wheel is tilted, the lowest edge is used as contact.
+        Specialized FK for the foot ground-contact point on the rim, accounting for
+        ground slope and lateral wheel tilt.
+
+        The tread is flat across its width with rounded (filleted) side edges of
+        radius ``wheel_fillet_radius``. As the wheel tilts laterally, the effective
+        contact point (center of pressure) slides off the tread center toward the
+        lower edge. Modeling this as a hard jump to ±half_w (the old behavior) makes
+        the lateral contact ``w`` discontinuous at gamma = 0, which injects a spurious
+        velocity impulse into the Rolling Jacobian and produces unwanted body yaw
+        during lateral motion.
+
+        Instead, ``w(tilt)`` is made C0-continuous in two stages:
+          1. Center-of-pressure ramp: 0 -> ±w_flat over the tilt band ``contact_cop_band``
+             (w_flat = half_w - fillet, the flat-tread half width). This models the
+             pressure center walking across the flat tread under finite load.
+          2. Fillet slide: an additional ``fillet * sin(tilt)`` term capturing the
+             rounded edge geometry, saturated at ±half_w.
 
         Args:
             theta (float): Joint angle 1 (rad).
@@ -316,22 +336,23 @@ class CorgiLegKinematics:
         # 1. Base alpha (sagittal)
         alpha = np.rad2deg(ground_slope - beta)
 
-        # 2. Determine w based on lateral tilt (lowest point on the flat-tread wheel)
+        # 2. Lateral tilt of the wheel plane, from the height difference between the
+        #    two tread edges in {B}. sin(phi) = (z_neg - z_pos) / wheel_thickness.
+        #    phi > 0  =>  +w edge is lower  =>  contact slides toward +w.
         half_w = self.wheel_thickness / 2.0
+        p_L0 = self.fk_sagittal(theta, beta, alpha)
+        z_pos = self._transform_to_body(p_L0 + np.array([0, 0, half_w]), gamma)[2]
+        z_neg = self._transform_to_body(p_L0 + np.array([0, 0, -half_w]), gamma)[2]
+        sin_phi = np.clip((z_neg - z_pos) / self.wheel_thickness, -1.0, 1.0)
+        phi = np.arcsin(sin_phi)
+        ap = abs(phi)
 
-        # Optimization: for extremely small gamma, assume center contact to avoid flickering
-        if abs(gamma) < 1e-4:
-            return alpha, 0.0
-
-        # Calculate heights of both wheel edges in Body Frame {B}
-        p_L_pos = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, half_w])
-        p_L_neg = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, -half_w])
-
-        z_pos = self._transform_to_body(p_L_pos, gamma)[2]
-        z_neg = self._transform_to_body(p_L_neg, gamma)[2]
-
-        # Use the edge that is physically lower (closer to ground)
-        w = half_w if z_pos < z_neg else -half_w
+        # 3. Continuous lateral contact: pressure-center ramp + fillet slide, capped.
+        fillet = self.wheel_fillet_radius
+        w_flat = half_w - fillet
+        cop = w_flat * np.clip(ap / self.contact_cop_band, 0.0, 1.0)
+        w_mag = min(cop + fillet * np.sin(ap), half_w)
+        w = np.sign(phi) * w_mag
         return alpha, w
 
     def get_joint_positions(self, theta, beta, gamma=None):

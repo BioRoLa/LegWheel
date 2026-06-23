@@ -96,6 +96,11 @@ class RobotParams:
     WHEEL_RADIUS_PITCH = 0.100      # Effective radius for kinematics
     WHEEL_RADIUS_OUTER = 0.135      # Physical outer radius (collision)
     WHEEL_THICKNESS    = 0.04       # Thickness of the wheel (for collision and visualization)
+    WHEEL_FILLET_RADIUS = 0.004     # Rounded edge radius on each rim side (R4 mm tread fillet)
+    # Pressure-center transition band: lateral tilt over which the contact center
+    # of pressure slides from the tread center (w=0) to the flat-tread edge.
+    # Models finite-load / contact compliance so foot_rim_contact_fk stays C0 across gamma=0.
+    CONTACT_COP_BAND_DEG = 3.0
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass
