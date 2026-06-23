@@ -22,6 +22,8 @@ GENERATOR_SCRIPT = os.path.join(BASE_DIR, "examples", "gait", "generate_lean_csv
 ROLL_LIMIT  = 10.0   # degrees
 PITCH_LIMIT = 8.0
 YAW_LIMIT   = 15.0
+HEIGHT_MIN  = 0.18   # m — theta ~75° at this height (low crouch)
+HEIGHT_MAX  = 0.32   # m — theta ~159° (just below 160° upper limit)
 
 
 class SliderRow:
@@ -117,7 +119,7 @@ class LeanCSVUI(tk.Tk):
         frm_params.columnconfigure(1, weight=1)
 
         SliderRow(frm_params, "Stand Height (m):", self.var_height,
-                  0.20, 0.36, row=0, fmt="{:.3f}")
+                  HEIGHT_MIN, HEIGHT_MAX, row=0, fmt="{:.3f}")
         SliderRow(frm_params, "Height Comp. (m/rad):", self.var_comp,
                   0.0, 0.4, row=1, fmt="{:.2f}")
         SliderRow(frm_params, "Steps / Segment:", self.var_steps,
