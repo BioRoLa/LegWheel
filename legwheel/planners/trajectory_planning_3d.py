@@ -177,9 +177,14 @@ class TrajectoryPlanner3D:
 
         # Touchdown: foot starts "ahead" of the body in both X and Y.
         # For X: beta starts at -beta0 (foot forward), sweeps to +beta0 (foot backward)
-        # For Y: gamma starts at +gamma0 (foot outward), sweeps to -gamma0 (foot inward)
-        #         when vy > 0 (body moving in +Y), foot in body frame retracts in -Y.
-        gamma_sign = 1.0 if self.velocity[1] >= 0 else -1.0
+        # For Y: gamma starts at ±gamma0 and sweeps symmetrically THROUGH zero to ∓gamma0.
+        #   The sign MUST be mirrored per leg side (self.kin.sy): left and right ABAD
+        #   are mirror-imaged, so for a given body +Y velocity the left leg sweeps γ
+        #   one way and the right leg the opposite way. Using the same sign for all
+        #   legs (the old bug) made one side sweep symmetrically about zero (full
+        #   lateral travel) while the other side swept away from zero (tiny travel),
+        #   so a diagonal stance pair moved unequal lateral distances → body yaw.
+        gamma_sign = (1.0 if self.velocity[1] >= 0 else -1.0) * self.kin.sy
         q = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma0])
         self.cmd.append(q.tolist())
 
@@ -322,12 +327,21 @@ class TrajectoryPlanner3D:
             [self.theta0, self.beta0, 0.0])
 
         # --- Rolling Jacobian ---
-        # FK wrapper with state-dependent contact angle α(q) = δ - β
+        # FK wrapper with state-dependent contact angle α(q) = δ - β.
+        #
+        # The Jacobian must track the rolling contact on the wheel CENTER plane
+        # (w = 0). The lateral edge term w from foot_rim_contact_fk is the center
+        # of pressure across the flat tread; it shifts with the wheel tilt (γ) but
+        # that shift is NOT the foot sliding sideways. Feeding w(γ) into the
+        # velocity Jacobian injects a large spurious d(w)/dγ term that corrupts the
+        # lateral velocity mapping (observed: lateral tracking ~4x too fast) and,
+        # because of the ±half_w edge flip at γ = 0, a yaw-inducing impulse. Use
+        # w = 0 so the lateral velocity comes purely from the pendulum (γ) motion.
         def rolling_fk(q_eval):
             contact = self.kin.foot_rim_contact_fk(
                 *q_eval, ground_slope=ground_slope)
             return self.kin.forward_kinematics(
-                *q_eval, alpha=contact[0], w=contact[1])
+                *q_eval, alpha=contact[0], w=0.0)
 
         # Numerical Jacobian evaluated at the continuously shifting contact
         J = numerical_jacobian(rolling_fk, q, diff=1e-5)
