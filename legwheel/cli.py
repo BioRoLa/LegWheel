@@ -271,13 +271,39 @@ def cmd_tui(args):
             "..", "examples", "gait", "generate_csv_tui.py",
         )
     )
-    if os.path.isfile(script_path):
-        # Import and run directly so the TUI shares the current terminal
-        sys.path.insert(0, os.path.dirname(script_path))
-        from generate_csv_tui import main as tui_main
-        tui_main()
-    else:
+    if not os.path.isfile(script_path):
         print(f"⚠️  Warning: Could not find {script_path}")
+        return
+
+    # Forward CLI args to TUI as argv so its own argparse applies them
+    argv = []
+    _flag_map = [
+        ("--mode",   "tui_mode"),
+        ("-g",       "gait"),
+        ("-vx",      "vx"),
+        ("-vy",      "vy"),
+        ("-wz",      "wz"),
+        ("-z",       "height"),
+        ("-s",       "step"),
+        ("-p",       "period"),
+        ("-c",       "cycles"),
+        ("-dt",      "dt"),
+        ("-o",       "outdir"),
+        ("--roll",   "roll"),
+        ("--pitch",  "pitch"),
+        ("--yaw",    "yaw"),
+        ("--comp",   "comp"),
+        ("-n",       "steps"),
+        ("--prep",   "prep"),
+    ]
+    for flag, attr in _flag_map:
+        v = getattr(args, attr, None)
+        if v is not None:
+            argv += [flag, str(v)]
+
+    sys.path.insert(0, os.path.dirname(script_path))
+    from generate_csv_tui import main as tui_main
+    tui_main(argv if argv else None)
 
 
 def cmd_ui(args):
@@ -495,7 +521,26 @@ def main():
     subparsers.add_parser('lean-ui', help='開啟 Lean Pose CSV 生成器 (Tkinter UI)')
 
     # Subcommand: tui
-    subparsers.add_parser('tui', help='開啟全螢幕終端機 TUI (Gait + Lean 雙模式)')
+    parser_tui = subparsers.add_parser('tui', help='開啟全螢幕終端機 TUI (Gait + Lean 雙模式)',
+                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser_tui.add_argument("-m", "--mode", dest="tui_mode",
+                            choices=["gait", "lean"], default=None, help="Starting mode")
+    parser_tui.add_argument("-g", "--gait",   default=None,     help="Gait type")
+    parser_tui.add_argument("-vx",            type=float, dest="vx",  default=None, help="Vx (m/s)")
+    parser_tui.add_argument("-vy",            type=float, dest="vy",  default=None, help="Vy (m/s)")
+    parser_tui.add_argument("-wz",            type=float, dest="wz",  default=None, help="Wz (rad/s)")
+    parser_tui.add_argument("-z", "--height", type=float, default=None, help="Stand height (m)")
+    parser_tui.add_argument("-s", "--step",   type=float, default=None, help="Step height (m)")
+    parser_tui.add_argument("-p", "--period", type=float, default=None, help="Gait period (s)")
+    parser_tui.add_argument("-c", "--cycles", type=int,   default=None, help="Gait cycles")
+    parser_tui.add_argument("-dt",            type=float, dest="dt",   default=None, help="dt (s)")
+    parser_tui.add_argument("-o", "--outdir", type=str,   default=None, help="Output directory")
+    parser_tui.add_argument("--roll",  type=float, default=None, help="Lean roll (deg)")
+    parser_tui.add_argument("--pitch", type=float, default=None, help="Lean pitch (deg)")
+    parser_tui.add_argument("--yaw",   type=float, default=None, help="Lean yaw (deg)")
+    parser_tui.add_argument("--comp",  type=float, default=None, help="Height comp (m/rad)")
+    parser_tui.add_argument("-n", "--steps", type=int,   default=None, help="Lean steps/seg")
+    parser_tui.add_argument("--prep",  type=float, default=None, help="Lean prep (s)")
 
     # Subcommand: ui
     parser_ui = subparsers.add_parser('ui', help='開啟互動式 CSV 生成器 (Tkinter UI)')

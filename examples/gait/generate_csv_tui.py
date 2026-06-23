@@ -24,6 +24,7 @@ Keys:
     q / Ctrl+C / Ctrl+Q        Quit
 """
 
+import argparse
 import math
 import os
 import re
@@ -31,7 +32,7 @@ import subprocess
 import sys
 import threading
 from dataclasses import dataclass, field as dc_field
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from prompt_toolkit import Application
 from prompt_toolkit.buffer import Buffer
@@ -172,9 +173,14 @@ LABEL_W = 15    # label column width (characters)
 
 
 class CSVGeneratorTUI:
-    def __init__(self):
-        self.mode        = "gait"
+    def __init__(self, mode: Optional[str] = None, overrides: Optional[Dict[str, str]] = None):
+        self.mode        = mode if mode in ("gait", "lean") else "gait"
         self.all_fields  = {"gait": _gait_fields(), "lean": _lean_fields()}
+        if overrides:
+            for fs in self.all_fields.values():
+                for f in fs:
+                    if f.key in overrides:
+                        f.set(overrides[f.key])
         self.focus_idx   = 0
         self.log_lines: List[str] = ["  Ready — press F5 to generate."]
         self.is_running  = False
@@ -678,8 +684,69 @@ class CSVGeneratorTUI:
         self._app.run()
 
 
-def main():
-    CSVGeneratorTUI().run()
+def _make_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="legwheel tui",
+        description="CorgiRobot full-screen TUI CSV generator (Gait + Lean modes)",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    p.add_argument("-m", "--mode", choices=["gait", "lean"], default=None,
+                   help="Starting mode")
+    # ── Gait params ────────────────────────────────
+    grp_g = p.add_argument_group("Gait defaults")
+    grp_g.add_argument("-g", "--gait", choices=GAIT_CHOICES, default=None,
+                       metavar="TYPE", help="Gait type")
+    grp_g.add_argument("-vx", dest="vx", type=float, default=None,
+                       metavar="M/S",  help="Forward velocity (m/s)")
+    grp_g.add_argument("-vy", dest="vy", type=float, default=None,
+                       metavar="M/S",  help="Lateral velocity (m/s)")
+    grp_g.add_argument("-wz", dest="wz", type=float, default=None,
+                       metavar="RAD/S", help="Yaw rate (rad/s)")
+    grp_g.add_argument("-z", "--height", type=float, default=None,
+                       metavar="M",    help="Stand height (m)")
+    grp_g.add_argument("-s", "--step", type=float, default=None,
+                       metavar="M",    help="Step height (m)")
+    grp_g.add_argument("-p", "--period", type=float, default=None,
+                       metavar="S",    help="Gait period (s)")
+    grp_g.add_argument("-c", "--cycles", type=int, default=None,
+                       metavar="N",    help="Number of gait cycles")
+    grp_g.add_argument("-dt", dest="dt", type=float, default=None,
+                       metavar="S",    help="Time step (s)")
+    # ── Lean params ────────────────────────────────
+    grp_l = p.add_argument_group("Lean defaults")
+    grp_l.add_argument("--roll",  type=float, default=None, metavar="DEG")
+    grp_l.add_argument("--pitch", type=float, default=None, metavar="DEG")
+    grp_l.add_argument("--yaw",   type=float, default=None, metavar="DEG")
+    grp_l.add_argument("--comp",  type=float, default=None, metavar="M/RAD",
+                       help="Height compensation (m/rad)")
+    grp_l.add_argument("-n", "--steps", type=int, default=None, metavar="N",
+                       help="Steps per segment")
+    grp_l.add_argument("--prep", type=float, default=None, metavar="S",
+                       help="Prep duration (s)")
+    # ── Shared ─────────────────────────────────────
+    p.add_argument("-o", "--outdir", type=str, default=None,
+                   metavar="DIR", help="Output directory")
+    return p
+
+
+# Maps argparse dest name → Field key (identical here, but explicit for clarity)
+_DEST_TO_KEY = {
+    "gait": "gait", "vx": "vx", "vy": "vy", "wz": "wz",
+    "height": "height", "step": "step", "period": "period",
+    "cycles": "cycles", "dt": "dt", "outdir": "outdir",
+    "roll": "roll", "pitch": "pitch", "yaw": "yaw",
+    "comp": "comp", "steps": "steps", "prep": "prep",
+}
+
+
+def main(argv: Optional[List[str]] = None):
+    args = _make_parser().parse_args(argv)
+    overrides = {
+        key: str(getattr(args, dest))
+        for dest, key in _DEST_TO_KEY.items()
+        if getattr(args, dest, None) is not None
+    }
+    CSVGeneratorTUI(mode=args.mode, overrides=overrides or None).run()
 
 
 if __name__ == "__main__":
