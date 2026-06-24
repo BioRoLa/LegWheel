@@ -32,8 +32,7 @@ from scipy.spatial import ConvexHull
 # ── Params ────────────────────────────────────────────────────────────────────
 D_WHEEL  = RobotParams.WHEEL_AXIAL_OFFSET     # 91.675 mm
 M6_EXTRA = 0.0345                              # 34.5 mm
-R_OUTER  = (RobotParams.WHEEL_RADIUS_PITCH
-            + 0.02225 + 0.01225)               # ≈ 134.5 mm
+R_OUTER  = RobotParams.WHEEL_RADIUS_OUTER      # TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
 THETA_MIN = RobotParams.MIN_THETA_DEG          # 17°
 THETA_MAX = RobotParams.MAX_THETA_DEG          # 160°
 

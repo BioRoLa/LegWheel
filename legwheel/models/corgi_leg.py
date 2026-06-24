@@ -74,7 +74,7 @@ class CorgiLegKinematics:
         # beta0 is typically 90 deg in config, creating an offset for intuitive usage.
         self.beta0 = self.solver.beta0
 
-    def fk_sagittal(self, theta, beta, alpha=0.0):
+    def fk_sagittal(self, theta, beta, alpha=0.0, w=0.0):
         """
         Calculates the 2D mechanism state in the sagittal Leg Frame {Li}.
         Adjusts beta by -90 deg to align the 2D solver with the 3D frame convention.
@@ -83,14 +83,16 @@ class CorgiLegKinematics:
             theta (float): Joint angle 1 (rad).
             beta (float): Joint angle 2 (rad).
             alpha (float): Rim contact angle (deg). 0 is bottom center.
+            w (float): Lateral contact offset from wheel mid-plane (m). Passed to rim_point
+                       to compute the toroidal effective radius r_eff(w).
 
         Returns:
             np.ndarray: [x, y, 0] coordinates in {Li}.
         """
         # Internal solver adds 90 deg. By subtracting 90 here, user beta=0 points Down.
         self.solver.forward(theta, beta, vector=True)
-        # rim_point returns the 2D position of a point on the rim for a given alpha.
-        p_contact = self.solver.rim_point(alpha)
+        # rim_point returns the 2D position of a point on the rim for a given alpha and w.
+        p_contact = self.solver.rim_point(alpha, w)
 
         # if rim_point returns a batch of points, we take the first one for FK.
         if isinstance(p_contact, np.ndarray):
@@ -294,7 +296,7 @@ class CorgiLegKinematics:
         Returns:
             np.ndarray: [x, y, z] position in Body Frame {B}.
         """
-        p_L = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, w])
+        p_L = self.fk_sagittal(theta, beta, alpha, w) + np.array([0, 0, w])
         return self._transform_to_body(p_L, gamma, type="pos")
 
     def foot_rim_contact_fk(self, theta, beta, gamma=None, ground_slope=0.0):

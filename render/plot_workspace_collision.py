@@ -78,7 +78,7 @@ _OCTAGON_HALFSPACES = np.array([
 
 LEG_LABELS = ["FL", "FR", "RR", "RL"]
 WHEEL_THICK = RobotParams.WHEEL_THICKNESS          # 0.04 m
-_R_OUTER    = RobotParams.WHEEL_RADIUS_OUTER        # 0.135 m
+_R_OUTER    = RobotParams.WHEEL_RADIUS_OUTER        # 0.140 m (TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS)
 # Bounding-sphere fast-reject threshold for leg-leg check
 _LEG_LEG_FAST_THRESH = 2 * _R_OUTER * 2.5          # ≈ 0.675 m
 

@@ -1,5 +1,6 @@
 import numpy as np
 import time
+from legwheel.config import RobotParams
 
 #### LegKinematics ####
 # Forward kinematics getting approximate coefficient used in class LegWheel.
@@ -12,13 +13,13 @@ class LegKinematics:
         self.min_theta = np.deg2rad(17.0)   # minimum theta = 17 deg
         self.theta0 = np.deg2rad(17.0)      # theta0 = 17 deg
         self.beta0 = np.deg2rad(90)         # beta0  = 90 deg
-        # wheel radius 
-        self.R = 0.1    # 10 cm
-        
-        # new foot design parameters
-        self.foot_offset = 0.02225  # rim offset for new foot 22.25 mm
-        self.tyre_thickness = 0.01225  # tire thickness 12.25 mm
-        self.foot_radius = self.R + self.foot_offset + self.tyre_thickness  # foot radius 134.5 mm
+        # wheel radius
+        self.R = RobotParams.WHEEL_RADIUS_PITCH
+
+        # new foot design parameters (derived from RobotParams tire geometry)
+        self.foot_offset = RobotParams.TIRE_TREAD_RADIUS - self.R  # torus tube center offset from R
+        self.tyre_thickness = RobotParams.TIRE_CORNER_RADIUS        # torus minor radius (corner fillet)
+        self.foot_radius = RobotParams.WHEEL_RADIUS_OUTER           # max contact radius
         
         # linkage parameters
         self.arc_HF = np.deg2rad(130)   # arc HF

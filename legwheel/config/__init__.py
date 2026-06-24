@@ -93,9 +93,14 @@ class RobotParams:
     # Leg & Wheel Configuration
     ABAD_AXIS_OFFSET = 0.057166     # Offset from Hip Roll axis to Leg Pitch plane
     WHEEL_AXIAL_OFFSET = 0.091675   # Lateral offset from leg plane to wheel center
-    WHEEL_RADIUS_PITCH = 0.100      # Effective radius for kinematics
-    WHEEL_RADIUS_OUTER = 0.135      # Physical outer radius (collision)
+    WHEEL_RADIUS_PITCH = 0.100      # Effective radius for kinematics (R: linkage joint circle)
     WHEEL_THICKNESS    = 0.04       # Thickness of the wheel (for collision and visualization)
+
+    # Tire geometry (toroidal cross-section)
+    TIRE_RIM_OFFSET    = 0.010      # Hard rim radial thickness beyond R (R → hard rim outer edge)
+    TIRE_TREAD_RADIUS  = 0.130      # Torus major radius: tread arc center = R + TIRE_RIM_OFFSET + 0.020
+    TIRE_CORNER_RADIUS = 0.010      # Torus minor radius (corner fillet); max contact = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
+    WHEEL_RADIUS_OUTER = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS  # = 0.140, physical outer radius (collision)
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass

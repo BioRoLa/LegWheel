@@ -26,10 +26,10 @@ class LegModel:
         self.r = 0.019 # Default linkage radius
         self.radius = self.R + self.r
         
-        # Foot design parameters
-        self.foot_offset = 0.02225  # 22.25 mm
-        self.tyre_thickness = 0.01225 # 12.25 mm
-        self.foot_radius = self.R + self.foot_offset + self.tyre_thickness
+        # Foot design parameters (derived from RobotParams tire geometry)
+        self.foot_offset = RobotParams.TIRE_TREAD_RADIUS - self.R  # torus tube center offset from R
+        self.tyre_thickness = RobotParams.TIRE_CORNER_RADIUS        # torus minor radius (corner fillet)
+        self.foot_radius = RobotParams.WHEEL_RADIUS_OUTER           # max contact radius
 
         # Linkage parameters (proportional to R)
         self.arc_HF = np.deg2rad(RobotParams.ARC_HF_DEG)
@@ -158,34 +158,39 @@ class LegModel:
         """Returns 2D rotation matrix."""
         return np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang),  np.cos(ang)]])
 
-    def rim_point(self, alpha=0.0):
+    def rim_point(self, alpha=0.0, w=0.0):
         """
-        Calculates point on the wheel rim for given alpha angle (degrees).
+        Calculates point on the wheel rim for given alpha angle (degrees) and lateral contact offset w (m).
         Args:
             alpha: Angle in degrees, where 0° is directly in front of the wheel (in the direction of motion), and positive angles rotate counterclockwise.
+            w: Lateral contact offset from wheel mid-plane (m). Shifts the effective contact radius
+               along the toroidal cross-section: r_eff = TIRE_TREAD_RADIUS + sqrt(r_c^2 - w^2).
         """
         alpha_rad = np.deg2rad(alpha)
         # We ensure it's calculated in vector form internally
         self.forward(self.theta, self.beta, vector=True)
-        
-        # Logic matches previous version but handles vector outputs consistently
+
+        # Effective contact radius varies with lateral offset due to toroidal tire cross-section
+        r_c = self.tyre_thickness  # TIRE_CORNER_RADIUS (torus minor radius)
+        R_tread = self.R + self.foot_offset  # TIRE_TREAD_RADIUS (torus major radius)
+        r_eff = R_tread + np.sqrt(np.clip(r_c**2 - w**2, 0.0, None))
+
         if self.n_elements == 0:
             a_mod = ((alpha + 180) % 360) - 180
             if -40 <= a_mod <= 40:
                 # Foot rim
                 vec = (self.G - self.O_r) / np.linalg.norm(self.G - self.O_r)
-                return self.O_r + (self.R + self.foot_offset + self.tyre_thickness) * (self.rot(alpha_rad) @ vec)
+                return self.O_r + r_eff * (self.rot(alpha_rad) @ vec)
             elif 40 < a_mod <= 180:
                 # Upper rim RHS
                 vec = (self.J_r - self.U_r) / np.linalg.norm(self.J_r - self.U_r)
-                return self.U_r + (self.R + self.foot_offset + self.tyre_thickness) * (self.rot(np.deg2rad(a_mod-40)) @ vec)
+                return self.U_r + r_eff * (self.rot(np.deg2rad(a_mod-40)) @ vec)
             else:
                 # Upper rim LHS
                 vec = (self.J_l - self.U_l) / np.linalg.norm(self.J_l - self.U_l)
-                return self.U_l + (self.R + self.foot_offset + self.tyre_thickness) * (self.rot(np.deg2rad(a_mod+40)) @ vec)
+                return self.U_l + r_eff * (self.rot(np.deg2rad(a_mod+40)) @ vec)
         else:
-            # Batch calculation for arrays (simplified for this refactor)
-            return np.array([self.rim_point(a) for a in np.atleast_1d(alpha)])
+            return np.array([self.rim_point(a, w) for a in np.atleast_1d(alpha)])
 
     def __getitem__(self, key):
         if key not in self.__dict__: raise KeyError(f"Joint '{key}' not found.")
