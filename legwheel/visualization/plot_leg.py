@@ -53,22 +53,28 @@ class PlotLeg(LegModel):
                 self.start = start
                 self.arc_fill = fill
 
-        def get_shape(self, O):
-            """Updates all geometric primitives based on current leg state."""
-            self.O = np.array(O)
-            self._update_geometry()
+        def get_shape(self, O, tyre_offset=None):
+            """Updates all geometric primitives based on current leg state.
 
-        def _update_geometry(self):
+            Args:
+                tyre_offset: override for tire arc half-width. None uses lm.tyre_thickness (w=0).
+                             Pass lm.tyre_offset_at_w(w) when projecting at a specific lateral plane.
+            """
+            self.O = np.array(O)
+            self._update_geometry(tyre_offset=tyre_offset)
+
+        def _update_geometry(self, tyre_offset=None):
             lm = self.leg_model
+            toff = tyre_offset if tyre_offset is not None else lm.tyre_thickness
             # Arcs
             c = 0.0012 # Clearance
             self.upper_rim_r = self.RimObj(*self._make_arc(lm.F_r, lm.H_r, lm.U_r, lm.r/2-c, 'Upper_Rim'))
             self.upper_rim_l = self.RimObj(*self._make_arc(lm.H_l, lm.F_l, lm.U_l, lm.r/2-c, 'Upper_Rim'))
             self.lower_rim_r = self.RimObj(*self._make_arc(lm.G,   lm.F_r, lm.L_r, lm.r/2-c, 'Lower_Rim'))
             self.lower_rim_l = self.RimObj(*self._make_arc(lm.F_l, lm.G,   lm.L_l, lm.r/2-c, 'Lower_Rim'))
-            self.foot_rim    = self.RimObj(*self._make_arc(lm.I_l, lm.I_r, lm.O_r, lm.tyre_thickness, 'Foot_Rim'))
-            self.upper_rim_r_f = self.RimObj(*self._make_arc(lm.J_r, lm.H_extend_r, lm.U_r, lm.tyre_thickness-c, 'Upper_Tyre', z_off=0.0002))
-            self.upper_rim_l_f = self.RimObj(*self._make_arc(lm.H_extend_l, lm.J_l, lm.U_l, lm.tyre_thickness-c, 'Upper_Tyre', z_off=0.0002))
+            self.foot_rim      = self.RimObj(*self._make_arc(lm.I_l, lm.I_r, lm.O_r, toff, 'Foot_Rim'))
+            self.upper_rim_r_f = self.RimObj(*self._make_arc(lm.J_r, lm.H_extend_r, lm.U_r, max(toff-c, 0), 'Upper_Tyre', z_off=0.0002))
+            self.upper_rim_l_f = self.RimObj(*self._make_arc(lm.H_extend_l, lm.J_l, lm.U_l, max(toff-c, 0), 'Upper_Tyre', z_off=0.0002))
 
             # Joints
             self.upper_joint_r = self._make_circle(lm.H_r, lm.r/2, 'Upper_Rim')
@@ -76,13 +82,13 @@ class PlotLeg(LegModel):
             self.lower_joint_r = self._make_circle(lm.F_r, lm.r/2, 'Lower_Rim')
             self.lower_joint_l = self._make_circle(lm.F_l, lm.r/2, 'Lower_Rim')
             self.G_joint       = self._make_circle(lm.G,   lm.r/2, 'Foot_Rim')
-            self.foot_joint    = self._make_circle(lm.G,   lm.foot_offset + lm.tyre_thickness, 'Foot_Rim')
-            self.I_joint_l     = self._make_circle(lm.I_l, lm.tyre_thickness, 'Foot_Rim')
-            self.I_joint_r     = self._make_circle(lm.I_r, lm.tyre_thickness, 'Foot_Rim')
-            self.J_joint_l     = self._make_circle(lm.J_l, lm.tyre_thickness, 'Upper_Tyre', z_off=0.0002)
-            self.J_joint_r     = self._make_circle(lm.J_r, lm.tyre_thickness, 'Upper_Tyre', z_off=0.0002)
-            self.H_extend_joint_l = self._make_circle(lm.H_extend_l, lm.tyre_thickness, 'Upper_Tyre', z_off=0.0002)
-            self.H_extend_joint_r = self._make_circle(lm.H_extend_r, lm.tyre_thickness, 'Upper_Tyre', z_off=0.0002)
+            self.foot_joint    = self._make_circle(lm.G,   lm.foot_offset + toff, 'Foot_Rim')
+            self.I_joint_l     = self._make_circle(lm.I_l, toff, 'Foot_Rim')
+            self.I_joint_r     = self._make_circle(lm.I_r, toff, 'Foot_Rim')
+            self.J_joint_l     = self._make_circle(lm.J_l, max(toff, 0), 'Upper_Tyre', z_off=0.0002)
+            self.J_joint_r     = self._make_circle(lm.J_r, max(toff, 0), 'Upper_Tyre', z_off=0.0002)
+            self.H_extend_joint_l = self._make_circle(lm.H_extend_l, max(toff, 0), 'Upper_Tyre', z_off=0.0002)
+            self.H_extend_joint_r = self._make_circle(lm.H_extend_r, max(toff, 0), 'Upper_Tyre', z_off=0.0002)
             
             # Bars
             self.OB_bar_r = self._make_line([0,0], lm.B_r, 'Actuating_Link')

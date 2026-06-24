@@ -47,7 +47,7 @@ class TrajectoryPlanner3D:
         self.kin = CorgiLegKinematics(leg_index)
 
         # Geometric constants for the rolling foot arc
-        # Rolling arc radius (0.1345m)
+        # Rolling arc radius (0.140m = WHEEL_RADIUS_OUTER)
         self.R_arc = self.kin.solver.foot_radius
         # Distance from Arc Center to G (0.1m)
         self.R_link = self.kin.solver.R

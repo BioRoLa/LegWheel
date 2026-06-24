@@ -154,6 +154,20 @@ class LegModel:
             else:
                 setattr(self, attr, np.array([val.real, val.imag]).transpose(1, 0))
 
+    def tyre_offset_at_w(self, w):
+        """
+        Arc half-width offset from TIRE_TREAD_RADIUS for the rim cross-section at lateral position w.
+        Flat tread zone (|w| ≤ w_c): full tyre_thickness.
+        Corner zone (w_c < |w| ≤ half_w): shrinks to 0 at the hard rim face.
+        """
+        r_c   = self.tyre_thickness
+        half_w = RobotParams.WHEEL_THICKNESS / 2.0
+        w_c   = half_w - r_c
+        w_abs = abs(w)
+        if w_abs <= w_c:
+            return r_c
+        return float(np.sqrt(np.clip(r_c**2 - (w_abs - w_c)**2, 0.0, None)))
+
     def rot(self, ang):
         """Returns 2D rotation matrix."""
         return np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang),  np.cos(ang)]])
@@ -170,10 +184,18 @@ class LegModel:
         # We ensure it's calculated in vector form internally
         self.forward(self.theta, self.beta, vector=True)
 
-        # Effective contact radius varies with lateral offset due to toroidal tire cross-section
-        r_c = self.tyre_thickness  # TIRE_CORNER_RADIUS (torus minor radius)
-        R_tread = self.R + self.foot_offset  # TIRE_TREAD_RADIUS (torus major radius)
-        r_eff = R_tread + np.sqrt(np.clip(r_c**2 - w**2, 0.0, None))
+        # Effective contact radius: outward-facing corner fillet at wheel edges.
+        # Torus tube center: (r=R_tread, |w|=w_c) where w_c = half_w - r_c.
+        #   |w| ≤ w_c  →  flat tread at R_outer (max contact radius)
+        #   w_c < |w| ≤ half_w  →  corner arc: R_tread + sqrt(r_c² - (|w| - w_c)²)
+        r_c   = self.tyre_thickness                       # TIRE_CORNER_RADIUS
+        half_w = RobotParams.WHEEL_THICKNESS / 2.0        # physical half-width
+        w_c   = half_w - r_c                              # lateral center of corner torus
+        w_abs = abs(w)
+        if w_abs <= w_c:
+            r_eff = self.foot_radius                      # flat tread: WHEEL_RADIUS_OUTER
+        else:
+            r_eff = (self.R + self.foot_offset) + np.sqrt(np.clip(r_c**2 - (w_abs - w_c)**2, 0.0, None))
 
         if self.n_elements == 0:
             a_mod = ((alpha + 180) % 360) - 180

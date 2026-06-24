@@ -354,16 +354,23 @@ class CorgiLegKinematics:
 
     def plot_leg_in_3d_plane(self, theta, beta, gamma=None,
                              z_offset=0.0, ax=None,
-                             select_components=["bars", "rims", "joints"]):
+                             select_components=["bars", "rims", "joints"],
+                             w=0.0):
         """
         Visualizes the full detailed mechanism by projecting 2D PlotLeg into specific planes in 3D space.
         This method uses the internal geometry of the PlotLeg solver to render the geometric primitives into 3D Body space.
+
+        Args:
+            w: lateral position of this projection plane (m). Used to compute the correct
+               tire arc half-width via tyre_offset_at_w(w), so rim outlines correctly narrow
+               toward the wheel edges.
         """
         # 1. Update the 2D solver with corrected beta to get current linkage geometry
         self.fk_sagittal(theta, beta)
         shape = self.solver.leg_shape
-        # Update all geometric primitives based on current leg state
-        shape.get_shape(shape.O)
+        # Update geometric primitives with the correct tire cross-section width for this w
+        tyre_off = self.solver.tyre_offset_at_w(w)
+        shape.get_shape(shape.O, tyre_offset=tyre_off)
 
         def proj(x, y, color, lw, z_offset=z_offset):
             """Internal projection helper."""
@@ -415,28 +422,31 @@ class CorgiLegKinematics:
         Wrapper to plot the leg in 3D with appropriate z-offsets for different components.
         This method calls plot_leg_in_3d_plane multiple times to layer the main linkage and the wheel rim with a slight offset to prevent visual overlap.
         """
-        # Plot the mechanism two times with tyre thickness spacing for rim and joints
-        self.plot_leg_in_3d_plane(theta, beta, z_offset=self.wheel_thickness/2,
-                                  gamma=gamma, ax=ax, select_components=["rims", "joints"])
-        self.plot_leg_in_3d_plane(theta, beta, z_offset=-self.wheel_thickness/2,
-                                  gamma=gamma, ax=ax, select_components=["rims", "joints"])
+        # ±half_w planes: rim outlines only (joints at edges are zero-radius at tyre face)
+        # w=0 center plane: bars + rims + joints (correct tyre_offset and structural joints)
+        half_w = self.wheel_thickness / 2.0
+        self.plot_leg_in_3d_plane(theta, beta, z_offset= half_w,
+                                  gamma=gamma, ax=ax, select_components=["rims"], w= half_w)
+        self.plot_leg_in_3d_plane(theta, beta, z_offset=-half_w,
+                                  gamma=gamma, ax=ax, select_components=["rims"], w=-half_w)
         self.plot_leg_in_3d_plane(
-            theta, beta, z_offset=0.0, gamma=gamma, ax=ax, select_components=["bars"])
+            theta, beta, z_offset=0.0, gamma=gamma, ax=ax, select_components=["bars", "rims", "joints"], w=0.0)
 
-        # Add lines connecting the two rim layers to visualize the wheel thickness
+        # Add toroidal cross-section profile lines around the wheel.
+        # Sample w across the full wheel width so the line curves with r_eff(w):
+        #   w ∈ [0, ±r_corner]     → torus arc (r_eff drops from R_outer to R_tread)
+        #   w ∈ [±r_corner, ±half] → flat hard-rim face (r_eff stays at R_tread)
         if ax is not None:
-            # set rim points in range ±π, to ensure correct rendering
-            # 100 points around the rim
             alpha_spacing = np.linspace(-180, 180, 100)
+            half_w = self.wheel_thickness / 2.0
+            w_samples = np.linspace(-half_w, half_w, 15)
             for alpha in alpha_spacing:
-                # Calculate the rim point in the Leg Frame and transform it to Robot Frame for both top and bottom layers
-                rim_point_pos_offset = self.forward_kinematics(
-                    theta, beta, gamma, alpha=alpha, w=self.wheel_thickness/2)
-                rim_point_neg_offset = self.forward_kinematics(
-                    theta, beta, gamma, alpha=alpha, w=-self.wheel_thickness/2)
-                ax.plot([rim_point_pos_offset[0], rim_point_neg_offset[0]],
-                        [rim_point_pos_offset[1], rim_point_neg_offset[1]],
-                        [rim_point_pos_offset[2], rim_point_neg_offset[2]], color='gray', linewidth=2, alpha=0.5)
+                pts = np.array([
+                    self.forward_kinematics(theta, beta, gamma, alpha=alpha, w=w)
+                    for w in w_samples
+                ])
+                ax.plot(pts[:, 0], pts[:, 1], pts[:, 2],
+                        color='gray', linewidth=2, alpha=0.5)
 
     def plot_frames(self, ax, gamma=None, axis_len=0.05):
         """

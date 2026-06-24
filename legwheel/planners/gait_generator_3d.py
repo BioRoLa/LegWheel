@@ -10,7 +10,7 @@ from legwheel.config import RobotParams
 # phase_offset = start partial in traj csv ex: 0.5 -> start from mid of traj curve
 GAIT_LIBRARY = {
     "Walk": {
-        "phase_offsets": [0.0, 0.5, 0.75, 0.25],
+        "phase_offsets": [0.75, 0.25, 0.5, 0.0],  # swing order: FL→RR→FR→RL (1→3→2→4)
         "stance_duty": 0.75,
     },
     "Trot": {
@@ -103,7 +103,7 @@ class GaitGenerator3D:
         GAMMA_GUARD = np.deg2rad(RobotParams.GAMMA_GUARD_DEG)  # conservative for velocity guard
         
         # Use actual geometric values from the kinematics model
-        R_arc = self.legs[0].solver.foot_radius    # 0.1345 m
+        R_arc = self.legs[0].solver.foot_radius    # 0.140 m (WHEEL_RADIUS_OUTER)
         R_link = self.legs[0].solver.R              # 0.100 m
         H_hip = stand_height + RobotParams.ABAD_AXIS_OFFSET
         H_O = H_hip - R_arc

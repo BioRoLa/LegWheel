@@ -34,7 +34,7 @@ def cmd_check(args):
     # 1. Height Check (Theta limits)
     H_hip = args.height + RobotParams.ABAD_AXIS_OFFSET
     leg_kine = [CorgiLegKinematics(i) for i in range(4)]
-    R_arc = leg_kine[0].solver.foot_radius   # 0.1345 m
+    R_arc = leg_kine[0].solver.foot_radius   # 0.140 m (WHEEL_RADIUS_OUTER)
     R_link = leg_kine[0].solver.R             # 0.100 m
     H_O = H_hip - R_arc
     
