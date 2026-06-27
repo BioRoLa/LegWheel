@@ -99,8 +99,8 @@ class RobotParams:
     # Tire geometry (toroidal cross-section)
     TIRE_RIM_OFFSET    = 0.010      # Hard rim radial thickness beyond R (R → hard rim outer edge)
     TIRE_TREAD_RADIUS  = 0.130      # Torus major radius: tread arc center = R + TIRE_RIM_OFFSET + 0.020
-    TIRE_CORNER_RADIUS = 0.010      # Torus minor radius (corner fillet); max contact = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
-    WHEEL_RADIUS_OUTER = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS  # = 0.140, physical outer radius (collision)
+    TIRE_CORNER_RADIUS = 0.015      # Torus minor radius (corner fillet); max contact = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
+    WHEEL_RADIUS_OUTER = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS  # = 0.145, physical outer radius (collision)
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass

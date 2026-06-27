@@ -59,7 +59,9 @@ def cmd_check(args):
     D_x_max = 2 * H_O * np.tan(BETA_MAX) + 2 * R_arc * BETA_MAX
     v_x_limit = D_x_max / (args.period * stance_duty)
     
-    D_y_max = 2 * H_hip * np.sin(GAMMA_GUARD)
+    # One-sided lateral sweep matches GaitGenerator3D: stance moves from the
+    # touchdown extreme toward the gamma floor without crossing upright.
+    D_y_max = H_hip * np.sin(GAMMA_GUARD)
     v_y_limit = D_y_max / (args.period * stance_duty)
 
     hip_positions = [leg.p_Mi_in_B for leg in leg_kine]
@@ -100,8 +102,10 @@ def cmd_check(args):
                 global_step_scale = 1.0
                 
         if global_step_scale < 1.0:
-            eff_step = args.step * global_step_scale
-            warnings.append(f"Step Height Guard: Downscaled to {global_step_scale*100:.1f}%. (Cmd H={args.step:.3f} -> {eff_step:.3f} m)")
+            warnings.append(
+                f"Swing Velocity Guard: Scaling liftoff/touchdown velocities to "
+                f"{global_step_scale*100:.1f}% while preserving step_height={args.step:.3f} m."
+            )
         elif len(errors) == 0:
             print(f" [OK] Step Height: \tSwing kinematics can fully realize {args.step:.3f} m clearance.")
             

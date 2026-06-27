@@ -301,8 +301,12 @@ class CorgiLegKinematics:
 
     def foot_rim_contact_fk(self, theta, beta, gamma=None, ground_slope=0.0):
         """
-        Specialized FK to calculate the foot contact point on the rim, accounting for ground slope
-        and wheel thickness. In 3D move, if the wheel is tilted, the lowest edge is used as contact.
+        Specialized FK to calculate the lowest toroidal rim contact point.
+
+        The Body Frame {B} uses +Z upward, so the physically lowest contact is the sample
+        with the minimum Z coordinate. Unlike the legacy flat-tread model, the toroidal
+        tire does not necessarily contact at ``w=±T/2``; the effective radius varies with
+        lateral coordinate ``w`` via ``LegModel.rim_point(alpha, w)``.
 
         Args:
             theta (float): Joint angle 1 (rad).
@@ -318,22 +322,18 @@ class CorgiLegKinematics:
         # 1. Base alpha (sagittal)
         alpha = np.rad2deg(ground_slope - beta)
 
-        # 2. Determine w based on lateral tilt (lowest point on the flat-tread wheel)
-        half_w = self.wheel_thickness / 2.0
-
         # Optimization: for extremely small gamma, assume center contact to avoid flickering
         if abs(gamma) < 1e-4:
             return alpha, 0.0
 
-        # Calculate heights of both wheel edges in Body Frame {B}
-        p_L_pos = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, half_w])
-        p_L_neg = self.fk_sagittal(theta, beta, alpha) + np.array([0, 0, -half_w])
+        half_w = self.wheel_thickness / 2.0
+        w_samples = np.linspace(-half_w, half_w, 9)
+        z_values = np.array([
+            self.forward_kinematics(theta, beta, gamma, alpha=alpha, w=w)[2]
+            for w in w_samples
+        ])
 
-        z_pos = self._transform_to_body(p_L_pos, gamma)[2]
-        z_neg = self._transform_to_body(p_L_neg, gamma)[2]
-
-        # Use the edge that is physically lower (closer to ground)
-        w = half_w if z_pos < z_neg else -half_w
+        w = float(w_samples[int(np.argmin(z_values))])
         return alpha, w
 
     def get_joint_positions(self, theta, beta, gamma=None):

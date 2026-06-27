@@ -51,8 +51,11 @@ def main():
     warnings = []
 
     # 1. Height Check (Theta limits)
-    H_O = args.height - RobotParams.WHEEL_RADIUS_PITCH
-    R_link = RobotParams.WHEEL_RADIUS_PITCH * 0.2225 # approx offset derived from geometric relations
+    leg_kine = [CorgiLegKinematics(i) for i in range(4)]
+    H_hip = args.height + RobotParams.ABAD_AXIS_OFFSET
+    R_arc = leg_kine[0].solver.foot_radius
+    R_link = leg_kine[0].solver.R
+    H_O = H_hip - R_arc
     
     # Calculate initial theta based on static height
     try:
@@ -71,19 +74,18 @@ def main():
 
 
     # 2. Twist Workspace Check (Velocity scaling)
-    L1 = RobotParams.WHEEL_RADIUS_PITCH * RobotParams.L1_RATIO
-    R_arc = np.sqrt(L1**2 - R_link**2)
-    BETA_MAX = np.deg2rad(40)
-    GAMMA_MAX = np.deg2rad(8)
+    BETA_MAX = np.deg2rad(RobotParams.BETA_MAX_DEG)
+    GAMMA_GUARD = np.deg2rad(RobotParams.GAMMA_GUARD_DEG)
 
     D_x_max = 2 * H_O * np.tan(BETA_MAX) + 2 * R_arc * BETA_MAX
     v_x_limit = D_x_max / (args.period * stance_duty)
     
-    D_y_max = 2 * args.height * np.sin(GAMMA_MAX)
+    # One-sided lateral sweep matches GaitGenerator3D: stance moves from the
+    # touchdown extreme toward the gamma floor without crossing upright.
+    D_y_max = H_hip * np.sin(GAMMA_GUARD)
     v_y_limit = D_y_max / (args.period * stance_duty)
 
     # Compute per-leg velocities at hip mounts
-    leg_kine = [CorgiLegKinematics(i) for i in range(4)]
     hip_positions = [leg.p_Mi_in_B for leg in leg_kine]
     
     VEL_TOL = 1e-4  # 0.01% relative tolerance (must match gait_generator_3d)
@@ -126,8 +128,11 @@ def main():
                 global_step_scale = 1.0 # Fallback in case attribute structure changes
                 
         if global_step_scale < 1.0:
-            eff_step = args.step * global_step_scale
-            warnings.append(f"Step Height Guard: Heavy lateral/sagittal usage. Step clearance downscaled to {global_step_scale*100:.1f}%. (Cmd H={args.step:.3f} -> {eff_step:.3f} m)")
+            warnings.append(
+                f"Swing Velocity Guard: Heavy lateral/sagittal usage. Scaling liftoff/touchdown "
+                f"velocities to {global_step_scale*100:.1f}% while preserving "
+                f"step_height={args.step:.3f} m."
+            )
         elif len(errors) == 0:
             print(f" [OK] Step Height: \tSwing kinematics can fully realize {args.step:.3f} m clearance.")
             
