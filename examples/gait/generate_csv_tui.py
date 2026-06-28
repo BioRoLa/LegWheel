@@ -149,24 +149,24 @@ class Field:
 
 def _gait_fields() -> List[Field]:
     return [
-        Field("Gait Type", "gait", "choice", "Walk", GAIT_CHOICES),
-        Field("Vx (m/s)", "vx", "float", "0.10"),
-        Field("Vy (m/s)", "vy", "float", "0.00"),
-        Field("Wz (rad/s)", "wz", "float", "0.00"),
-        Field("Height (m)", "height", "float", "0.25"),
-        Field("Step H (m)", "step", "float", "0.04"),
-        Field("Period (s)", "period", "float", "4.0"),
-        Field("Duty D_f", "duty", "float", ""),
-        Field("Cycles", "cycles", "int", "10"),
-        Field("dt (s)", "dt", "float", "0.001"),
-        Field("Output Dir", "outdir", "text", "outputs/csv"),
-        Field("Stab. Margin", "stab_margin", "float", "0.02", section="── Walk Stability ──"),
-        Field("Launch Enable", "launch", "bool", False, section="── Launch Control ──"),
-        Field("Ramp Mode", "ramp_mode", "choice", "cycles", ["cycles", "seconds"]),
-        Field("Ramp Cycles", "ramp_cycles", "int", "3"),
-        Field("Ramp Seconds", "ramp_secs", "float", "3.0"),
-        Field("Ramp Floor", "ramp_floor", "float", "0.10"),
-        Field("Generate", GENERATE_ACTION_KEY, "action", ""),
+        Field("Gait Type",    "gait",        "choice", "Walk",        GAIT_CHOICES),
+        Field("Vx (m/s)",     "vx",          "float",  "0.10"),
+        Field("Vy (m/s)",     "vy",          "float",  "0.00"),
+        Field("Wz (rad/s)",   "wz",          "float",  "0.00"),
+        Field("Height (m)",   "height",      "float",  "0.25"),
+        Field("Step H (m)",   "step",        "float",  "0.04"),
+        Field("Period (s)",   "period",      "float",  "1.0"),
+        Field("Duty D_f",     "duty",        "float",  ""),
+        Field("Cycles",       "cycles",      "int",    "10"),
+        Field("dt (s)",       "dt",          "float",  "0.001"),
+        Field("Output Dir",   "outdir",      "text",   "outputs/csv"),
+        Field("Stab. Margin", "stab_margin", "float",  "0.02",        section="── Walk Stability ──"),
+        Field("Launch Enable","launch",      "bool",   False,         section="── Launch Control ──"),
+        Field("Ramp Mode",    "ramp_mode",   "choice", "cycles",      ["cycles", "seconds"]),
+        Field("Ramp Cycles",  "ramp_cycles", "int",    "3"),
+        Field("Ramp Seconds", "ramp_secs",   "float",  "3.0"),
+        Field("Ramp Floor",   "ramp_floor",  "float",  "0.10"),
+        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
@@ -303,14 +303,14 @@ class CSVGeneratorTUI:
     def _gait_summary(self):
         out = []
         try:
-            gait = self._fval("gait", "Walk")
-            vx = float(self._fval("vx", "0"))
-            vy = float(self._fval("vy", "0"))
-            wz = float(self._fval("wz", "0"))
-            h = float(self._fval("height", "0.25"))
-            period = float(self._fval("period", "4"))
+            gait     = self._fval("gait",   "Walk")
+            vx       = float(self._fval("vx",     "0"))
+            vy       = float(self._fval("vy",     "0"))
+            wz       = float(self._fval("wz",     "0"))
+            h        = float(self._fval("height", "0.25"))
+            period   = float(self._fval("period", "1.0"))
             duty_raw = str(self._fval("duty", "")).strip()
-            duty = float(duty_raw) if duty_raw else None
+            duty     = float(duty_raw) if duty_raw else None
             cycles = int(float(self._fval("cycles", "10")))
             dt = float(self._fval("dt", "0.001"))
             launch = self._fval("launch", False)
@@ -787,28 +787,17 @@ class CSVGeneratorTUI:
 
     def _gait_cmd(self) -> List[str]:
         cmd = [
-            sys.executable,
-            GAIT_SCRIPT,
-            "-g",
-            self._fval("gait", "Walk"),
-            "-vx",
-            self._fval("vx", "0.10"),
-            "-vy",
-            self._fval("vy", "0.00"),
-            "-wz",
-            self._fval("wz", "0.00"),
-            "-z",
-            self._fval("height", "0.25"),
-            "-s",
-            self._fval("step", "0.04"),
-            "-p",
-            self._fval("period", "4.0"),
-            "-c",
-            self._fval("cycles", "10"),
-            "-dt",
-            self._fval("dt", "0.001"),
-            "-o",
-            self._fval("outdir", "outputs/csv"),
+            sys.executable, GAIT_SCRIPT,
+            "-g",  self._fval("gait",   "Walk"),
+            "-vx", self._fval("vx",     "0.10"),
+            "-vy", self._fval("vy",     "0.00"),
+            "-wz", self._fval("wz",     "0.00"),
+            "-z",  self._fval("height", "0.25"),
+            "-s",  self._fval("step",   "0.04"),
+            "-p",  self._fval("period", "1.0"),
+            "-c",  self._fval("cycles", "10"),
+            "-dt", self._fval("dt",     "0.001"),
+            "-o",  self._fval("outdir", "outputs/csv"),
         ]
         stab = self._fval("stab_margin", "0.02")
         cmd += ["--stab-margin", stab]
@@ -819,9 +808,9 @@ class CSVGeneratorTUI:
             rmode = self._fval("ramp_mode", "cycles")
             if rmode == "seconds":
                 try:
-                    secs = float(self._fval("ramp_secs", "3.0"))
-                    period = float(self._fval("period", "4.0"))
-                    n = max(1, math.ceil(secs / max(period, 1e-9)))
+                    secs   = float(self._fval("ramp_secs", "3.0"))
+                    period = float(self._fval("period", "1.0"))
+                    n      = max(1, math.ceil(secs / max(period, 1e-9)))
                 except (ValueError, ZeroDivisionError):
                     n = 3
                 n_str = str(n)

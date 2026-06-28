@@ -48,7 +48,7 @@ def generate_hardware_csv(
     gait_type="Trot",
     stand_height=0.25,
     step_height=0.04,
-    period=5.98,
+    period=1.0,
     dt=0.001,
     n_cycles=5,
     output_dir="outputs/csv",
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument("-wz", "--wz",    type=float, default=0.0,     help="Yaw velocity (rad/s)")
     parser.add_argument("-z", "--height", type=float, default=0.25,    help="Standing height (m)")
     parser.add_argument("-s", "--step",   type=float, default=0.04,    help="Step height (m)")
-    parser.add_argument("-p", "--period", type=float, default=4,       help="Gait period (s)")
+    parser.add_argument("-p", "--period", type=float, default=1.0,     help="Gait period (s)")
     parser.add_argument("-c", "--cycles", type=int,   default=10,      help="Number of gait cycles")
     parser.add_argument("-dt", "--dt",    type=float, default=0.001,   help="Time step (s)")
     parser.add_argument("-o", "--outdir", type=str,   default="outputs/csv", help="Output directory")

@@ -253,7 +253,11 @@ class GaitGenerator3D:
         labels = ["FL", "FR", "RR", "RL"]
 
         # Step 1: preliminary trajectory (all biases zero)
-        all_leg_trajs = [np.array(p.generate_trajectory()) for p in self.planners]
+        try:
+            all_leg_trajs = [np.array(p.generate_trajectory()) for p in self.planners]
+        except RuntimeError as e:
+            print(f"  [WalkBias] Preliminary trajectory failed ({e}); skipping bias (reduce speed or period)")
+            return biases
         n_points = len(all_leg_trajs[0])
         n_stance = int(round(self.stance_duty * n_points))
 
