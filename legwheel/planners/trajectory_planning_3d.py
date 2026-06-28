@@ -294,8 +294,14 @@ class TrajectoryPlanner3D:
         v_lo_virtual[2] += v_z_kinematic
 
         # --- Step 4: Touchdown velocity ---
+        # Use the planned global/body-space LO→TD displacement for horizontal
+        # touchdown velocity. The previous -self.velocity target described stance
+        # contact velocity, so lateral swing asked for the opposite arrival direction.
         v_mag = np.linalg.norm(self.velocity)  # still used for touchdown damping
-        v_td = np.array([-self.velocity[0], -self.velocity[1], -v_mag / 10])
+        swing_delta_B = p_td - p_lo_virtual
+        v_td_xy_B = swing_delta_B[:2] / T_sw
+        v_td = np.array([v_td_xy_B[0], v_td_xy_B[1], -v_mag / 10])
+        self._last_swing_boundary_velocities_B = (v_lo_virtual.copy(), v_td.copy())
 
         # --- Apply swing velocity scaling ---
         # Scale liftoff & touchdown velocities to reduce joint speed demands

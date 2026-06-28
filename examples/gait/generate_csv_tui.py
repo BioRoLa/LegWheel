@@ -42,16 +42,21 @@ from prompt_toolkit.filters import Condition
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import (
-    ConditionalContainer, Float, FloatContainer, HSplit, VSplit, Window,
+    ConditionalContainer,
+    Float,
+    FloatContainer,
+    HSplit,
+    VSplit,
+    Window,
 )
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.dimension import D
 from prompt_toolkit.styles import Style
 
-SCRIPT_DIR       = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR         = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
-GAIT_SCRIPT      = os.path.join(SCRIPT_DIR, "generate_hardware_csv.py")
-LEAN_SCRIPT      = os.path.join(SCRIPT_DIR, "generate_lean_csv.py")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
+GAIT_SCRIPT = os.path.join(SCRIPT_DIR, "generate_hardware_csv.py")
+LEAN_SCRIPT = os.path.join(SCRIPT_DIR, "generate_lean_csv.py")
 TRANSFORM_SCRIPT = os.path.join(SCRIPT_DIR, "generate_transform_csv.py")
 
 GAIT_CHOICES = ["Walk", "Trot", "Pace", "Bound", "Pronk"]
@@ -91,14 +96,15 @@ HELP_TEXT = """\
 # Field model
 # ──────────────────────────────────────────────────────────
 
+
 @dataclass
 class Field:
-    label:   str
-    key:     str
-    type:    str            # "float" | "int" | "text" | "bool" | "choice" | "action"
+    label: str
+    key: str
+    type: str  # "float" | "int" | "text" | "bool" | "choice" | "action"
     default: Any
     choices: List[str] = dc_field(default_factory=list)
-    section: Optional[str] = None   # separator header above this field
+    section: Optional[str] = None  # separator header above this field
 
     def __post_init__(self):
         self._val: Any = bool(self.default) if self.type == "bool" else str(self.default)
@@ -140,58 +146,60 @@ class Field:
 # Field definitions
 # ──────────────────────────────────────────────────────────
 
+
 def _gait_fields() -> List[Field]:
     return [
-        Field("Gait Type",    "gait",        "choice", "Walk",        GAIT_CHOICES),
-        Field("Vx (m/s)",     "vx",          "float",  "0.10"),
-        Field("Vy (m/s)",     "vy",          "float",  "0.00"),
-        Field("Wz (rad/s)",   "wz",          "float",  "0.00"),
-        Field("Height (m)",   "height",      "float",  "0.25"),
-        Field("Step H (m)",   "step",        "float",  "0.04"),
-        Field("Period (s)",   "period",      "float",  "4.0"),
-        Field("Cycles",       "cycles",      "int",    "10"),
-        Field("dt (s)",       "dt",          "float",  "0.001"),
-        Field("Output Dir",   "outdir",      "text",   "outputs/csv"),
-        Field("Stab. Margin", "stab_margin", "float",  "0.02",        section="── Walk Stability ──"),
-        Field("Launch Enable","launch",      "bool",   False,         section="── Launch Control ──"),
-        Field("Ramp Mode",    "ramp_mode",   "choice", "cycles",      ["cycles", "seconds"]),
-        Field("Ramp Cycles",  "ramp_cycles", "int",    "3"),
-        Field("Ramp Seconds", "ramp_secs",   "float",  "3.0"),
-        Field("Ramp Floor",   "ramp_floor",  "float",  "0.10"),
-        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
+        Field("Gait Type", "gait", "choice", "Walk", GAIT_CHOICES),
+        Field("Vx (m/s)", "vx", "float", "0.10"),
+        Field("Vy (m/s)", "vy", "float", "0.00"),
+        Field("Wz (rad/s)", "wz", "float", "0.00"),
+        Field("Height (m)", "height", "float", "0.25"),
+        Field("Step H (m)", "step", "float", "0.04"),
+        Field("Period (s)", "period", "float", "4.0"),
+        Field("Duty D_f", "duty", "float", ""),
+        Field("Cycles", "cycles", "int", "10"),
+        Field("dt (s)", "dt", "float", "0.001"),
+        Field("Output Dir", "outdir", "text", "outputs/csv"),
+        Field("Stab. Margin", "stab_margin", "float", "0.02", section="── Walk Stability ──"),
+        Field("Launch Enable", "launch", "bool", False, section="── Launch Control ──"),
+        Field("Ramp Mode", "ramp_mode", "choice", "cycles", ["cycles", "seconds"]),
+        Field("Ramp Cycles", "ramp_cycles", "int", "3"),
+        Field("Ramp Seconds", "ramp_secs", "float", "3.0"),
+        Field("Ramp Floor", "ramp_floor", "float", "0.10"),
+        Field("Generate", GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
 def _lean_fields() -> List[Field]:
     return [
-        Field("Roll (°)",      "roll",    "float", "0.0"),
-        Field("Pitch (°)",     "pitch",   "float", "0.0"),
-        Field("Yaw (°)",       "yaw",     "float", "0.0"),
-        Field("Height (m)",    "height",  "float", "0.30"),
-        Field("Compensation",  "comp",    "float", "0.0"),
-        Field("Steps / Seg",   "steps",   "int",   "500"),
-        Field("Repeats",       "repeats", "int",   "1"),
-        Field("Prep (s)",      "prep",    "float", "5.0"),
-        Field("dt (s)",        "dt",      "float", "0.001"),
-        Field("Return Neutral","ret",     "bool",  True),
-        Field("Output Dir",    "outdir",  "text",  "outputs/csv"),
-        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
+        Field("Roll (°)", "roll", "float", "0.0"),
+        Field("Pitch (°)", "pitch", "float", "0.0"),
+        Field("Yaw (°)", "yaw", "float", "0.0"),
+        Field("Height (m)", "height", "float", "0.30"),
+        Field("Compensation", "comp", "float", "0.0"),
+        Field("Steps / Seg", "steps", "int", "500"),
+        Field("Repeats", "repeats", "int", "1"),
+        Field("Prep (s)", "prep", "float", "5.0"),
+        Field("dt (s)", "dt", "float", "0.001"),
+        Field("Return Neutral", "ret", "bool", True),
+        Field("Output Dir", "outdir", "text", "outputs/csv"),
+        Field("Generate", GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
 def _transform_fields() -> List[Field]:
     return [
-        Field("Target θ (°)",  "t_theta", "float", "45.0",  section="── Target Pose (all legs) ──"),
-        Field("Target β (°)",  "t_beta",  "float", "0.0"),
-        Field("Target γ (°)",  "t_gamma", "float", "0.0"),
-        Field("Start θ (°)",   "s_theta", "float", "17.0",  section="── Start Pose (all legs) ──"),
-        Field("Start β (°)",   "s_beta",  "float", "0.0"),
-        Field("Start γ (°)",   "s_gamma", "float", "0.0"),
-        Field("Duration (s)",  "dur",     "float", "5.0",   section="── Options ──"),
-        Field("Hold (s)",      "hold",    "float", "0.0"),
-        Field("dt (s)",        "dt",      "float", "0.001"),
-        Field("Output Dir",    "outdir",  "text",  "outputs/csv"),
-        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
+        Field("Target θ (°)", "t_theta", "float", "45.0", section="── Target Pose (all legs) ──"),
+        Field("Target β (°)", "t_beta", "float", "0.0"),
+        Field("Target γ (°)", "t_gamma", "float", "0.0"),
+        Field("Start θ (°)", "s_theta", "float", "17.0", section="── Start Pose (all legs) ──"),
+        Field("Start β (°)", "s_beta", "float", "0.0"),
+        Field("Start γ (°)", "s_gamma", "float", "0.0"),
+        Field("Duration (s)", "dur", "float", "5.0", section="── Options ──"),
+        Field("Hold (s)", "hold", "float", "0.0"),
+        Field("dt (s)", "dt", "float", "0.001"),
+        Field("Output Dir", "outdir", "text", "outputs/csv"),
+        Field("Generate", GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
@@ -199,27 +207,31 @@ def _transform_fields() -> List[Field]:
 # TUI Application
 # ──────────────────────────────────────────────────────────
 
-LABEL_W = 15    # label column width (characters)
+LABEL_W = 15  # label column width (characters)
 
 
 class CSVGeneratorTUI:
     def __init__(self, mode: Optional[str] = None, overrides: Optional[Dict[str, str]] = None):
-        self.mode        = mode if mode in ("gait", "lean", "transform") else "gait"
-        self.all_fields  = {"gait": _gait_fields(), "lean": _lean_fields(), "transform": _transform_fields()}
+        self.mode = mode if mode in ("gait", "lean", "transform") else "gait"
+        self.all_fields = {
+            "gait": _gait_fields(),
+            "lean": _lean_fields(),
+            "transform": _transform_fields(),
+        }
         if overrides:
             for fs in self.all_fields.values():
                 for f in fs:
                     if f.key in overrides:
                         f.set(overrides[f.key])
-        self.focus_idx   = 0
+        self.focus_idx = 0
         self.log_lines: List[str] = ["  Ready — press F5 to generate."]
-        self.is_running  = False
-        self.last_path   = ""
-        self.status      = "Idle"
-        self.edit_mode   = False
-        self.show_help   = False
+        self.is_running = False
+        self.last_path = ""
+        self.status = "Idle"
+        self.edit_mode = False
+        self.show_help = False
         self.edit_buffer = Buffer(name="edit", multiline=False)
-        self._app        = self._build_app()
+        self._app = self._build_app()
 
     # ── field helpers ─────────────────────────────────────
 
@@ -239,8 +251,8 @@ class CSVGeneratorTUI:
     # ── renderers ─────────────────────────────────────────
 
     def _render_title(self):
-        gs = "class:tab.on" if self.mode == "gait"      else "class:tab"
-        ls = "class:tab.on" if self.mode == "lean"      else "class:tab"
+        gs = "class:tab.on" if self.mode == "gait" else "class:tab"
+        ls = "class:tab.on" if self.mode == "lean" else "class:tab"
         ts = "class:tab.on" if self.mode == "transform" else "class:tab"
         return [
             ("class:title", "  CorgiRobot CSV Generator   "),
@@ -256,17 +268,17 @@ class CSVGeneratorTUI:
         for i, f in enumerate(self._fields()):
             if f.section:
                 out.append(("class:sep", f"\n  {f.section}\n\n"))
-            foc = (i == self.focus_idx)
-            ls  = "class:lbl.f" if foc else "class:lbl"
-            vs  = "class:val.f" if foc else "class:val"
+            foc = i == self.focus_idx
+            ls = "class:lbl.f" if foc else "class:lbl"
+            vs = "class:val.f" if foc else "class:val"
             cur = " ▶ " if foc else "   "
             out += [(ls, f"{cur}{f.label.ljust(LABEL_W)}"), (vs, f" {f.display()}\n")]
         out += [
             ("class:hint", "\n  Tab/↑↓/jk  Navigate     ←→/Spc/hl  Toggle\n"),
-            ("class:hint",   "  Enter/i/a  Edit/press   F5          Generate\n"),
-            ("class:hint",   "  Focus Generate button and press Enter/Space\n"),
-            ("class:hint",   "  gg/G       First/Last   1/2/3       Mode\n"),
-            ("class:hint",   "  F1         Key help     q           Quit\n"),
+            ("class:hint", "  Enter/i/a  Edit/press   F5          Generate\n"),
+            ("class:hint", "  Focus Generate button and press Enter/Space\n"),
+            ("class:hint", "  gg/G       First/Last   1/2/3       Mode\n"),
+            ("class:hint", "  F1         Key help     q           Quit\n"),
         ]
         return out
 
@@ -280,51 +292,72 @@ class CSVGeneratorTUI:
             out += self._transform_summary()
         out.append(("class:sep", "\n ── Log ──\n"))
         for line in self.log_lines[-28:]:
-            s = "class:log.ok" if line.startswith("✓") else (
-                "class:log.err" if line.startswith("✗") else "class:log")
+            s = (
+                "class:log.ok"
+                if line.startswith("✓")
+                else ("class:log.err" if line.startswith("✗") else "class:log")
+            )
             out.append((s, f"{line}\n"))
         return out
 
     def _gait_summary(self):
         out = []
         try:
-            gait   = self._fval("gait",   "Walk")
-            vx     = float(self._fval("vx",     "0"))
-            vy     = float(self._fval("vy",     "0"))
-            wz     = float(self._fval("wz",     "0"))
-            h      = float(self._fval("height", "0.25"))
+            gait = self._fval("gait", "Walk")
+            vx = float(self._fval("vx", "0"))
+            vy = float(self._fval("vy", "0"))
+            wz = float(self._fval("wz", "0"))
+            h = float(self._fval("height", "0.25"))
             period = float(self._fval("period", "4"))
+            duty_raw = str(self._fval("duty", "")).strip()
+            duty = float(duty_raw) if duty_raw else None
             cycles = int(float(self._fval("cycles", "10")))
-            dt     = float(self._fval("dt",     "0.001"))
+            dt = float(self._fval("dt", "0.001"))
             launch = self._fval("launch", False)
 
-            gait_s  = cycles * period
+            gait_s = cycles * period
             total_s = 5.0 + gait_s
 
-            stab   = float(self._fval("stab_margin", "0.02"))
-            stab_s = (f" {stab*100:.0f} cm" if gait == "Walk" and stab > 0
-                      else (" disabled" if gait == "Walk" else " N/A"))
+            stab = float(self._fval("stab_margin", "0.02"))
+            stab_s = (
+                f" {stab*100:.0f} cm"
+                if gait == "Walk" and stab > 0
+                else (" disabled" if gait == "Walk" else " N/A")
+            )
             out += [
-                ("class:sum",    f" Gait    {gait}\n"),
-                ("class:sum",    f" Speed   Vx={vx:+.2f}  Vy={vy:+.2f}  Wz={wz:+.2f}\n"),
-                ("class:sum",    f" Height  {h:.3f} m\n"),
-                ("class:sum",    f" Period  {period:.2f} s\n"),
-                ("class:sum",    f" Cycles  {cycles}  →  {gait_s:.1f} s\n"),
-                ("class:sum",    f" Prep    5.0 s (fixed)\n"),
-                ("class:sum",    f" CoM Stab{stab_s}\n"),
+                ("class:sum", f" Gait    {gait}\n"),
+                ("class:sum", f" Speed   Vx={vx:+.2f}  Vy={vy:+.2f}  Wz={wz:+.2f}\n"),
+                ("class:sum", f" Height  {h:.3f} m\n"),
+                ("class:sum", f" Period  {period:.2f} s\n"),
+                (
+                    "class:sum",
+                    (
+                        f" Duty    {duty:.2f} (override)\n"
+                        if duty is not None
+                        else " Duty    gait default\n"
+                    ),
+                ),
+                ("class:sum", f" Cycles  {cycles}  →  {gait_s:.1f} s\n"),
+                ("class:sum", f" Prep    5.0 s (fixed)\n"),
+                ("class:sum", f" CoM Stab{stab_s}\n"),
             ]
             if launch:
                 rmode = self._fval("ramp_mode", "cycles")
                 if rmode == "seconds":
-                    secs   = float(self._fval("ramp_secs", "3"))
+                    secs = float(self._fval("ramp_secs", "3"))
                     n_ramp = max(1, math.ceil(secs / max(period, 1e-9)))
                 else:
                     n_ramp = int(float(self._fval("ramp_cycles", "3")))
-                ramp_s   = n_ramp * period
+                ramp_s = n_ramp * period
                 total_s += ramp_s
                 out.append(("class:sum", f" Launch  {n_ramp} cy → {ramp_s:.1f} s\n"))
 
-            out.append(("class:sum.hi", f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n"))
+            out.append(
+                (
+                    "class:sum.hi",
+                    f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n",
+                )
+            )
         except Exception:
             out.append(("class:log.err", " (invalid params)\n"))
         return out
@@ -332,28 +365,31 @@ class CSVGeneratorTUI:
     def _lean_summary(self):
         out = []
         try:
-            roll    = float(self._fval("roll",    "0"))
-            pitch   = float(self._fval("pitch",   "0"))
-            yaw     = float(self._fval("yaw",     "0"))
-            h       = float(self._fval("height",  "0.3"))
-            steps   = int(float(self._fval("steps",   "500")))
+            roll = float(self._fval("roll", "0"))
+            pitch = float(self._fval("pitch", "0"))
+            yaw = float(self._fval("yaw", "0"))
+            h = float(self._fval("height", "0.3"))
+            steps = int(float(self._fval("steps", "500")))
             repeats = int(float(self._fval("repeats", "1")))
-            dt      = float(self._fval("dt",      "0.001"))
-            prep    = float(self._fval("prep",    "5"))
-            ret     = self._fval("ret", True)
+            dt = float(self._fval("dt", "0.001"))
+            prep = float(self._fval("prep", "5"))
+            ret = self._fval("ret", True)
 
             segs_per_rep = 2 if ret else 1
-            total_segs   = repeats * segs_per_rep
-            total_s      = prep + steps * total_segs * dt
+            total_segs = repeats * segs_per_rep
+            total_s = prep + steps * total_segs * dt
 
             out += [
-                ("class:sum",    f" Roll    {roll:+.1f}°\n"),
-                ("class:sum",    f" Pitch   {pitch:+.1f}°\n"),
-                ("class:sum",    f" Yaw     {yaw:+.1f}°\n"),
-                ("class:sum",    f" Height  {h:.3f} m\n"),
-                ("class:sum",    f" Steps   {steps} × {total_segs} seg ({repeats}x)\n"),
-                ("class:sum",    f" Prep    {prep:.1f} s\n"),
-                ("class:sum.hi", f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n"),
+                ("class:sum", f" Roll    {roll:+.1f}°\n"),
+                ("class:sum", f" Pitch   {pitch:+.1f}°\n"),
+                ("class:sum", f" Yaw     {yaw:+.1f}°\n"),
+                ("class:sum", f" Height  {h:.3f} m\n"),
+                ("class:sum", f" Steps   {steps} × {total_segs} seg ({repeats}x)\n"),
+                ("class:sum", f" Prep    {prep:.1f} s\n"),
+                (
+                    "class:sum.hi",
+                    f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n",
+                ),
             ]
         except Exception:
             out.append(("class:log.err", " (invalid params)\n"))
@@ -363,22 +399,25 @@ class CSVGeneratorTUI:
         out = []
         try:
             t_theta = float(self._fval("t_theta", "45"))
-            t_beta  = float(self._fval("t_beta",  "0"))
+            t_beta = float(self._fval("t_beta", "0"))
             t_gamma = float(self._fval("t_gamma", "0"))
             s_theta = float(self._fval("s_theta", "17"))
-            s_beta  = float(self._fval("s_beta",  "0"))
+            s_beta = float(self._fval("s_beta", "0"))
             s_gamma = float(self._fval("s_gamma", "0"))
-            dur     = float(self._fval("dur",     "5"))
-            hold    = float(self._fval("hold",    "0"))
-            dt      = float(self._fval("dt",      "0.001"))
+            dur = float(self._fval("dur", "5"))
+            hold = float(self._fval("hold", "0"))
+            dt = float(self._fval("dt", "0.001"))
 
             total_s = dur + hold
             out += [
-                ("class:sum",    f" Target  θ={t_theta:.1f}° β={t_beta:.1f}° γ={t_gamma:.1f}°\n"),
-                ("class:sum",    f" Start   θ={s_theta:.1f}° β={s_beta:.1f}° γ={s_gamma:.1f}°\n"),
-                ("class:sum",    f" Duration {dur:.1f} s\n"),
-                ("class:sum",    f" Hold    {hold:.1f} s\n"),
-                ("class:sum.hi", f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n"),
+                ("class:sum", f" Target  θ={t_theta:.1f}° β={t_beta:.1f}° γ={t_gamma:.1f}°\n"),
+                ("class:sum", f" Start   θ={s_theta:.1f}° β={s_beta:.1f}° γ={s_gamma:.1f}°\n"),
+                ("class:sum", f" Duration {dur:.1f} s\n"),
+                ("class:sum", f" Hold    {hold:.1f} s\n"),
+                (
+                    "class:sum.hi",
+                    f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n",
+                ),
             ]
         except Exception:
             out.append(("class:log.err", " (invalid params)\n"))
@@ -401,7 +440,7 @@ class CSVGeneratorTUI:
     # ── layout construction ───────────────────────────────
 
     def _build_app(self) -> Application:
-        in_edit  = Condition(lambda: self.edit_mode)
+        in_edit = Condition(lambda: self.edit_mode)
         not_edit = Condition(lambda: not self.edit_mode)
 
         self._fields_win = Window(
@@ -420,21 +459,27 @@ class CSVGeneratorTUI:
         status_bar = ConditionalContainer(
             content=Window(
                 content=FormattedTextControl(self._render_status),
-                height=1, style="class:st",
+                height=1,
+                style="class:st",
             ),
             filter=not_edit,
         )
         edit_bar = ConditionalContainer(
-            content=VSplit([
-                Window(
-                    content=FormattedTextControl(self._render_edit_label),
-                    width=26, height=1, style="class:ed.lbl",
-                ),
-                Window(
-                    content=BufferControl(buffer=self.edit_buffer),
-                    height=1, style="class:ed",
-                ),
-            ]),
+            content=VSplit(
+                [
+                    Window(
+                        content=FormattedTextControl(self._render_edit_label),
+                        width=26,
+                        height=1,
+                        style="class:ed.lbl",
+                    ),
+                    Window(
+                        content=BufferControl(buffer=self.edit_buffer),
+                        height=1,
+                        style="class:ed",
+                    ),
+                ]
+            ),
             filter=in_edit,
         )
 
@@ -442,21 +487,26 @@ class CSVGeneratorTUI:
 
         layout = Layout(
             FloatContainer(
-                content=HSplit([
-                    Window(
-                        content=FormattedTextControl(self._render_title),
-                        height=1, style="class:title",
-                    ),
-                    Window(height=1, char="─", style="class:border"),
-                    VSplit([
-                        self._fields_win,
-                        Window(width=1, char="│", style="class:border"),
-                        right_win,
-                    ]),
-                    Window(height=1, char="─", style="class:border"),
-                    edit_bar,
-                    status_bar,
-                ]),
+                content=HSplit(
+                    [
+                        Window(
+                            content=FormattedTextControl(self._render_title),
+                            height=1,
+                            style="class:title",
+                        ),
+                        Window(height=1, char="─", style="class:border"),
+                        VSplit(
+                            [
+                                self._fields_win,
+                                Window(width=1, char="│", style="class:border"),
+                                right_win,
+                            ]
+                        ),
+                        Window(height=1, char="─", style="class:border"),
+                        edit_bar,
+                        status_bar,
+                    ]
+                ),
                 floats=[
                     Float(
                         content=ConditionalContainer(
@@ -466,35 +516,40 @@ class CSVGeneratorTUI:
                             ),
                             filter=help_filter,
                         ),
-                        top=2, left=4, width=47, height=29,
+                        top=2,
+                        left=4,
+                        width=47,
+                        height=29,
                     ),
                 ],
             ),
             focused_element=self._fields_win,
         )
 
-        style = Style.from_dict({
-            "title":    "bg:#002244 #cce0ff bold",
-            "tab":      "bg:#002244 #446688",
-            "tab.on":   "bg:#002244 #ffffff bold underline",
-            "border":   "#334455",
-            "lbl":      "#99aabb",
-            "lbl.f":    "#ffffff bold",
-            "val":      "#556677",
-            "val.f":    "#00ccff bold",
-            "sep":      "#446688 italic",
-            "hint":     "#334455",
-            "sum":      "#8899aa",
-            "sum.hi":   "#00ccff bold",
-            "log":      "#445566",
-            "log.ok":   "#22aa55",
-            "log.err":  "#cc3344",
-            "ed":       "bg:#00213f #ffffff",
-            "ed.lbl":   "bg:#00213f #7799bb",
-            "st":       "bg:#0d0d0d #445566",
-            "st.run":   "bg:#0d0d0d #ffaa00 bold",
-            "help":     "bg:#001830 #99ccff",
-        })
+        style = Style.from_dict(
+            {
+                "title": "bg:#002244 #cce0ff bold",
+                "tab": "bg:#002244 #446688",
+                "tab.on": "bg:#002244 #ffffff bold underline",
+                "border": "#334455",
+                "lbl": "#99aabb",
+                "lbl.f": "#ffffff bold",
+                "val": "#556677",
+                "val.f": "#00ccff bold",
+                "sep": "#446688 italic",
+                "hint": "#334455",
+                "sum": "#8899aa",
+                "sum.hi": "#00ccff bold",
+                "log": "#445566",
+                "log.ok": "#22aa55",
+                "log.err": "#cc3344",
+                "ed": "bg:#00213f #ffffff",
+                "ed.lbl": "bg:#00213f #7799bb",
+                "st": "bg:#0d0d0d #445566",
+                "st.run": "bg:#0d0d0d #ffaa00 bold",
+                "help": "bg:#001830 #99ccff",
+            }
+        )
 
         return Application(
             layout=layout,
@@ -534,22 +589,24 @@ class CSVGeneratorTUI:
     # ── key bindings ──────────────────────────────────────
 
     def _build_kb(self) -> KeyBindings:
-        kb       = KeyBindings()
+        kb = KeyBindings()
         not_edit = Condition(lambda: not self.edit_mode)
-        in_edit  = Condition(lambda: self.edit_mode)
-        not_run  = Condition(lambda: not self.is_running)
+        in_edit = Condition(lambda: self.edit_mode)
+        not_run = Condition(lambda: not self.is_running)
 
         not_help = Condition(lambda: not self.show_help)
-        in_help  = Condition(lambda: self.show_help)
-        nav_mode = not_edit & not_help   # navigation: no edit, no help overlay
+        in_help = Condition(lambda: self.show_help)
+        nav_mode = not_edit & not_help  # navigation: no edit, no help overlay
 
         # Quit — always active
         @kb.add("c-c")
         @kb.add("c-q")
-        def _quit(ev): ev.app.exit()
+        def _quit(ev):
+            ev.app.exit()
 
         @kb.add("q", filter=nav_mode)
-        def _q(ev): ev.app.exit()
+        def _q(ev):
+            ev.app.exit()
 
         # Help overlay — F1 toggles; Esc closes when open
         @kb.add("f1")
@@ -565,27 +622,33 @@ class CSVGeneratorTUI:
         # Mode switch
         @kb.add("1", filter=nav_mode)
         def _m1(ev):
-            self.mode = "gait"; self.focus_idx = 0; ev.app.invalidate()
+            self.mode = "gait"
+            self.focus_idx = 0
+            ev.app.invalidate()
 
         @kb.add("2", filter=nav_mode)
         def _m2(ev):
-            self.mode = "lean"; self.focus_idx = 0; ev.app.invalidate()
+            self.mode = "lean"
+            self.focus_idx = 0
+            ev.app.invalidate()
 
         @kb.add("3", filter=nav_mode)
         def _m3(ev):
-            self.mode = "transform"; self.focus_idx = 0; ev.app.invalidate()
+            self.mode = "transform"
+            self.focus_idx = 0
+            ev.app.invalidate()
 
         # Navigation — arrow keys + vim j/k
-        @kb.add("down",  filter=nav_mode)
-        @kb.add("tab",   filter=nav_mode)
-        @kb.add("j",     filter=nav_mode)
+        @kb.add("down", filter=nav_mode)
+        @kb.add("tab", filter=nav_mode)
+        @kb.add("j", filter=nav_mode)
         def _next(ev):
             self.focus_idx = (self.focus_idx + 1) % len(self._fields())
             ev.app.invalidate()
 
-        @kb.add("up",    filter=nav_mode)
+        @kb.add("up", filter=nav_mode)
         @kb.add("s-tab", filter=nav_mode)
-        @kb.add("k",     filter=nav_mode)
+        @kb.add("k", filter=nav_mode)
         def _prev(ev):
             self.focus_idx = (self.focus_idx - 1) % len(self._fields())
             ev.app.invalidate()
@@ -604,7 +667,7 @@ class CSVGeneratorTUI:
         # Toggle / cycle / press action — arrow keys + vim h/l
         @kb.add("right", filter=nav_mode)
         @kb.add("space", filter=nav_mode)
-        @kb.add("l",     filter=nav_mode)
+        @kb.add("l", filter=nav_mode)
         def _fwd(ev):
             f = self._focused()
             if f:
@@ -617,7 +680,7 @@ class CSVGeneratorTUI:
             ev.app.invalidate()
 
         @kb.add("left", filter=nav_mode)
-        @kb.add("h",    filter=nav_mode)
+        @kb.add("h", filter=nav_mode)
         def _bwd(ev):
             f = self._focused()
             if f:
@@ -628,8 +691,8 @@ class CSVGeneratorTUI:
             ev.app.invalidate()
 
         @kb.add("enter", filter=nav_mode)
-        @kb.add("i",     filter=nav_mode)
-        @kb.add("a",     filter=nav_mode)
+        @kb.add("i", filter=nav_mode)
+        @kb.add("a", filter=nav_mode)
         def _enter_nav(ev):
             self._activate_focused(ev)
 
@@ -651,7 +714,7 @@ class CSVGeneratorTUI:
             ev.app.invalidate()
 
         # Generate
-        @kb.add("f5",  filter=nav_mode & not_run)
+        @kb.add("f5", filter=nav_mode & not_run)
         @kb.add("c-g", filter=nav_mode & not_run)
         def _gen(ev):
             self._start_generation(ev.app)
@@ -683,9 +746,12 @@ class CSVGeneratorTUI:
             self._log("─" * 38, app)
 
             proc = subprocess.Popen(
-                cmd, cwd=BASE_DIR,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, bufsize=1,
+                cmd,
+                cwd=BASE_DIR,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
             )
             if proc.stdout:
                 for raw in proc.stdout:
@@ -721,27 +787,41 @@ class CSVGeneratorTUI:
 
     def _gait_cmd(self) -> List[str]:
         cmd = [
-            sys.executable, GAIT_SCRIPT,
-            "-g",  self._fval("gait",   "Walk"),
-            "-vx", self._fval("vx",     "0.10"),
-            "-vy", self._fval("vy",     "0.00"),
-            "-wz", self._fval("wz",     "0.00"),
-            "-z",  self._fval("height", "0.25"),
-            "-s",  self._fval("step",   "0.04"),
-            "-p",  self._fval("period", "4.0"),
-            "-c",  self._fval("cycles", "10"),
-            "-dt", self._fval("dt",     "0.001"),
-            "-o",  self._fval("outdir", "outputs/csv"),
+            sys.executable,
+            GAIT_SCRIPT,
+            "-g",
+            self._fval("gait", "Walk"),
+            "-vx",
+            self._fval("vx", "0.10"),
+            "-vy",
+            self._fval("vy", "0.00"),
+            "-wz",
+            self._fval("wz", "0.00"),
+            "-z",
+            self._fval("height", "0.25"),
+            "-s",
+            self._fval("step", "0.04"),
+            "-p",
+            self._fval("period", "4.0"),
+            "-c",
+            self._fval("cycles", "10"),
+            "-dt",
+            self._fval("dt", "0.001"),
+            "-o",
+            self._fval("outdir", "outputs/csv"),
         ]
         stab = self._fval("stab_margin", "0.02")
         cmd += ["--stab-margin", stab]
+        duty = str(self._fval("duty", "")).strip()
+        if duty:
+            cmd += ["--duty", duty]
         if self._fval("launch", False):
             rmode = self._fval("ramp_mode", "cycles")
             if rmode == "seconds":
                 try:
-                    secs   = float(self._fval("ramp_secs", "3.0"))
+                    secs = float(self._fval("ramp_secs", "3.0"))
                     period = float(self._fval("period", "4.0"))
-                    n      = max(1, math.ceil(secs / max(period, 1e-9)))
+                    n = max(1, math.ceil(secs / max(period, 1e-9)))
                 except (ValueError, ZeroDivisionError):
                     n = 3
                 n_str = str(n)
@@ -749,51 +829,94 @@ class CSVGeneratorTUI:
                 n_str = self._fval("ramp_cycles", "3")
             cmd += [
                 "--launch",
-                "--ramp-cycles", n_str,
-                "--ramp-floor",  self._fval("ramp_floor", "0.10"),
+                "--ramp-cycles",
+                n_str,
+                "--ramp-floor",
+                self._fval("ramp_floor", "0.10"),
             ]
         return cmd
 
     def _lean_cmd(self) -> List[str]:
         cmd = [
-            sys.executable, LEAN_SCRIPT,
-            "--roll",         self._fval("roll",    "0.0"),
-            "--pitch",        self._fval("pitch",   "0.0"),
-            "--yaw",          self._fval("yaw",     "0.0"),
-            "-z",             self._fval("height",  "0.30"),
-            "--compensation", self._fval("comp",    "0.0"),
-            "-n",             self._fval("steps",   "500"),
-            "--repeats",      self._fval("repeats", "1"),
-            "-dt",            self._fval("dt",      "0.001"),
-            "--prep",         self._fval("prep",    "5.0"),
-            "-o",             self._fval("outdir",  "outputs/csv"),
+            sys.executable,
+            LEAN_SCRIPT,
+            "--roll",
+            self._fval("roll", "0.0"),
+            "--pitch",
+            self._fval("pitch", "0.0"),
+            "--yaw",
+            self._fval("yaw", "0.0"),
+            "-z",
+            self._fval("height", "0.30"),
+            "--compensation",
+            self._fval("comp", "0.0"),
+            "-n",
+            self._fval("steps", "500"),
+            "--repeats",
+            self._fval("repeats", "1"),
+            "-dt",
+            self._fval("dt", "0.001"),
+            "--prep",
+            self._fval("prep", "5.0"),
+            "-o",
+            self._fval("outdir", "outputs/csv"),
         ]
         if not self._fval("ret", True):
             cmd.append("--no-return")
         return cmd
 
     def _transform_cmd(self) -> List[str]:
-        t  = self._fval("t_theta", "45.0")
-        b  = self._fval("t_beta",  "0.0")
-        g  = self._fval("t_gamma", "0.0")
+        t = self._fval("t_theta", "45.0")
+        b = self._fval("t_beta", "0.0")
+        g = self._fval("t_gamma", "0.0")
         st = self._fval("s_theta", "17.0")
-        sb = self._fval("s_beta",  "0.0")
+        sb = self._fval("s_beta", "0.0")
         sg = self._fval("s_gamma", "0.0")
         outdir = self._fval("outdir", "outputs/csv")
         import time as _time
+
         fname = os.path.join(outdir, f"transform_pose_{_time.strftime('%Y%m%d_%H%M%S')}.csv")
         return [
-            sys.executable, TRANSFORM_SCRIPT,
-            "--theta",       t,  t,  t,  t,
-            "--beta",        b,  b,  b,  b,
-            "--gamma",       g,  g,  g,  g,
-            "--start-theta", st, st, st, st,
-            "--start-beta",  sb, sb, sb, sb,
-            "--start-gamma", sg, sg, sg, sg,
-            "--duration",    self._fval("dur",  "5.0"),
-            "--hold",        self._fval("hold", "0.0"),
-            "--dt",          self._fval("dt",   "0.001"),
-            "-o",            fname,
+            sys.executable,
+            TRANSFORM_SCRIPT,
+            "--theta",
+            t,
+            t,
+            t,
+            t,
+            "--beta",
+            b,
+            b,
+            b,
+            b,
+            "--gamma",
+            g,
+            g,
+            g,
+            g,
+            "--start-theta",
+            st,
+            st,
+            st,
+            st,
+            "--start-beta",
+            sb,
+            sb,
+            sb,
+            sb,
+            "--start-gamma",
+            sg,
+            sg,
+            sg,
+            sg,
+            "--duration",
+            self._fval("dur", "5.0"),
+            "--hold",
+            self._fval("hold", "0.0"),
+            "--dt",
+            self._fval("dt", "0.001"),
+            "-o",
+            fname,
         ]
 
     # ── entry point ───────────────────────────────────────
@@ -808,72 +931,113 @@ def _make_parser() -> argparse.ArgumentParser:
         description="CorgiRobot full-screen TUI CSV generator (Gait / Lean / Transform modes)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    p.add_argument("-m", "--mode", choices=["gait", "lean", "transform"], default=None,
-                   help="Starting mode")
+    p.add_argument(
+        "-m", "--mode", choices=["gait", "lean", "transform"], default=None, help="Starting mode"
+    )
     # ── Gait params ────────────────────────────────
     grp_g = p.add_argument_group("Gait defaults")
-    grp_g.add_argument("-g", "--gait", choices=GAIT_CHOICES, default=None,
-                       metavar="TYPE", help="Gait type")
-    grp_g.add_argument("-vx", dest="vx", type=float, default=None,
-                       metavar="M/S",  help="Forward velocity (m/s)")
-    grp_g.add_argument("-vy", dest="vy", type=float, default=None,
-                       metavar="M/S",  help="Lateral velocity (m/s)")
-    grp_g.add_argument("-wz", dest="wz", type=float, default=None,
-                       metavar="RAD/S", help="Yaw rate (rad/s)")
-    grp_g.add_argument("-z", "--height", type=float, default=None,
-                       metavar="M",    help="Stand height (m)")
-    grp_g.add_argument("-s", "--step", type=float, default=None,
-                       metavar="M",    help="Step height (m)")
-    grp_g.add_argument("-p", "--period", type=float, default=None,
-                       metavar="S",    help="Gait period (s)")
-    grp_g.add_argument("-c", "--cycles", type=int, default=None,
-                       metavar="N",    help="Number of gait cycles")
-    grp_g.add_argument("-dt", dest="dt", type=float, default=None,
-                       metavar="S",    help="Time step (s)")
-    grp_g.add_argument("--stab-margin", dest="stab_margin", type=float, default=None,
-                       metavar="M",    help="Walk CoM stability margin (m); 0 = disabled")
+    grp_g.add_argument(
+        "-g", "--gait", choices=GAIT_CHOICES, default=None, metavar="TYPE", help="Gait type"
+    )
+    grp_g.add_argument(
+        "-vx", dest="vx", type=float, default=None, metavar="M/S", help="Forward velocity (m/s)"
+    )
+    grp_g.add_argument(
+        "-vy", dest="vy", type=float, default=None, metavar="M/S", help="Lateral velocity (m/s)"
+    )
+    grp_g.add_argument(
+        "-wz", dest="wz", type=float, default=None, metavar="RAD/S", help="Yaw rate (rad/s)"
+    )
+    grp_g.add_argument(
+        "-z", "--height", type=float, default=None, metavar="M", help="Stand height (m)"
+    )
+    grp_g.add_argument(
+        "-s", "--step", type=float, default=None, metavar="M", help="Step height (m)"
+    )
+    grp_g.add_argument(
+        "-p", "--period", type=float, default=None, metavar="S", help="Gait period (s)"
+    )
+    grp_g.add_argument(
+        "--duty", type=float, default=None, metavar="D", help="Override stance duty D_f (0–1)"
+    )
+    grp_g.add_argument(
+        "-c", "--cycles", type=int, default=None, metavar="N", help="Number of gait cycles"
+    )
+    grp_g.add_argument(
+        "-dt", dest="dt", type=float, default=None, metavar="S", help="Time step (s)"
+    )
+    grp_g.add_argument(
+        "--stab-margin",
+        dest="stab_margin",
+        type=float,
+        default=None,
+        metavar="M",
+        help="Walk CoM stability margin (m); 0 = disabled",
+    )
     # ── Lean params ────────────────────────────────
     grp_l = p.add_argument_group("Lean defaults")
-    grp_l.add_argument("--roll",  type=float, default=None, metavar="DEG")
+    grp_l.add_argument("--roll", type=float, default=None, metavar="DEG")
     grp_l.add_argument("--pitch", type=float, default=None, metavar="DEG")
-    grp_l.add_argument("--yaw",   type=float, default=None, metavar="DEG")
-    grp_l.add_argument("--comp",  type=float, default=None, metavar="M/RAD",
-                       help="Height compensation (m/rad)")
-    grp_l.add_argument("-n", "--steps", type=int, default=None, metavar="N",
-                       help="Steps per segment")
-    grp_l.add_argument("--repeats", type=int, default=None, metavar="N",
-                       help="Lean repeat count")
-    grp_l.add_argument("--prep", type=float, default=None, metavar="S",
-                       help="Prep duration (s)")
+    grp_l.add_argument("--yaw", type=float, default=None, metavar="DEG")
+    grp_l.add_argument(
+        "--comp", type=float, default=None, metavar="M/RAD", help="Height compensation (m/rad)"
+    )
+    grp_l.add_argument(
+        "-n", "--steps", type=int, default=None, metavar="N", help="Steps per segment"
+    )
+    grp_l.add_argument("--repeats", type=int, default=None, metavar="N", help="Lean repeat count")
+    grp_l.add_argument("--prep", type=float, default=None, metavar="S", help="Prep duration (s)")
     # ── Transform params ───────────────────────────
     grp_t = p.add_argument_group("Transform defaults")
-    grp_t.add_argument("--t-theta", type=float, default=None, metavar="DEG",
-                       help="Target theta for all legs (deg)")
-    grp_t.add_argument("--t-beta",  type=float, default=None, metavar="DEG",
-                       help="Target beta for all legs (deg)")
-    grp_t.add_argument("--t-gamma", type=float, default=None, metavar="DEG",
-                       help="Target gamma for all legs (deg)")
-    grp_t.add_argument("--s-theta", type=float, default=None, metavar="DEG",
-                       help="Start theta for all legs (deg)")
-    grp_t.add_argument("--dur",  type=float, default=None, metavar="S",
-                       help="Transform duration (s)")
-    grp_t.add_argument("--hold", type=float, default=None, metavar="S",
-                       help="Hold time after transform (s)")
+    grp_t.add_argument(
+        "--t-theta", type=float, default=None, metavar="DEG", help="Target theta for all legs (deg)"
+    )
+    grp_t.add_argument(
+        "--t-beta", type=float, default=None, metavar="DEG", help="Target beta for all legs (deg)"
+    )
+    grp_t.add_argument(
+        "--t-gamma", type=float, default=None, metavar="DEG", help="Target gamma for all legs (deg)"
+    )
+    grp_t.add_argument(
+        "--s-theta", type=float, default=None, metavar="DEG", help="Start theta for all legs (deg)"
+    )
+    grp_t.add_argument(
+        "--dur", type=float, default=None, metavar="S", help="Transform duration (s)"
+    )
+    grp_t.add_argument(
+        "--hold", type=float, default=None, metavar="S", help="Hold time after transform (s)"
+    )
     # ── Shared ─────────────────────────────────────
-    p.add_argument("-o", "--outdir", type=str, default=None,
-                   metavar="DIR", help="Output directory")
+    p.add_argument("-o", "--outdir", type=str, default=None, metavar="DIR", help="Output directory")
     return p
 
 
 # Maps argparse dest name → Field key (identical here, but explicit for clarity)
 _DEST_TO_KEY = {
-    "gait": "gait", "vx": "vx", "vy": "vy", "wz": "wz",
-    "height": "height", "step": "step", "period": "period",
-    "cycles": "cycles", "dt": "dt", "outdir": "outdir",
-    "roll": "roll", "pitch": "pitch", "yaw": "yaw",
-    "comp": "comp", "steps": "steps", "repeats": "repeats", "prep": "prep",
-    "t_theta": "t_theta", "t_beta": "t_beta", "t_gamma": "t_gamma",
-    "s_theta": "s_theta", "dur": "dur", "hold": "hold",
+    "gait": "gait",
+    "vx": "vx",
+    "vy": "vy",
+    "wz": "wz",
+    "height": "height",
+    "step": "step",
+    "period": "period",
+    "duty": "duty",
+    "cycles": "cycles",
+    "dt": "dt",
+    "outdir": "outdir",
+    "roll": "roll",
+    "pitch": "pitch",
+    "yaw": "yaw",
+    "comp": "comp",
+    "steps": "steps",
+    "repeats": "repeats",
+    "prep": "prep",
+    "t_theta": "t_theta",
+    "t_beta": "t_beta",
+    "t_gamma": "t_gamma",
+    "s_theta": "s_theta",
+    "dur": "dur",
+    "hold": "hold",
     "stab_margin": "stab_margin",
 }
 

@@ -16,6 +16,8 @@ The caller is responsible for prepending the hardware prep sequence and
 appending the steady-state gait (see generate_hardware_csv.py).
 """
 
+from typing import Optional
+
 import numpy as np
 from legwheel.planners.gait_generator_3d import GaitGenerator3D, GAIT_LIBRARY
 
@@ -91,6 +93,7 @@ class LaunchController:
         n_ramp (int): Number of ramp cycles (each one gait period long).
         ramp_floor (float): Velocity fraction for the first ramp cycle (0–1).
                             Default 0.1 (10% of target velocity).
+        stance_duty (float): Optional stance duty override ``D_f`` in (0, 1).
     """
 
     def __init__(
@@ -104,6 +107,7 @@ class LaunchController:
         n_ramp: int = 3,
         ramp_floor: float = 0.1,
         stability_margin: float = 0.02,
+        stance_duty: Optional[float] = None,
     ):
         if gait_type not in GAIT_LIBRARY:
             raise ValueError(
@@ -121,7 +125,12 @@ class LaunchController:
 
         gait_def = GAIT_LIBRARY[gait_type]
         self.phase_offsets = gait_def["phase_offsets"]
-        self.stance_duty = gait_def["stance_duty"]
+        if stance_duty is None:
+            self.stance_duty = gait_def["stance_duty"]
+        else:
+            if not 0.0 < stance_duty < 1.0:
+                raise ValueError("stance_duty must be in the open interval (0, 1).")
+            self.stance_duty = float(stance_duty)
 
         # Find optimal launch start phase once at construction
         self.start_phase = find_all_stance_phase(
@@ -154,6 +163,7 @@ class LaunchController:
             gait_type=self.gait_type,
             dt=self.dt,
             stability_margin=self.stability_margin,
+            stance_duty=self.stance_duty,
         )
         cmds = gen.generate_full_gait(n_cycles=1)   # (n_pts, 12)
 
@@ -186,6 +196,7 @@ class LaunchController:
     def print_summary(self) -> None:
         print("=== LaunchController Summary ===")
         print(f"  Gait          : {self.gait_type}")
+        print(f"  Stance duty   : {self.stance_duty:.2f}")
         print(f"  Target twist  : ω_z={self.twist[0]:.3f} rad/s, "
               f"v_x={self.twist[1]:.3f} m/s, v_y={self.twist[2]:.3f} m/s")
         print(f"  Ramp cycles   : {self.n_ramp}")

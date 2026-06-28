@@ -51,11 +51,12 @@ class GaitGenerator3D:
         period (float): Gait cycle duration (s).
         gait_type (str): One of "Walk", "Trot", "Pace", "Bound", "Pronk".
         dt (float): Planner time step (s).
+        stance_duty (float): Optional stance duty override ``D_f`` in (0, 1).
     """
 
     def __init__(self, stand_height=0.31, twist=np.array([0.0, 0.15, 0.0]),
                  step_height=0.04, period=1.0, gait_type="Trot", dt=0.001,
-                 stability_margin=0.02):
+                 stability_margin=0.02, stance_duty=None):
 
         self.stand_height = stand_height
         self.step_height = step_height
@@ -70,7 +71,14 @@ class GaitGenerator3D:
         self.gait_type = gait_type
         gait_def = GAIT_LIBRARY[gait_type]
         self.phase_offsets = gait_def["phase_offsets"]
-        self.stance_duty = gait_def["stance_duty"]
+        if stance_duty is None:
+            self.stance_duty = gait_def["stance_duty"]
+            self.custom_stance_duty = None
+        else:
+            if not 0.0 < stance_duty < 1.0:
+                raise ValueError("stance_duty must be in the open interval (0, 1).")
+            self.stance_duty = float(stance_duty)
+            self.custom_stance_duty = self.stance_duty
 
         # Parse the planar twist: [omega_z, v_x, v_y]
         self.twist = np.array(twist, dtype=float)
@@ -346,11 +354,16 @@ class GaitGenerator3D:
         ky_peak = float(np.max(np.abs(self.y_biases)))
         kbias_str = (f"_Kx{kx_peak:.3f}_Ky{ky_peak:.3f}"
                      if kx_peak > 1e-4 or ky_peak > 1e-4 else "")
+        duty_str = (
+            f"_D{self.custom_stance_duty:.2f}"
+            if self.custom_stance_duty is not None
+            else ""
+        )
         return (
             f"{self.gait_type}{kbias_str}"
             f"_Vx{v_x_actual:.2f}_Vy{v_y_actual:.2f}_Wz{w_z_actual:.2f}"
             f"_H{self.stand_height:.2f}_S{step_actual:.3f}"
-            f"_P{self.T:.1f}{cycles_str}_dt{self.dt:g}"
+            f"_P{self.T:.1f}{duty_str}{cycles_str}_dt{self.dt:g}"
         )
 
     def print_summary(self):

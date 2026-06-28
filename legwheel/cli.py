@@ -17,7 +17,10 @@ def cmd_check(args):
         print(f"Error: Unknown gait '{args.gait}'. Available: {list(GAIT_LIBRARY.keys())}")
         return
 
-    stance_duty = GAIT_LIBRARY[args.gait]["stance_duty"]
+    stance_duty = args.duty if getattr(args, "duty", None) is not None else GAIT_LIBRARY[args.gait]["stance_duty"]
+    if not 0.0 < stance_duty < 1.0:
+        print("Error: --duty must be in the open interval (0, 1).")
+        return
     print(f"=======================================")
     print(f" Corgi LegWheel Parameter Checker")
     print(f"=======================================")
@@ -95,8 +98,14 @@ def cmd_check(args):
         import io
         from contextlib import redirect_stdout
         with io.StringIO() as buf, redirect_stdout(buf):
-            gait = GaitGenerator3D(stand_height=args.height, twist=[args.wz, args.vx, args.vy],
-                                   step_height=args.step, period=args.period, gait_type=args.gait)
+            gait = GaitGenerator3D(
+                stand_height=args.height,
+                twist=[args.wz, args.vx, args.vy],
+                step_height=args.step,
+                period=args.period,
+                gait_type=args.gait,
+                stance_duty=stance_duty,
+            )
             global_step_scale = gait.planners[0].input_step_scale
             if global_step_scale is None: 
                 global_step_scale = 1.0
@@ -172,6 +181,7 @@ def cmd_generate(args):
                 with_launch=getattr(args, 'launch', False),
                 n_ramp=_resolve_n_ramp(args),
                 ramp_floor=getattr(args, 'ramp_floor', 0.1),
+                stance_duty=getattr(args, 'duty', None),
             )
             return
         except ImportError:
@@ -290,6 +300,7 @@ def cmd_tui(args):
         ("-z",       "height"),
         ("-s",       "step"),
         ("-p",       "period"),
+        ("--duty",   "duty"),
         ("-c",       "cycles"),
         ("-dt",      "dt"),
         ("-o",       "outdir"),
@@ -424,6 +435,7 @@ def main():
     parser_check.add_argument("--step", type=float, default=0.04, help="Step swing clearance height (m)")
     parser_check.add_argument("--period", "-p", type=float, default=1.0, help="Gait period (s)")
     parser_check.add_argument("--gait", "-g", type=str, default="Trot", help="Gait type (Trot, Pace, Bound, etc.)")
+    parser_check.add_argument("--duty", type=float, default=None, help="Override stance duty D_f (0–1)")
     
     # Subcommand: ik
     parser_ik = subparsers.add_parser('ik', help='計算單腳逆運動學')
@@ -452,6 +464,8 @@ def main():
                             help="Ramp duration in seconds (converted to cycles via period; overrides --ramp-cycles)")
     parser_gen.add_argument("--ramp-floor", type=float, default=0.1,
                             help="First ramp cycle velocity fraction (default: 0.1 = 10%%)")
+    parser_gen.add_argument("--duty", type=float, default=None,
+                            help="Override stance duty D_f (0–1)")
 
     # Subcommand: transform
     parser_transform = subparsers.add_parser(
@@ -536,6 +550,7 @@ def main():
     parser_tui.add_argument("-z", "--height", type=float, default=None, help="Stand height (m)")
     parser_tui.add_argument("-s", "--step",   type=float, default=None, help="Step height (m)")
     parser_tui.add_argument("-p", "--period", type=float, default=None, help="Gait period (s)")
+    parser_tui.add_argument("--duty", type=float, default=None, help="Stance duty D_f (0–1)")
     parser_tui.add_argument("-c", "--cycles", type=int,   default=None, help="Gait cycles")
     parser_tui.add_argument("-dt",            type=float, dest="dt",   default=None, help="dt (s)")
     parser_tui.add_argument("-o", "--outdir", type=str,   default=None, help="Output directory")
