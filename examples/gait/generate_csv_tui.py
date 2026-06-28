@@ -18,6 +18,7 @@ Keys:
     Enter / i / a              Begin editing a text field
     Enter / Esc                Confirm / cancel edit
     F5  / Ctrl+G               Generate CSV
+    Generate CSV button        Focus and press Enter / Space
     1 / 2                      Switch Gait / Lean mode
     F1                         Show / hide key-binding help
     Ctrl+L                     Clear log
@@ -54,6 +55,7 @@ LEAN_SCRIPT      = os.path.join(SCRIPT_DIR, "generate_lean_csv.py")
 TRANSFORM_SCRIPT = os.path.join(SCRIPT_DIR, "generate_transform_csv.py")
 
 GAIT_CHOICES = ["Walk", "Trot", "Pace", "Bound", "Pronk"]
+GENERATE_ACTION_KEY = "__generate__"
 
 HELP_TEXT = """\
  ╔══════════════ Key Bindings ═══════════════╗
@@ -76,6 +78,7 @@ HELP_TEXT = """\
  ║                                           ║
  ║  Commands                                 ║
  ║  F5 / Ctrl+G      Generate CSV           ║
+ ║  Generate button  Enter / Space          ║
  ║  1 / 2 / 3        Gait/Lean/Transform    ║
  ║  Ctrl+L           Clear log              ║
  ║  F1 / Esc         Close this help        ║
@@ -92,7 +95,7 @@ HELP_TEXT = """\
 class Field:
     label:   str
     key:     str
-    type:    str            # "float" | "int" | "text" | "bool" | "choice"
+    type:    str            # "float" | "int" | "text" | "bool" | "choice" | "action"
     default: Any
     choices: List[str] = dc_field(default_factory=list)
     section: Optional[str] = None   # separator header above this field
@@ -111,6 +114,8 @@ class Field:
             return "[x]" if self._val else "[ ]"
         if self.type == "choice":
             return f"◄ {self._val} ►"
+        if self.type == "action":
+            return "[ Generate CSV ]"
         return str(self._val)
 
     def toggle(self):
@@ -125,6 +130,10 @@ class Field:
     @property
     def is_text(self) -> bool:
         return self.type in ("float", "int", "text")
+
+    @property
+    def is_action(self) -> bool:
+        return self.type == "action"
 
 
 # ──────────────────────────────────────────────────────────
@@ -149,6 +158,7 @@ def _gait_fields() -> List[Field]:
         Field("Ramp Cycles",  "ramp_cycles", "int",    "3"),
         Field("Ramp Seconds", "ramp_secs",   "float",  "3.0"),
         Field("Ramp Floor",   "ramp_floor",  "float",  "0.10"),
+        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
@@ -165,6 +175,7 @@ def _lean_fields() -> List[Field]:
         Field("dt (s)",        "dt",      "float", "0.001"),
         Field("Return Neutral","ret",     "bool",  True),
         Field("Output Dir",    "outdir",  "text",  "outputs/csv"),
+        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
@@ -180,6 +191,7 @@ def _transform_fields() -> List[Field]:
         Field("Hold (s)",      "hold",    "float", "0.0"),
         Field("dt (s)",        "dt",      "float", "0.001"),
         Field("Output Dir",    "outdir",  "text",  "outputs/csv"),
+        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
@@ -251,8 +263,9 @@ class CSVGeneratorTUI:
             out += [(ls, f"{cur}{f.label.ljust(LABEL_W)}"), (vs, f" {f.display()}\n")]
         out += [
             ("class:hint", "\n  Tab/↑↓/jk  Navigate     ←→/Spc/hl  Toggle\n"),
-            ("class:hint",   "  Enter/i/a  Edit text    F5          Generate\n"),
-            ("class:hint",   "  gg/G       First/Last   1/2         Gait/Lean\n"),
+            ("class:hint",   "  Enter/i/a  Edit/press   F5          Generate\n"),
+            ("class:hint",   "  Focus Generate button and press Enter/Space\n"),
+            ("class:hint",   "  gg/G       First/Last   1/2/3       Mode\n"),
             ("class:hint",   "  F1         Key help     q           Quit\n"),
         ]
         return out
@@ -491,6 +504,33 @@ class CSVGeneratorTUI:
             mouse_support=False,
         )
 
+    # ── actions ───────────────────────────────────────────
+
+    def _activate_focused(self, ev):
+        f = self._focused()
+        if not f:
+            return
+        if f.is_text:
+            val = f.get()
+            self.edit_buffer.set_document(
+                Document(text=val, cursor_position=len(val)), bypass_readonly=True
+            )
+            self.edit_mode = True
+            ev.app.layout.focus(self.edit_buffer)
+        elif f.type == "bool":
+            f.toggle()
+        elif f.type == "choice":
+            f.cycle(1)
+        elif f.is_action:
+            self._start_generation(ev.app)
+        ev.app.invalidate()
+
+    def _start_generation(self, app):
+        if self.is_running:
+            self._log("  Generation already running.", app)
+            return
+        threading.Thread(target=self._run_gen, args=(app,), daemon=True).start()
+
     # ── key bindings ──────────────────────────────────────
 
     def _build_kb(self) -> KeyBindings:
@@ -561,7 +601,7 @@ class CSVGeneratorTUI:
             self.focus_idx = len(self._fields()) - 1
             ev.app.invalidate()
 
-        # Toggle / cycle — arrow keys + vim h/l
+        # Toggle / cycle / press action — arrow keys + vim h/l
         @kb.add("right", filter=nav_mode)
         @kb.add("space", filter=nav_mode)
         @kb.add("l",     filter=nav_mode)
@@ -572,6 +612,8 @@ class CSVGeneratorTUI:
                     f.toggle()
                 elif f.type == "choice":
                     f.cycle(1)
+                elif f.is_action:
+                    self._start_generation(ev.app)
             ev.app.invalidate()
 
         @kb.add("left", filter=nav_mode)
@@ -585,28 +627,11 @@ class CSVGeneratorTUI:
                     f.cycle(-1)
             ev.app.invalidate()
 
-        # Enter edit mode — Enter, i, a (vim insert)
-        def _start_edit(ev):
-            f = self._focused()
-            if not f:
-                return
-            if f.is_text:
-                val = f.get()
-                self.edit_buffer.set_document(
-                    Document(text=val, cursor_position=len(val)), bypass_readonly=True
-                )
-                self.edit_mode = True
-                ev.app.layout.focus(self.edit_buffer)
-            elif f.type == "bool":
-                f.toggle()
-            elif f.type == "choice":
-                f.cycle(1)
-            ev.app.invalidate()
-
         @kb.add("enter", filter=nav_mode)
         @kb.add("i",     filter=nav_mode)
         @kb.add("a",     filter=nav_mode)
-        def _enter_nav(ev): _start_edit(ev)
+        def _enter_nav(ev):
+            self._activate_focused(ev)
 
         # Confirm edit
         @kb.add("enter", filter=in_edit, eager=True)
@@ -629,7 +654,7 @@ class CSVGeneratorTUI:
         @kb.add("f5",  filter=nav_mode & not_run)
         @kb.add("c-g", filter=nav_mode & not_run)
         def _gen(ev):
-            threading.Thread(target=self._run_gen, args=(ev.app,), daemon=True).start()
+            self._start_generation(ev.app)
 
         # Clear log
         @kb.add("c-l", filter=not_edit)
