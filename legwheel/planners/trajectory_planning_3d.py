@@ -16,7 +16,8 @@ class TrajectoryPlanner3D:
     """
 
     def __init__(self, stand_height=0.3, velocity=None, step_height=0.04,
-                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0, step_scale=None):
+                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0, step_scale=None,
+                 x_bias=0.0, y_bias=0.0):
         """
         Initializes the 3D trajectory planner.
 
@@ -31,6 +32,8 @@ class TrajectoryPlanner3D:
             step_scale (float)  :   Swing velocity scaling factor (1.0 = full speed).
         """
         self.input_step_scale = step_scale
+        self.x_bias = float(x_bias)
+        self.y_bias = float(y_bias)
         self.stand_height = stand_height
         self.velocity = np.array(
             velocity if velocity is not None else [0.15, 0.0, 0.0])
@@ -194,7 +197,7 @@ class TrajectoryPlanner3D:
             self.theta0, -self.beta0, 0.0, alpha=alpha0, w=0.0)
         D_lat = np.abs(self.velocity[1]) * self.T * self.stance_duty
         lead_y = np.sign(self.velocity[1]) * D_lat
-        target = np.array([nom[0], nom[1] + lead_y, nom[2]])
+        target = np.array([nom[0] + self.x_bias, nom[1] + lead_y + self.y_bias, nom[2]])
         return self.kin.inverse_kinematics(
             target, guess_q=np.array([self.theta0, -self.beta0, 0.0]))
 

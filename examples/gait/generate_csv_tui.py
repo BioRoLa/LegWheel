@@ -143,6 +143,7 @@ def _gait_fields() -> List[Field]:
         Field("Cycles",       "cycles",      "int",    "10"),
         Field("dt (s)",       "dt",          "float",  "0.001"),
         Field("Output Dir",   "outdir",      "text",   "outputs/csv"),
+        Field("Stab. Margin", "stab_margin", "float",  "0.02",        section="── Walk Stability ──"),
         Field("Launch Enable","launch",      "bool",   False,         section="── Launch Control ──"),
         Field("Ramp Mode",    "ramp_mode",   "choice", "cycles",      ["cycles", "seconds"]),
         Field("Ramp Cycles",  "ramp_cycles", "int",    "3"),
@@ -287,6 +288,9 @@ class CSVGeneratorTUI:
             gait_s  = cycles * period
             total_s = 5.0 + gait_s
 
+            stab   = float(self._fval("stab_margin", "0.02"))
+            stab_s = (f" {stab*100:.0f} cm" if gait == "Walk" and stab > 0
+                      else (" disabled" if gait == "Walk" else " N/A"))
             out += [
                 ("class:sum",    f" Gait    {gait}\n"),
                 ("class:sum",    f" Speed   Vx={vx:+.2f}  Vy={vy:+.2f}  Wz={wz:+.2f}\n"),
@@ -294,6 +298,7 @@ class CSVGeneratorTUI:
                 ("class:sum",    f" Period  {period:.2f} s\n"),
                 ("class:sum",    f" Cycles  {cycles}  →  {gait_s:.1f} s\n"),
                 ("class:sum",    f" Prep    5.0 s (fixed)\n"),
+                ("class:sum",    f" CoM Stab{stab_s}\n"),
             ]
             if launch:
                 rmode = self._fval("ramp_mode", "cycles")
@@ -703,6 +708,8 @@ class CSVGeneratorTUI:
             "-dt", self._fval("dt",     "0.001"),
             "-o",  self._fval("outdir", "outputs/csv"),
         ]
+        stab = self._fval("stab_margin", "0.02")
+        cmd += ["--stab-margin", stab]
         if self._fval("launch", False):
             rmode = self._fval("ramp_mode", "cycles")
             if rmode == "seconds":
@@ -798,6 +805,8 @@ def _make_parser() -> argparse.ArgumentParser:
                        metavar="N",    help="Number of gait cycles")
     grp_g.add_argument("-dt", dest="dt", type=float, default=None,
                        metavar="S",    help="Time step (s)")
+    grp_g.add_argument("--stab-margin", dest="stab_margin", type=float, default=None,
+                       metavar="M",    help="Walk CoM stability margin (m); 0 = disabled")
     # ── Lean params ────────────────────────────────
     grp_l = p.add_argument_group("Lean defaults")
     grp_l.add_argument("--roll",  type=float, default=None, metavar="DEG")
@@ -840,6 +849,7 @@ _DEST_TO_KEY = {
     "comp": "comp", "steps": "steps", "repeats": "repeats", "prep": "prep",
     "t_theta": "t_theta", "t_beta": "t_beta", "t_gamma": "t_gamma",
     "s_theta": "s_theta", "dur": "dur", "hold": "hold",
+    "stab_margin": "stab_margin",
 }
 
 
