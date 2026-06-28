@@ -54,7 +54,8 @@ class GaitGenerator3D:
     """
 
     def __init__(self, stand_height=0.31, twist=np.array([0.0, 0.15, 0.0]),
-                 step_height=0.04, period=1.0, gait_type="Trot", dt=0.001):
+                 step_height=0.04, period=1.0, gait_type="Trot", dt=0.001,
+                 stability_margin=0.02):
 
         self.stand_height = stand_height
         self.step_height = step_height
@@ -192,6 +193,117 @@ class GaitGenerator3D:
             for i in range(4)
         ]
 
+        # --- Walk gait CoM stability: pre-planned per-leg touchdown offset ---
+        # Computes (x_bias, y_bias) for each leg so the CoM lies inside every
+        # support triangle with the requested safety margin.  Only Walk has
+        # triangular (3-leg) support where a static offset is sufficient;
+        # other gaits rely on COMStabilityPlanner for dynamic correction.
+        self.x_biases = np.zeros(4)
+        self.y_biases = np.zeros(4)
+        if gait_type == "Walk" and stability_margin > 0.0:
+            print("  [WalkBias] Computing per-leg CoM stability offsets …")
+            biases = self._compute_walk_bias(safety_margin=stability_margin)
+            for i in range(4):
+                self.planners[i].x_bias = float(biases[i, 0])
+                self.planners[i].y_bias = float(biases[i, 1])
+            self.x_biases = biases[:, 0]
+            self.y_biases = biases[:, 1]
+            kx_peak = float(np.max(np.abs(self.x_biases)))
+            ky_peak = float(np.max(np.abs(self.y_biases)))
+            print(f"  [WalkBias] Done ✓  peak |Kx|={kx_peak*100:.1f}cm, "
+                  f"peak |Ky|={ky_peak*100:.1f}cm")
+
+    def _compute_walk_bias(self, safety_margin: float = 0.02) -> np.ndarray:
+        """
+        Compute per-leg (x_bias, y_bias) touchdown offsets for Walk gait CoM stability.
+
+        For each of the four swing phases, the leg that just touched down is the
+        primary vertex controlling the support triangle shape.  This method finds
+        the minimum-norm 2-D offset for that leg's touchdown position such that the
+        projected CoM lies inside the triangle with the requested safety_margin.
+
+        Strategy
+        --------
+        1. Generate a preliminary zero-bias trajectory to obtain actual foot
+           positions via FK at each swing-start frame.
+        2. At each swing transition compute the signed stability margin with
+           ``_hull_signed_margin``.
+        3. If the margin is below target, evaluate the numerical gradient of the
+           margin w.r.t. the touchdown leg's (x, y) position and solve for the
+           minimum-norm correction.
+
+        Returns
+        -------
+        np.ndarray
+            Shape (4, 2): ``[[x_bias_FL, y_bias_FL], ..., [x_bias_RL, y_bias_RL]]``
+            in metres, body-frame.
+        """
+        from legwheel.planners.com_stability import _hull_signed_margin
+
+        com_xy = np.array([RobotParams.COM_BIAS_X, RobotParams.COM_BIAS_Y])
+        biases = np.zeros((4, 2))
+        labels = ["FL", "FR", "RR", "RL"]
+
+        # Step 1: preliminary trajectory (all biases zero)
+        all_leg_trajs = [np.array(p.generate_trajectory()) for p in self.planners]
+        n_points = len(all_leg_trajs[0])
+        n_stance = int(round(self.stance_duty * n_points))
+
+        for swing_i in range(4):
+            # Frame at which leg swing_i lifts off (stance → swing transition)
+            shift_i = int(round(self.phase_offsets[swing_i] * n_points))
+            f_lo = (n_stance - shift_i) % n_points
+
+            stance_legs = [j for j in range(4) if j != swing_i]
+
+            # Step 2: foot XY of the 3 stance legs at this frame (from zero-bias traj)
+            foot_xy = np.zeros((3, 2))
+            for k, j in enumerate(stance_legs):
+                shift_j = int(round(self.phase_offsets[j] * n_points))
+                idx_j = (f_lo + shift_j) % n_points
+                q_j = all_leg_trajs[j][idx_j]
+                foot_xy[k] = self.planners[j].kin.forward_kinematics(*q_j)[:2]
+
+            margin, _ = _hull_signed_margin(com_xy, foot_xy)
+
+            if margin >= safety_margin:
+                continue  # already stable for this swing phase
+
+            # Identify the just-touched-down leg (smallest τ among stance legs)
+            min_tau, td_leg, td_k = 1.0, -1, -1
+            for k, j in enumerate(stance_legs):
+                shift_j = int(round(self.phase_offsets[j] * n_points))
+                own_phase = (f_lo + shift_j) % n_points
+                tau = own_phase / n_stance
+                if tau < min_tau:
+                    min_tau, td_leg, td_k = tau, j, k
+
+            if td_leg == -1:
+                continue
+
+            # Step 3: numerical gradient of margin w.r.t. touchdown foot XY
+            EPS = 1e-4
+            fxy_px = foot_xy.copy(); fxy_px[td_k, 0] += EPS
+            m_px, _ = _hull_signed_margin(com_xy, fxy_px)
+
+            fxy_py = foot_xy.copy(); fxy_py[td_k, 1] += EPS
+            m_py, _ = _hull_signed_margin(com_xy, fxy_py)
+
+            grad = np.array([(m_px - margin) / EPS, (m_py - margin) / EPS])
+            grad_norm_sq = float(np.dot(grad, grad))
+            if grad_norm_sq < 1e-10:
+                continue
+
+            deficit = safety_margin - margin   # > 0: shortfall to overcome
+            correction = deficit * grad / grad_norm_sq
+            biases[td_leg] += correction
+
+            print(f"  [WalkBias] {labels[swing_i]} swing: margin={margin*100:+.1f}cm  "
+                  f"→ {labels[td_leg]} TD bias "
+                  f"({correction[0]*100:+.1f}, {correction[1]*100:+.1f}) cm")
+
+        return biases
+
     def generate_full_gait(self, n_cycles=2):
         """
         Generates coordinated 3D commands for all 4 legs with phase offsets.
@@ -230,8 +342,12 @@ class GaitGenerator3D:
         step_actual = self.planners[0].step_height
 
         cycles_str = f"_C{self.n_cycles}" if self.n_cycles is not None else ""
+        kx_peak = float(np.max(np.abs(self.x_biases)))
+        ky_peak = float(np.max(np.abs(self.y_biases)))
+        kbias_str = (f"_Kx{kx_peak:.3f}_Ky{ky_peak:.3f}"
+                     if kx_peak > 1e-4 or ky_peak > 1e-4 else "")
         return (
-            f"{self.gait_type}"
+            f"{self.gait_type}{kbias_str}"
             f"_Vx{v_x_actual:.2f}_Vy{v_y_actual:.2f}_Wz{w_z_actual:.2f}"
             f"_H{self.stand_height:.2f}_S{step_actual:.3f}"
             f"_P{self.T:.1f}{cycles_str}_dt{self.dt:g}"

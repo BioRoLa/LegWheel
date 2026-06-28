@@ -103,6 +103,7 @@ class LaunchController:
         dt: float = 0.001,
         n_ramp: int = 3,
         ramp_floor: float = 0.1,
+        stability_margin: float = 0.02,
     ):
         if gait_type not in GAIT_LIBRARY:
             raise ValueError(
@@ -116,6 +117,7 @@ class LaunchController:
         self.dt = dt
         self.n_ramp = n_ramp
         self.ramp_floor = ramp_floor
+        self.stability_margin = stability_margin
 
         gait_def = GAIT_LIBRARY[gait_type]
         self.phase_offsets = gait_def["phase_offsets"]
@@ -151,6 +153,7 @@ class LaunchController:
             period=self.period,
             gait_type=self.gait_type,
             dt=self.dt,
+            stability_margin=self.stability_margin,
         )
         cmds = gen.generate_full_gait(n_cycles=1)   # (n_pts, 12)
 
