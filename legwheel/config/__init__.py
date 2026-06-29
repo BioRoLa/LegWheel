@@ -123,8 +123,8 @@ class RobotParams:
 
     # Workspace Guard Constants  only used for trajectory planning and velocity limiting
     BETA_MAX_DEG = 40.0         # Sagittal swing geometric limit (°)
-    GAMMA_MAX_DEG = 30.0        # ABAD lateral sweep geometric limit (°)
-    GAMMA_GUARD_DEG = 30.27     # Velocity guard limit (°) — sized so vy=0.6 @ h=0.30/T=1.0 sits on the boundary
+    GAMMA_MAX_DEG = 70.0        # ABAD lateral sweep geometric limit (°)
+    GAMMA_GUARD_DEG = 70.0      # Velocity guard limit (°)
     GAMMA_FLOOR_DEG = 1.0       # Lateral one-sided sweep floor (°): liftoff ABAD tilt kept this far
                                 # from upright so the loaded wheel never crosses gamma=0 (no contact
                                 # edge / center-of-pressure flip mid-stance).
@@ -134,7 +134,13 @@ class RobotParams:
 
     # Touchdown velocity targets — tune to reduce body bounce at landing
     TOUCHDOWN_VEL_H_MAX = 0.3   # m/s: horizontal cap; prevents swing_delta/T_sw overshoot
-    TOUCHDOWN_VEL_Z_SCALE = 0.1 # vertical = -2*step_h/T_sw * scale; 0.1 → ~gentle descent
+    TOUCHDOWN_VEL_Z_SCALE = 0.1 # vertical = -2*step_h/T_sw * scale; 0.1 → ~gentle descent (legacy, unused by accel model)
+
+    # Swing acceleration budget — unified a_max (m/s²) for liftoff/touchdown velocity design.
+    # Feasibility constraint: SWING_ACCEL_MAX >= 8 * step_height / T_sw²
+    # Example: Walk h=0.04, T_sw=0.25 → a_min = 5.12 m/s²; Trot T_sw=0.20 → 8.0 m/s²
+    # At a_max=10: peak joint acc ≈ a_max / J_x = 10/0.019 ≈ 526 rad/s² (vs 5000+ in old model).
+    SWING_ACCEL_MAX = 10.0      # m/s²: liftoff/touchdown Cartesian acceleration budget
 
 class TrajectoryParams:
     """Current trajectory parameters."""

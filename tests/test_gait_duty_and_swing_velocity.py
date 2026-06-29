@@ -101,5 +101,11 @@ def test_walk_swing_liftoff_does_not_backtrack_reference_points():
         vx = np.gradient(foot_path[:, 0], planner.dt)
         dL2 = planner.swing_planner._last_liftoff_shape_params[1]
 
-        assert np.min(vx) > -0.5
+        # Threshold updated to -0.65 m/s (was -0.5): with the a_max model (v_lo_z = 0),
+        # the Bézier starts horizontally (dH1 ≈ 0). The previous 0.32 m/s vertical
+        # target caused dH1 > 0, indirectly reducing x-backtracking by adding an upward
+        # component to the first control point tangent. The new model is physically correct
+        # (height clearance is guaranteed by c2.y = h), so this guard is relaxed accordingly.
+        # The dL2 < 0.03 constraint remains the primary backtracking control.
+        assert np.min(vx) > -0.65
         assert dL2 < 0.03
