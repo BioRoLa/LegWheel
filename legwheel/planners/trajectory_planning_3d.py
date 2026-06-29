@@ -294,13 +294,22 @@ class TrajectoryPlanner3D:
         v_lo_virtual[2] += v_z_kinematic
 
         # --- Step 4: Touchdown velocity ---
-        # Use the planned global/body-space LO→TD displacement for horizontal
-        # touchdown velocity. The previous -self.velocity target described stance
-        # contact velocity, so lateral swing asked for the opposite arrival direction.
-        v_mag = np.linalg.norm(self.velocity)  # still used for touchdown damping
-        swing_delta_B = p_td - p_lo_virtual
-        v_td_xy_B = swing_delta_B[:2] / T_sw
-        v_td = np.array([v_td_xy_B[0], v_td_xy_B[1], -v_mag / 10])
+        # Target: foot arrives matching body stance velocity (XY) so foot-ground
+        # relative velocity is minimized at impact, reducing bounce and slip.
+        # Using swing_delta/T_sw (average over swing) as the target over-estimates
+        # the arrival speed when step length > body_velocity * T_sw, which causes
+        # high-impact touchdown and body bounce (observed post-dL2 constraint fix).
+        v_mag = np.linalg.norm(self.velocity)
+        # Horizontal: match body velocity direction, capped to avoid demanding
+        # a high touchdown speed the Bézier optimizer may not converge to.
+        v_td_xy_body = self.velocity[:2].copy()
+        v_td_h_max = RobotParams.TOUCHDOWN_VEL_H_MAX  # m/s, tunable
+        v_td_h_norm = np.linalg.norm(v_td_xy_body)
+        if v_td_h_norm > v_td_h_max:
+            v_td_xy_body *= v_td_h_max / v_td_h_norm
+        # Vertical: small downward component scaled to step height, not body speed
+        v_td_z = -2.0 * self.step_height / T_sw * RobotParams.TOUCHDOWN_VEL_Z_SCALE
+        v_td = np.array([v_td_xy_body[0], v_td_xy_body[1], v_td_z])
         self._last_swing_boundary_velocities_B = (v_lo_virtual.copy(), v_td.copy())
 
         # --- Apply swing velocity scaling ---

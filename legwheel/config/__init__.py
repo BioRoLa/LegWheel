@@ -132,6 +132,10 @@ class RobotParams:
     STEP_FLOOR = 0.2            # Minimum step height scale lower bound
     STEP_USAGE_THRESHOLD = 0.15 # Deadband: no scaling when workspace usage < 15%
 
+    # Touchdown velocity targets — tune to reduce body bounce at landing
+    TOUCHDOWN_VEL_H_MAX = 0.3   # m/s: horizontal cap; prevents swing_delta/T_sw overshoot
+    TOUCHDOWN_VEL_Z_SCALE = 0.1 # vertical = -2*step_h/T_sw * scale; 0.1 → ~gentle descent
+
 class TrajectoryParams:
     """Current trajectory parameters."""
     STAND_HEIGHT = 0.3
