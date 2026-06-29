@@ -3,6 +3,8 @@
 import importlib.util
 from pathlib import Path
 
+import numpy as np
+
 from legwheel.planners.gait_generator_3d import GaitGenerator3D
 from legwheel.planners.launch_controller import LaunchController
 from legwheel.planners.trajectory_planning_3d import TrajectoryPlanner3D
@@ -74,3 +76,30 @@ def test_swing_touchdown_horizontal_velocity_follows_global_displacement():
 
     assert v_td_B[0] > 0.0
     assert v_td_B[1] > 0.0
+
+
+def test_walk_swing_liftoff_does_not_backtrack_reference_points():
+    """Walk swing should not choose Bezier branches with large backward X kicks."""
+    gen = GaitGenerator3D(
+        stand_height=0.25,
+        twist=[0.0, 0.20, 0.0],
+        step_height=0.04,
+        period=1.0,
+        gait_type="Walk",
+        dt=0.001,
+    )
+    gen.generate_full_gait(n_cycles=1)
+
+    for planner in gen.planners:
+        q = np.asarray(planner.cmd)
+        n_stance = int(round(planner.stance_duty * len(q)))
+        early_swing = q[n_stance : n_stance + 70]
+
+        foot_path = np.asarray(
+            [planner.kin.forward_kinematics(*q_i, alpha=0.0, w=0.0) for q_i in early_swing]
+        )
+        vx = np.gradient(foot_path[:, 0], planner.dt)
+        dL2 = planner.swing_planner._last_liftoff_shape_params[1]
+
+        assert np.min(vx) > -0.5
+        assert dL2 < 0.03
