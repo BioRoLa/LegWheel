@@ -21,7 +21,6 @@ import pandas as pd
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.utils.fitted_coefficient import inv_G_dist_poly
 
-
 LEG_LABELS = ["FL", "FR", "RR", "RL"]
 
 
@@ -62,8 +61,8 @@ class PosePlanner:
         self._kins = [CorgiLegKinematics(i) for i in range(4)]
 
         # Compute neutral joint angles and fixed foot positions in world frame.
-        self._q_neutral = np.zeros((4, 3))   # [theta, beta, gamma] per leg
-        self._p_feet_W = np.zeros((4, 3))    # foot contacts in world frame
+        self._q_neutral = np.zeros((4, 3))  # [theta, beta, gamma] per leg
+        self._p_feet_W = np.zeros((4, 3))  # foot contacts in world frame
 
         self._init_neutral_pose()
 
@@ -90,7 +89,7 @@ class PosePlanner:
             R_link = kin.solver.R
             d_abad = kin.d_abad
             H_hip = self.stand_height + d_abad  # hip height above ground
-            H_O = H_hip - R_arc                 # arc-center height above ground
+            H_O = H_hip - R_arc  # arc-center height above ground
 
             theta0 = self._neutral_theta(H_O, R_arc, R_link)
             beta0 = 0.0
@@ -136,9 +135,9 @@ class PosePlanner:
         Returns:
             np.ndarray: (4, 3) joint angles [[theta, beta, gamma], ...].
         """
-        lean_mag = np.sqrt(roll ** 2 + pitch ** 2)
+        lean_mag = np.sqrt(roll**2 + pitch**2)
         height = height - height_compensation * lean_mag
-        R_WB = _rot_zyx(roll, pitch, yaw)   # body → world
+        R_WB = _rot_zyx(roll, pitch, yaw)  # body → world
         p_body_W = np.array([0.0, 0.0, height])
 
         if q_guess is None:
@@ -162,7 +161,7 @@ class PosePlanner:
                     # Target is near or outside workspace boundary.  Clamp to the
                     # closest reachable point by interpolating toward the flat-body
                     # foot target (zero rotation, same height — guaranteed reachable).
-                    p_flat_B = self._p_feet_W[i] - p_body_W   # no rotation
+                    p_flat_B = self._p_feet_W[i] - p_body_W  # no rotation
                     p_clamped = 0.5 * (p_foot_B + p_flat_B)
                     try:
                         q_result[i] = kin.inverse_kinematics(
@@ -209,9 +208,9 @@ class PosePlanner:
         def _parse(wp):
             return (
                 float(wp.get("height", self.stand_height)),
-                float(wp.get("roll",   0.0)),
-                float(wp.get("pitch",  0.0)),
-                float(wp.get("yaw",    0.0)),
+                float(wp.get("roll", 0.0)),
+                float(wp.get("pitch", 0.0)),
+                float(wp.get("yaw", 0.0)),
             )
 
         n_segs = len(waypoints) - 1
@@ -239,8 +238,7 @@ class PosePlanner:
                     p0 + t * (p1 - p0),
                     y0 + t * (y1 - y0),
                 )
-                q = self.solve_pose(*pose, q_guess=q_prev,
-                                    height_compensation=height_compensation)
+                q = self.solve_pose(*pose, q_guess=q_prev, height_compensation=height_compensation)
                 all_cmds.append(q.flatten())
                 q_prev = q
 
@@ -280,7 +278,7 @@ class PosePlanner:
             raise ValueError("n_repeats must be >= 1")
         h = height if height is not None else self.stand_height
         neutral = {"height": self.stand_height, "roll": 0.0, "pitch": 0.0, "yaw": 0.0}
-        target  = {"height": h, "roll": roll, "pitch": pitch, "yaw": yaw}
+        target = {"height": h, "roll": roll, "pitch": pitch, "yaw": yaw}
 
         wps = [neutral]
         for _ in range(n_repeats):
@@ -290,8 +288,7 @@ class PosePlanner:
             wps = wps[:-1]
 
         steps = [n_steps] * (len(wps) - 1)
-        return self.plan_sequence(wps, n_steps=steps,
-                                  height_compensation=height_compensation)
+        return self.plan_sequence(wps, n_steps=steps, height_compensation=height_compensation)
 
     # ------------------------------------------------------------------
     # Output

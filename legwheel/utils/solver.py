@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Solver:
     """
     An optimization solver for equations
@@ -10,7 +11,8 @@ class Solver:
         function (callable): The function to optimize (default: None).
         derivative (callable): The derivative of the function (default: None).
     """
-    def __init__(self, method = "Newton", tol=1e-6, max_iter=100, function=None, derivative=None):
+
+    def __init__(self, method="Newton", tol=1e-6, max_iter=100, function=None, derivative=None):
         self.method = method
         self.tol = tol
         self.max_iter = max_iter
@@ -35,7 +37,7 @@ class Solver:
             ValueError: If the method is not recognized or if the function is not defined.
 
         Returns:
-            float: The solution found by the solver.    
+            float: The solution found by the solver.
         """
         if self.method == "Newton":
             return self.newton_method(x0)
@@ -58,7 +60,7 @@ class Solver:
                 return x1
             x0 = x1
         raise ValueError("Failed to converge.")
-    
+
     def bisection_method(self, x0, x1=None):
         if x1 is None:
             x1 = x0 + 1
@@ -122,6 +124,7 @@ class Solver:
     def get_method_list(self):
         return self.method_list
 
+
 if __name__ == "__main__":
     # Example usage
     # solve: x^2 = 2
@@ -130,18 +133,18 @@ if __name__ == "__main__":
         tol=1e-6,
         max_iter=100,
         function=lambda x: x**2 - 2,
-        derivative=lambda x: 2*x
+        derivative=lambda x: 2 * x,
     )
     root = solver.solve(1.0)
     print("Root found:", root)
-    
+
     # example sin(a) = sqrt(2)/2
     solver = Solver(
         method="Regula Falsi",
         tol=1e-6,
         max_iter=100,
-        function=lambda x: np.sin(x) - np.sqrt(2)/2,
-        derivative=lambda x: np.cos(x)
+        function=lambda x: np.sin(x) - np.sqrt(2) / 2,
+        derivative=lambda x: np.cos(x),
     )
-    root = solver.solve(np.pi/3, np.pi/8)
+    root = solver.solve(np.pi / 3, np.pi / 8)
     print("Root found:", np.rad2deg(root))

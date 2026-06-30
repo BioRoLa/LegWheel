@@ -4,6 +4,7 @@ import time
 from legwheel.utils.fitted_coefficient import *
 from legwheel.config import RobotParams
 
+
 #### LegModel ####
 # Using approximate coefficients instead of kinematics.
 # Init param - sim: True means using wheel radius without tire. False means using actual wheel radius (including tire thick).
@@ -12,24 +13,25 @@ class LegModel:
     2D Kinematics model for the Leg-Wheel mechanism.
     Handles joint positions calculation and rim point mapping.
     """
+
     def __init__(self):
         #### Constant values from Config ####
         self.max_theta = np.deg2rad(RobotParams.MAX_THETA_DEG)
         self.min_theta = np.deg2rad(RobotParams.MIN_THETA_DEG)
         self.theta0 = np.deg2rad(RobotParams.THETA0_DEG)
         self.beta0 = np.deg2rad(RobotParams.BETA0_DEG)
-        
+
         # Wheel and Foot dimensions
         # R: Effective wheel radius (100mm)
         # r: Linkage rim radius (19mm)
         self.R = RobotParams.WHEEL_RADIUS_PITCH
-        self.r = 0.019 # Default linkage radius
+        self.r = 0.019  # Default linkage radius
         self.radius = self.R + self.r
-        
+
         # Foot design parameters (derived from RobotParams tire geometry)
         self.foot_offset = RobotParams.TIRE_TREAD_RADIUS - self.R  # torus tube center offset from R
-        self.tyre_thickness = RobotParams.TIRE_CORNER_RADIUS        # torus minor radius (corner fillet)
-        self.foot_radius = RobotParams.WHEEL_RADIUS_OUTER           # max contact radius
+        self.tyre_thickness = RobotParams.TIRE_CORNER_RADIUS  # torus minor radius (corner fillet)
+        self.foot_radius = RobotParams.WHEEL_RADIUS_OUTER  # max contact radius
 
         # Linkage parameters (proportional to R)
         self.arc_HF = np.deg2rad(RobotParams.ARC_HF_DEG)
@@ -42,20 +44,20 @@ class LegModel:
         self.l6 = RobotParams.L6_RATIO * self.R
         self.l7 = 2.0 * self.R * np.sin((self.arc_HF - self.arc_BC - self.theta0) / 2)
         self.l8 = 2.0 * self.R * np.sin((np.pi - self.arc_HF) / 2)
-        
+
         self.l_AE = self.l5 + self.l6
         self.l_BF = 2.0 * self.R * np.sin((self.arc_HF - self.theta0) / 2)
-        self.l_BH = 2.0 * self.R * np.sin( self.theta0 / 2)
+        self.l_BH = 2.0 * self.R * np.sin(self.theta0 / 2)
         self.ang_UBC = (np.pi - self.arc_BC) / 2
         self.ang_LFG = (np.pi - (np.pi - self.arc_HF)) / 2
         self.ang_BCF = np.arccos((self.l3**2 + self.l7**2 - self.l_BF**2) / (2 * self.l3 * self.l7))
-        
+
         #### Variable values ####
         self.l_BD = 0
         self.ang_OEA = 0
         self.ang_DBC = 0
         self.ang_OGF = 0
-        
+
         # Initial pose
         self.forward(self.theta0, 0.0, vector=True)
 
@@ -69,60 +71,98 @@ class LegModel:
         self.theta = np.array(theta)
         self.beta = np.array(beta)
         self.n_elements = 0 if self.theta.ndim == 0 else self.theta.shape[0]
-        
+
         # Clip theta to limits
         self.theta = np.clip(self.theta, self.min_theta, self.max_theta)
-        
+
         self.calculate()
         self.rotate()
-        
+
         if vector:
             self.to_vector()
 
     def calculate(self, coefficient=False):
         """Internal linkage geometry solver."""
         if not coefficient:
-            self.A_l = self.l1 * np.exp( 1j*(self.theta) )
-            self.B_l = self.R * np.exp( 1j*(self.theta) )
+            self.A_l = self.l1 * np.exp(1j * (self.theta))
+            self.B_l = self.R * np.exp(1j * (self.theta))
             self.ang_OEA = np.arcsin(np.abs(self.A_l.imag) / self.l_AE)
             self.E = self.A_l.real - self.l_AE * np.cos(self.ang_OEA)
-            self.D_l = self.E + self.l6 * np.exp( 1j*(self.ang_OEA) )
+            self.D_l = self.E + self.l6 * np.exp(1j * (self.ang_OEA))
             self.l_BD = np.abs(self.D_l - self.B_l)
-            self.ang_DBC = np.arccos((self.l_BD**2 + self.l3**2 - self.l4**2) / (2 * self.l_BD * self.l3))
-            self.C_l = self.B_l + (self.D_l - self.B_l) * np.exp( -1j*(self.ang_DBC) ) * (self.l3 / self.l_BD)
-            self.F_l = self.C_l + (self.B_l - self.C_l) * np.exp( -1j*(self.ang_BCF) ) * (self.l7 / self.l3)
+            self.ang_DBC = np.arccos(
+                (self.l_BD**2 + self.l3**2 - self.l4**2) / (2 * self.l_BD * self.l3)
+            )
+            self.C_l = self.B_l + (self.D_l - self.B_l) * np.exp(-1j * (self.ang_DBC)) * (
+                self.l3 / self.l_BD
+            )
+            self.F_l = self.C_l + (self.B_l - self.C_l) * np.exp(-1j * (self.ang_BCF)) * (
+                self.l7 / self.l3
+            )
             self.ang_OGF = np.arcsin(np.abs(self.F_l.imag) / self.l8)
             self.G = self.F_l.real - self.l8 * np.cos(self.ang_OGF)
-            self.U_l = self.B_l + (self.C_l - self.B_l) * np.exp( 1j*(self.ang_UBC) ) * (self.R / self.l3)
-            self.L_l = self.F_l + (self.G - self.F_l) * np.exp( 1j*(self.ang_LFG) ) * (self.R / self.l8)
-            self.H_l = self.U_l + (self.B_l - self.U_l) * np.exp( -1j*(self.theta0) )
-            
+            self.U_l = self.B_l + (self.C_l - self.B_l) * np.exp(1j * (self.ang_UBC)) * (
+                self.R / self.l3
+            )
+            self.L_l = self.F_l + (self.G - self.F_l) * np.exp(1j * (self.ang_LFG)) * (
+                self.R / self.l8
+            )
+            self.H_l = self.U_l + (self.B_l - self.U_l) * np.exp(-1j * (self.theta0))
+
             # Foot characteristics
             self.O_r = self.G.real + self.R
-            self.I_l = self.O_r + (self.R + self.foot_offset) * np.exp( 1j*(np.deg2rad(180-40)) )
+            self.I_l = self.O_r + (self.R + self.foot_offset) * np.exp(1j * (np.deg2rad(180 - 40)))
             self.ang_OC = np.angle(self.C_l)
-            self.J_l = self.U_l + (self.R + self.foot_offset) * np.exp( 1j*(np.deg2rad(140)+np.angle(self.H_l - self.U_l)))
-            self.H_extend_l = self.U_l + (self.R + self.foot_offset) * np.exp( 1j*(np.angle(self.H_l - self.U_l)))
+            self.J_l = self.U_l + (self.R + self.foot_offset) * np.exp(
+                1j * (np.deg2rad(140) + np.angle(self.H_l - self.U_l))
+            )
+            self.H_extend_l = self.U_l + (self.R + self.foot_offset) * np.exp(
+                1j * (np.angle(self.H_l - self.U_l))
+            )
         else:
             self.A_l = A_l_poly[1](self.theta) - 1j * A_l_poly[0](self.theta)
             self.B_l = B_l_poly[1](self.theta) - 1j * B_l_poly[0](self.theta)
             self.C_l = C_l_poly[1](self.theta) - 1j * C_l_poly[0](self.theta)
             self.D_l = D_l_poly[1](self.theta) - 1j * D_l_poly[0](self.theta)
-            self.E   = E_poly[1](self.theta)   - 1j * E_poly[0](self.theta)
+            self.E = E_poly[1](self.theta) - 1j * E_poly[0](self.theta)
             self.F_l = F_l_poly[1](self.theta) - 1j * F_l_poly[0](self.theta)
-            self.G   = G_poly[1](self.theta)   - 1j * G_poly[0](self.theta)
+            self.G = G_poly[1](self.theta) - 1j * G_poly[0](self.theta)
             self.H_l = H_l_poly[1](self.theta) - 1j * H_l_poly[0](self.theta)
             self.U_l = U_l_poly[1](self.theta) - 1j * U_l_poly[0](self.theta)
             self.L_l = L_l_poly[1](self.theta) - 1j * L_l_poly[0](self.theta)
-        
+
         self.symmetry()
 
     def rotate(self):
         """Rotates joint positions by beta."""
-        rot_ang = np.exp( 1j*(np.array(self.beta) + self.beta0) )
-        attrs = ['A_l', 'A_r', 'B_l', 'B_r', 'C_l', 'C_r', 'D_l', 'D_r', 'E', 'F_l', 'F_r', 
-                 'G', 'H_l', 'H_r', 'U_l', 'U_r', 'L_l', 'L_r', 'O_r', 'I_l', 'I_r', 
-                 'J_l', 'J_r', 'H_extend_l', 'H_extend_r']
+        rot_ang = np.exp(1j * (np.array(self.beta) + self.beta0))
+        attrs = [
+            "A_l",
+            "A_r",
+            "B_l",
+            "B_r",
+            "C_l",
+            "C_r",
+            "D_l",
+            "D_r",
+            "E",
+            "F_l",
+            "F_r",
+            "G",
+            "H_l",
+            "H_r",
+            "U_l",
+            "U_r",
+            "L_l",
+            "L_r",
+            "O_r",
+            "I_l",
+            "I_r",
+            "J_l",
+            "J_r",
+            "H_extend_l",
+            "H_extend_r",
+        ]
         for attr in attrs:
             if hasattr(self, attr):
                 setattr(self, attr, rot_ang * getattr(self, attr))
@@ -143,11 +183,36 @@ class LegModel:
 
     def to_vector(self):
         """Converts complex positions to numpy [x, y] arrays."""
-        attrs = ['A_l', 'A_r', 'B_l', 'B_r', 'C_l', 'C_r', 'D_l', 'D_r', 'E', 'F_l', 'F_r', 
-                 'G', 'H_l', 'H_r', 'U_l', 'U_r', 'L_l', 'L_r', 'O_r', 'I_l', 'I_r', 
-                 'J_l', 'J_r', 'H_extend_l', 'H_extend_r']
+        attrs = [
+            "A_l",
+            "A_r",
+            "B_l",
+            "B_r",
+            "C_l",
+            "C_r",
+            "D_l",
+            "D_r",
+            "E",
+            "F_l",
+            "F_r",
+            "G",
+            "H_l",
+            "H_r",
+            "U_l",
+            "U_r",
+            "L_l",
+            "L_r",
+            "O_r",
+            "I_l",
+            "I_r",
+            "J_l",
+            "J_r",
+            "H_extend_l",
+            "H_extend_r",
+        ]
         for attr in attrs:
-            if not hasattr(self, attr): continue
+            if not hasattr(self, attr):
+                continue
             val = getattr(self, attr)
             if self.n_elements == 0:
                 setattr(self, attr, np.array([val.real, val.imag]))
@@ -160,17 +225,17 @@ class LegModel:
         Flat tread zone (|w| ≤ w_c): full tyre_thickness.
         Corner zone (w_c < |w| ≤ half_w): shrinks to 0 at the hard rim face.
         """
-        r_c   = self.tyre_thickness
+        r_c = self.tyre_thickness
         half_w = RobotParams.WHEEL_THICKNESS / 2.0
-        w_c   = half_w - r_c
+        w_c = half_w - r_c
         w_abs = abs(w)
         if w_abs <= w_c:
             return r_c
-        return float(np.sqrt(np.clip(r_c**2 - (w_abs - w_c)**2, 0.0, None)))
+        return float(np.sqrt(np.clip(r_c**2 - (w_abs - w_c) ** 2, 0.0, None)))
 
     def rot(self, ang):
         """Returns 2D rotation matrix."""
-        return np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang),  np.cos(ang)]])
+        return np.array([[np.cos(ang), -np.sin(ang)], [np.sin(ang), np.cos(ang)]])
 
     def rim_point(self, alpha=0.0, w=0.0):
         """
@@ -188,14 +253,16 @@ class LegModel:
         # Torus tube center: (r=R_tread, |w|=w_c) where w_c = half_w - r_c.
         #   |w| ≤ w_c  →  flat tread at R_outer (max contact radius)
         #   w_c < |w| ≤ half_w  →  corner arc: R_tread + sqrt(r_c² - (|w| - w_c)²)
-        r_c   = self.tyre_thickness                       # TIRE_CORNER_RADIUS
-        half_w = RobotParams.WHEEL_THICKNESS / 2.0        # physical half-width
-        w_c   = half_w - r_c                              # lateral center of corner torus
+        r_c = self.tyre_thickness  # TIRE_CORNER_RADIUS
+        half_w = RobotParams.WHEEL_THICKNESS / 2.0  # physical half-width
+        w_c = half_w - r_c  # lateral center of corner torus
         w_abs = abs(w)
         if w_abs <= w_c:
-            r_eff = self.foot_radius                      # flat tread: WHEEL_RADIUS_OUTER
+            r_eff = self.foot_radius  # flat tread: WHEEL_RADIUS_OUTER
         else:
-            r_eff = (self.R + self.foot_offset) + np.sqrt(np.clip(r_c**2 - (w_abs - w_c)**2, 0.0, None))
+            r_eff = (self.R + self.foot_offset) + np.sqrt(
+                np.clip(r_c**2 - (w_abs - w_c) ** 2, 0.0, None)
+            )
 
         if self.n_elements == 0:
             a_mod = ((alpha + 180) % 360) - 180
@@ -206,18 +273,20 @@ class LegModel:
             elif 40 < a_mod <= 180:
                 # Upper rim RHS
                 vec = (self.J_r - self.U_r) / np.linalg.norm(self.J_r - self.U_r)
-                return self.U_r + r_eff * (self.rot(np.deg2rad(a_mod-40)) @ vec)
+                return self.U_r + r_eff * (self.rot(np.deg2rad(a_mod - 40)) @ vec)
             else:
                 # Upper rim LHS
                 vec = (self.J_l - self.U_l) / np.linalg.norm(self.J_l - self.U_l)
-                return self.U_l + r_eff * (self.rot(np.deg2rad(a_mod+40)) @ vec)
+                return self.U_l + r_eff * (self.rot(np.deg2rad(a_mod + 40)) @ vec)
         else:
             return np.array([self.rim_point(a, w) for a in np.atleast_1d(alpha)])
 
     def __getitem__(self, key):
-        if key not in self.__dict__: raise KeyError(f"Joint '{key}' not found.")
+        if key not in self.__dict__:
+            raise KeyError(f"Joint '{key}' not found.")
         return self.__dict__[key]
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     lm = LegModel()
     print("Default G:", lm.G)

@@ -1,13 +1,15 @@
 import numpy as np
 
+
 class Screw:
     """
     Representation of a Screw (Twist or Wrench) in 3D space.
     Used for applying Screw Theory to robotic kinematics and dynamics.
-    
+
     A Twist V is represented as [omega, v] where omega is angular velocity
     and v is linear velocity.
     """
+
     def __init__(self, vec):
         """
         Initializes a Screw with a 6D vector.
@@ -34,9 +36,7 @@ class Screw:
 
     def skew_symmetric(self, w):
         """Returns the 3x3 skew-symmetric matrix of a 3D vector."""
-        return np.array([[0, -w[2], w[1]],
-                         [w[2], 0, -w[0]],
-                         [-w[1], w[0], 0]])
+        return np.array([[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]])
 
     def to_matrix(self):
         """Returns the 4x4 se(3) matrix representation of the twist."""
@@ -56,20 +56,24 @@ class Screw:
         """
         omega = self.omega
         v = self.v
-        
+
         if np.linalg.norm(omega) < 1e-9:
             # Pure translation
             T = np.eye(4)
             T[:3, 3] = v * theta
             return T
-        
+
         # Rotation and translation (Rodrigues' Formula extension)
         w_mat = self.skew_symmetric(omega)
         R = np.eye(3) + np.sin(theta) * w_mat + (1 - np.cos(theta)) * (w_mat @ w_mat)
-        
-        V = np.eye(3) * theta + (1 - np.cos(theta)) * w_mat + (theta - np.sin(theta)) * (w_mat @ w_mat)
+
+        V = (
+            np.eye(3) * theta
+            + (1 - np.cos(theta)) * w_mat
+            + (theta - np.sin(theta)) * (w_mat @ w_mat)
+        )
         p = V @ v
-        
+
         T = np.eye(4)
         T[:3, :3] = R
         T[:3, 3] = p
@@ -80,10 +84,8 @@ class Screw:
         """Returns the 6x6 Adjoint transformation matrix of a 4x4 SE(3) matrix."""
         R = T[:3, :3]
         p = T[:3, 3]
-        p_mat = np.array([[0, -p[2], p[1]],
-                          [p[2], 0, -p[0]],
-                          [-p[1], p[0], 0]])
-        
+        p_mat = np.array([[0, -p[2], p[1]], [p[2], 0, -p[0]], [-p[1], p[0], 0]])
+
         Adj = np.zeros((6, 6))
         Adj[:3, :3] = R
         Adj[3:, 3:] = R
