@@ -32,6 +32,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import dataclass, field as dc_field
 from typing import Any, Dict, List, Optional
 
@@ -61,6 +62,7 @@ TRANSFORM_SCRIPT = os.path.join(SCRIPT_DIR, "generate_transform_csv.py")
 
 GAIT_CHOICES = ["Walk", "Trot", "Pace", "Bound", "Pronk"]
 GENERATE_ACTION_KEY = "__generate__"
+PROGRESS_RE = re.compile(r"^::progress::\s*(\d+(?:\.\d+)?)\s*$")
 
 HELP_TEXT = """\
  ╔══════════════ Key Bindings ═══════════════╗
@@ -149,24 +151,24 @@ class Field:
 
 def _gait_fields() -> List[Field]:
     return [
-        Field("Gait Type",    "gait",        "choice", "Walk",        GAIT_CHOICES),
-        Field("Vx (m/s)",     "vx",          "float",  "0.10"),
-        Field("Vy (m/s)",     "vy",          "float",  "0.00"),
-        Field("Wz (rad/s)",   "wz",          "float",  "0.00"),
-        Field("Height (m)",   "height",      "float",  "0.25"),
-        Field("Step H (m)",   "step",        "float",  "0.04"),
-        Field("Period (s)",   "period",      "float",  "1.0"),
-        Field("Duty D_f",     "duty",        "float",  ""),
-        Field("Cycles",       "cycles",      "int",    "10"),
-        Field("dt (s)",       "dt",          "float",  "0.001"),
-        Field("Output Dir",   "outdir",      "text",   "outputs/csv"),
-        Field("Stab. Margin", "stab_margin", "float",  "0.02",        section="── Walk Stability ──"),
-        Field("Launch Enable","launch",      "bool",   False,         section="── Launch Control ──"),
-        Field("Ramp Mode",    "ramp_mode",   "choice", "cycles",      ["cycles", "seconds"]),
-        Field("Ramp Cycles",  "ramp_cycles", "int",    "3"),
-        Field("Ramp Seconds", "ramp_secs",   "float",  "3.0"),
-        Field("Ramp Floor",   "ramp_floor",  "float",  "0.10"),
-        Field("Generate",      GENERATE_ACTION_KEY, "action", ""),
+        Field("Gait Type", "gait", "choice", "Walk", GAIT_CHOICES),
+        Field("Vx (m/s)", "vx", "float", "0.10"),
+        Field("Vy (m/s)", "vy", "float", "0.00"),
+        Field("Wz (rad/s)", "wz", "float", "0.00"),
+        Field("Height (m)", "height", "float", "0.25"),
+        Field("Step H (m)", "step", "float", "0.04"),
+        Field("Period (s)", "period", "float", "1.0"),
+        Field("Duty D_f", "duty", "float", ""),
+        Field("Cycles", "cycles", "int", "10"),
+        Field("dt (s)", "dt", "float", "0.001"),
+        Field("Output Dir", "outdir", "text", "outputs/csv"),
+        Field("Stab. Margin", "stab_margin", "float", "0.02", section="── Walk Stability ──"),
+        Field("Launch Enable", "launch", "bool", False, section="── Launch Control ──"),
+        Field("Ramp Mode", "ramp_mode", "choice", "cycles", ["cycles", "seconds"]),
+        Field("Ramp Cycles", "ramp_cycles", "int", "3"),
+        Field("Ramp Seconds", "ramp_secs", "float", "3.0"),
+        Field("Ramp Floor", "ramp_floor", "float", "0.10"),
+        Field("Generate", GENERATE_ACTION_KEY, "action", ""),
     ]
 
 
@@ -226,6 +228,8 @@ class CSVGeneratorTUI:
         self.focus_idx = 0
         self.log_lines: List[str] = ["  Ready — press F5 to generate."]
         self.is_running = False
+        self.generation_progress = 0.0
+        self.generation_started_at: Optional[float] = None
         self.last_path = ""
         self.status = "Idle"
         self.edit_mode = False
@@ -303,14 +307,14 @@ class CSVGeneratorTUI:
     def _gait_summary(self):
         out = []
         try:
-            gait     = self._fval("gait",   "Walk")
-            vx       = float(self._fval("vx",     "0"))
-            vy       = float(self._fval("vy",     "0"))
-            wz       = float(self._fval("wz",     "0"))
-            h        = float(self._fval("height", "0.25"))
-            period   = float(self._fval("period", "1.0"))
+            gait = self._fval("gait", "Walk")
+            vx = float(self._fval("vx", "0"))
+            vy = float(self._fval("vy", "0"))
+            wz = float(self._fval("wz", "0"))
+            h = float(self._fval("height", "0.25"))
+            period = float(self._fval("period", "1.0"))
             duty_raw = str(self._fval("duty", "")).strip()
-            duty     = float(duty_raw) if duty_raw else None
+            duty = float(duty_raw) if duty_raw else None
             cycles = int(float(self._fval("cycles", "10")))
             dt = float(self._fval("dt", "0.001"))
             launch = self._fval("launch", False)
@@ -338,7 +342,7 @@ class CSVGeneratorTUI:
                     ),
                 ),
                 ("class:sum", f" Cycles  {cycles}  →  {gait_s:.1f} s\n"),
-                ("class:sum", f" Prep    5.0 s (fixed)\n"),
+                ("class:sum", " Prep    5.0 s (fixed)\n"),
                 ("class:sum", f" CoM Stab{stab_s}\n"),
             ]
             if launch:
@@ -423,9 +427,22 @@ class CSVGeneratorTUI:
             out.append(("class:log.err", " (invalid params)\n"))
         return out
 
+    def _render_progress_bar(self, width: int = 18):
+        progress = min(1.0, max(0.0, self.generation_progress))
+        filled = int(round(progress * width))
+        bar = "█" * filled + "░" * (width - filled)
+        return [("class:progress", f"[{bar}] {progress * 100:3.0f}%")]
+
     def _render_status(self):
         if self.is_running:
-            return [("class:st.run", f"  ⏳  Running…  {self.status}")]
+            elapsed = 0.0
+            if self.generation_started_at is not None:
+                elapsed = max(0.0, time.monotonic() - self.generation_started_at)
+            return [
+                ("class:st.run", f"  ⏳  Running…  {self.status}  "),
+                *self._render_progress_bar(),
+                ("class:st.run", f"  {elapsed:4.1f}s"),
+            ]
         fname = os.path.basename(self.last_path) or "—"
         return [("class:st", f"  ●  {self.status}  │  {fname}  │  Ctrl+L clear log")]
 
@@ -547,6 +564,7 @@ class CSVGeneratorTUI:
                 "ed.lbl": "bg:#00213f #7799bb",
                 "st": "bg:#0d0d0d #445566",
                 "st.run": "bg:#0d0d0d #ffaa00 bold",
+                "progress": "bg:#0d0d0d #00ccff bold",
                 "help": "bg:#001830 #99ccff",
             }
         )
@@ -736,8 +754,39 @@ class CSVGeneratorTUI:
         if app:
             app.invalidate()
 
+    def _set_generation_progress(self, progress: float, app=None):
+        self.generation_progress = min(1.0, max(self.generation_progress, progress))
+        if app:
+            app.invalidate()
+
+    def _update_progress_from_output(self, line: str, app=None) -> bool:
+        progress_match = PROGRESS_RE.match(line.strip())
+        if progress_match:
+            self._set_generation_progress(float(progress_match.group(1)) / 100.0, app)
+            return True
+
+        normalized = line.strip().lower()
+        if normalized.startswith("generating") or normalized.startswith("planning"):
+            self._set_generation_progress(0.25, app)
+        elif "[success]" in normalized:
+            self._set_generation_progress(0.90, app)
+        elif "saved to" in normalized:
+            self._set_generation_progress(1.0, app)
+        return False
+
+    def _handle_output_line(self, line: str, app=None):
+        if self._update_progress_from_output(line, app):
+            return
+
+        self._log(f"  {line}", app)
+        m = re.search(r"Saved to\s*[:\-]\s*(.+\.csv)", line)
+        if m:
+            self.last_path = m.group(1).strip()
+
     def _run_gen(self, app):
         self.is_running = True
+        self.generation_progress = 0.0
+        self.generation_started_at = time.monotonic()
         self.status = "Starting…"
         app.invalidate()
         try:
@@ -753,17 +802,17 @@ class CSVGeneratorTUI:
                 text=True,
                 bufsize=1,
             )
+            self._set_generation_progress(0.10, app)
+            self.status = "Generating…"
             if proc.stdout:
                 for raw in proc.stdout:
                     line = raw.rstrip()
                     if line:
-                        self._log(f"  {line}", app)
-                        m = re.search(r"Saved to\s*[:\-]\s*(.+\.csv)", line)
-                        if m:
-                            self.last_path = m.group(1).strip()
+                        self._handle_output_line(line, app)
                 proc.stdout.close()
             rc = proc.wait()
             if rc == 0:
+                self._set_generation_progress(1.0, app)
                 fname = os.path.basename(self.last_path)
                 self._log(f"✓ Saved: {fname}", app)
                 self.status = f"Done — {fname}"
@@ -775,6 +824,7 @@ class CSVGeneratorTUI:
             self.status = f"Error: {e}"
         finally:
             self.is_running = False
+            self.generation_started_at = None
             app.invalidate()
 
     def _build_cmd(self) -> List[str]:
@@ -787,17 +837,28 @@ class CSVGeneratorTUI:
 
     def _gait_cmd(self) -> List[str]:
         cmd = [
-            sys.executable, GAIT_SCRIPT,
-            "-g",  self._fval("gait",   "Walk"),
-            "-vx", self._fval("vx",     "0.10"),
-            "-vy", self._fval("vy",     "0.00"),
-            "-wz", self._fval("wz",     "0.00"),
-            "-z",  self._fval("height", "0.25"),
-            "-s",  self._fval("step",   "0.04"),
-            "-p",  self._fval("period", "1.0"),
-            "-c",  self._fval("cycles", "10"),
-            "-dt", self._fval("dt",     "0.001"),
-            "-o",  self._fval("outdir", "outputs/csv"),
+            sys.executable,
+            GAIT_SCRIPT,
+            "-g",
+            self._fval("gait", "Walk"),
+            "-vx",
+            self._fval("vx", "0.10"),
+            "-vy",
+            self._fval("vy", "0.00"),
+            "-wz",
+            self._fval("wz", "0.00"),
+            "-z",
+            self._fval("height", "0.25"),
+            "-s",
+            self._fval("step", "0.04"),
+            "-p",
+            self._fval("period", "1.0"),
+            "-c",
+            self._fval("cycles", "10"),
+            "-dt",
+            self._fval("dt", "0.001"),
+            "-o",
+            self._fval("outdir", "outputs/csv"),
         ]
         stab = self._fval("stab_margin", "0.02")
         cmd += ["--stab-margin", stab]
@@ -808,9 +869,9 @@ class CSVGeneratorTUI:
             rmode = self._fval("ramp_mode", "cycles")
             if rmode == "seconds":
                 try:
-                    secs   = float(self._fval("ramp_secs", "3.0"))
+                    secs = float(self._fval("ramp_secs", "3.0"))
                     period = float(self._fval("period", "1.0"))
-                    n      = max(1, math.ceil(secs / max(period, 1e-9)))
+                    n = max(1, math.ceil(secs / max(period, 1e-9)))
                 except (ValueError, ZeroDivisionError):
                     n = 3
                 n_str = str(n)

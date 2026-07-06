@@ -17,6 +17,13 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 LEG_LABELS = ["FL", "FR", "RR", "RL"]
+PROGRESS_PREFIX = "::progress::"
+
+
+def _emit_progress(percent):
+    """Emit a machine-readable progress percentage for TUI consumers."""
+    percent = max(0, min(100, int(round(percent))))
+    print("{}{}".format(PROGRESS_PREFIX, percent), flush=True)
 
 
 def _to_hw_order(cmds: np.ndarray) -> np.ndarray:
@@ -26,18 +33,18 @@ def _to_hw_order(cmds: np.ndarray) -> np.ndarray:
     # HW order:      FL_t FL_b  FR_t FR_b  RR_t RR_b  RL_t RL_b  FL_g FR_g RR_g RL_g
     N = cmds.shape[0]
     hw = np.zeros((N, 12))
-    hw[:, 0] = cmds[:, 0]   # FL theta
-    hw[:, 1] = cmds[:, 1]   # FL beta
-    hw[:, 2] = cmds[:, 3]   # FR theta
-    hw[:, 3] = cmds[:, 4]   # FR beta
-    hw[:, 4] = cmds[:, 6]   # RR theta
-    hw[:, 5] = cmds[:, 7]   # RR beta
-    hw[:, 6] = cmds[:, 9]   # RL theta
+    hw[:, 0] = cmds[:, 0]  # FL theta
+    hw[:, 1] = cmds[:, 1]  # FL beta
+    hw[:, 2] = cmds[:, 3]  # FR theta
+    hw[:, 3] = cmds[:, 4]  # FR beta
+    hw[:, 4] = cmds[:, 6]  # RR theta
+    hw[:, 5] = cmds[:, 7]  # RR beta
+    hw[:, 6] = cmds[:, 9]  # RL theta
     hw[:, 7] = cmds[:, 10]  # RL beta
-    hw[:, 8] = cmds[:, 2]   # FL gamma
-    hw[:, 9] = cmds[:, 5]   # FR gamma
+    hw[:, 8] = cmds[:, 2]  # FL gamma
+    hw[:, 9] = cmds[:, 5]  # FR gamma
     hw[:, 10] = cmds[:, 8]  # RR gamma
-    hw[:, 11] = cmds[:, 11] # RL gamma
+    hw[:, 11] = cmds[:, 11]  # RL gamma
     return hw
 
 
@@ -75,6 +82,7 @@ def generate_lean_csv(
     """
     from legwheel.planners.pose_planner import PosePlanner
 
+    _emit_progress(5)
     print("=========================================")
     print(" CorgiRobot Lean Pose CSV Generator      ")
     print("=========================================")
@@ -90,8 +98,10 @@ def generate_lean_csv(
     print()
 
     os.makedirs(output_dir, exist_ok=True)
+    _emit_progress(10)
 
     pp = PosePlanner(stand_height=stand_height, dt=dt)
+    _emit_progress(20)
 
     print("Planning lean trajectory...")
     cmds = pp.plan_lean(
@@ -103,8 +113,10 @@ def generate_lean_csv(
         height_compensation=height_compensation,
         n_repeats=n_repeats,
     )
+    _emit_progress(60)
 
     hw_cmds = _to_hw_order(cmds)
+    _emit_progress(70)
 
     # 5s prep: cosine ramp from home (θ=17°, rest=0) to first gait frame
     N_prep = int(prep_time / dt)
@@ -115,8 +127,10 @@ def generate_lean_csv(
     t_interp = np.linspace(0, 1, N_prep)
     alpha = 0.5 * (1 - np.cos(np.pi * t_interp))[:, np.newaxis]
     prep_cmds = (1 - alpha) * home_pose + alpha * hw_cmds[0]
+    _emit_progress(80)
 
     final_cmds = np.vstack([prep_cmds, hw_cmds])
+    _emit_progress(90)
 
     # Filename encodes key parameters
     sign_r = "p" if roll_deg >= 0 else "n"
@@ -137,9 +151,10 @@ def generate_lean_csv(
     filepath = os.path.join(output_dir, filename)
 
     np.savetxt(filepath, final_cmds, delimiter=",", fmt="%.6f")
+    _emit_progress(100)
 
     total = final_cmds.shape[0]
-    print(f"\n[SUCCESS]")
+    print("\n[SUCCESS]")
     print(f"  Total frames : {total} ({total*dt:.1f} s including {prep_time:.1f}s prep)")
     print(f"  Saved to     : {filepath}")
     return filepath
@@ -150,23 +165,32 @@ if __name__ == "__main__":
         description="Generate CorgiRobot whole-body lean pose CSV.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("--roll",  type=float, default=0.0,  help="Target roll  (deg, + = left up)")
-    parser.add_argument("--pitch", type=float, default=0.0,  help="Target pitch (deg, + = nose down)")
-    parser.add_argument("--yaw",   type=float, default=0.0,  help="Target yaw   (deg)")
+    parser.add_argument("--roll", type=float, default=0.0, help="Target roll  (deg, + = left up)")
+    parser.add_argument(
+        "--pitch", type=float, default=0.0, help="Target pitch (deg, + = nose down)"
+    )
+    parser.add_argument("--yaw", type=float, default=0.0, help="Target yaw   (deg)")
     parser.add_argument("-z", "--height", type=float, default=0.30, help="Stand height (m)")
-    parser.add_argument("--compensation", type=float, default=0.0,
-                        help="Height compensation (m/rad). Use 0.15–0.2 for large angles.")
-    parser.add_argument("-n", "--steps", type=int, default=500,
-                        help="IK samples per ramp segment")
-    parser.add_argument("--no-return", action="store_true",
-                        help="Do NOT append a return-to-neutral ramp")
-    parser.add_argument("-r", "--repeats", type=int, default=1,
-                        help="Number of lean cycles (neutral→target→neutral)")
+    parser.add_argument(
+        "--compensation",
+        type=float,
+        default=0.0,
+        help="Height compensation (m/rad). Use 0.15–0.2 for large angles.",
+    )
+    parser.add_argument("-n", "--steps", type=int, default=500, help="IK samples per ramp segment")
+    parser.add_argument(
+        "--no-return", action="store_true", help="Do NOT append a return-to-neutral ramp"
+    )
+    parser.add_argument(
+        "-r",
+        "--repeats",
+        type=int,
+        default=1,
+        help="Number of lean cycles (neutral→target→neutral)",
+    )
     parser.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
-    parser.add_argument("--prep", type=float, default=5.0,
-                        help="Prep sequence duration (s)")
-    parser.add_argument("-o", "--outdir", type=str, default="outputs/csv",
-                        help="Output directory")
+    parser.add_argument("--prep", type=float, default=5.0, help="Prep sequence duration (s)")
+    parser.add_argument("-o", "--outdir", type=str, default="outputs/csv", help="Output directory")
 
     a = parser.parse_args()
     generate_lean_csv(
