@@ -21,25 +21,33 @@ import sys
 import argparse
 import numpy as np
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+PROGRESS_PREFIX = "::progress::"
+
+
+def _emit_progress(percent):
+    """Emit a machine-readable progress percentage for TUI consumers."""
+    percent = max(0, min(100, int(round(percent))))
+    print("{}{}".format(PROGRESS_PREFIX, percent), flush=True)
 
 
 def _to_hw_order(raw_cmds: np.ndarray) -> np.ndarray:
     """Reorder (N, 12) planner output to hardware column order."""
     N = raw_cmds.shape[0]
     hw = np.zeros((N, 12))
-    hw[:, 0] = raw_cmds[:, 0]   # FL theta
-    hw[:, 1] = raw_cmds[:, 1]   # FL beta
-    hw[:, 8] = raw_cmds[:, 2]   # FL gamma
-    hw[:, 2] = raw_cmds[:, 3]   # FR theta
-    hw[:, 3] = raw_cmds[:, 4]   # FR beta
-    hw[:, 9] = raw_cmds[:, 5]   # FR gamma
-    hw[:, 4] = raw_cmds[:, 6]   # RR theta
-    hw[:, 5] = raw_cmds[:, 7]   # RR beta
+    hw[:, 0] = raw_cmds[:, 0]  # FL theta
+    hw[:, 1] = raw_cmds[:, 1]  # FL beta
+    hw[:, 8] = raw_cmds[:, 2]  # FL gamma
+    hw[:, 2] = raw_cmds[:, 3]  # FR theta
+    hw[:, 3] = raw_cmds[:, 4]  # FR beta
+    hw[:, 9] = raw_cmds[:, 5]  # FR gamma
+    hw[:, 4] = raw_cmds[:, 6]  # RR theta
+    hw[:, 5] = raw_cmds[:, 7]  # RR beta
     hw[:, 10] = raw_cmds[:, 8]  # RR gamma
-    hw[:, 6] = raw_cmds[:, 9]   # RL theta
+    hw[:, 6] = raw_cmds[:, 9]  # RL theta
     hw[:, 7] = raw_cmds[:, 10]  # RL beta
-    hw[:, 11] = raw_cmds[:, 11] # RL gamma
+    hw[:, 11] = raw_cmds[:, 11]  # RL gamma
     return hw
 
 
@@ -48,7 +56,7 @@ def generate_hardware_csv(
     gait_type="Trot",
     stand_height=0.25,
     step_height=0.04,
-    period=5.98,
+    period=1.0,
     dt=0.001,
     n_cycles=5,
     output_dir="outputs/csv",
@@ -56,12 +64,15 @@ def generate_hardware_csv(
     n_ramp=3,
     ramp_floor=0.1,
     stability_margin=0.02,
+    stance_duty=None,
 ):
+    _emit_progress(5)
     print("=========================================")
     print(" CorgiRobot Hardware CSV Generator       ")
     print("=========================================")
 
     os.makedirs(output_dir, exist_ok=True)
+    _emit_progress(10)
 
     # 1. Steady-state gait
     gait = GaitGenerator3D(
@@ -72,16 +83,20 @@ def generate_hardware_csv(
         gait_type=gait_type,
         dt=dt,
         stability_margin=stability_margin,
+        stance_duty=stance_duty,
     )
     gait.print_summary()
+    _emit_progress(20)
 
     print(f"\nGenerating {n_cycles} steady cycles of {gait_type}...")
     hw_cmds = _to_hw_order(gait.generate_full_gait(n_cycles=n_cycles))
+    _emit_progress(50)
 
     # 2. Optional launch ramp sequence
     launch_hw_cmds = None
     if with_launch:
         from legwheel.planners.launch_controller import LaunchController
+
         lc = LaunchController(
             gait_type=gait_type,
             stand_height=stand_height,
@@ -92,9 +107,12 @@ def generate_hardware_csv(
             n_ramp=n_ramp,
             ramp_floor=ramp_floor,
             stability_margin=stability_margin,
+            stance_duty=stance_duty,
         )
         lc.print_summary()
+        _emit_progress(60)
         launch_hw_cmds = _to_hw_order(lc.generate_launch_sequence())
+        _emit_progress(70)
 
     # 3. Prep sequence: cosine ramp from home (θ=17°) to first gait frame
     prep_time = 5.0
@@ -107,6 +125,7 @@ def generate_hardware_csv(
     t_interp = np.linspace(0, 1, N_prep)
     alpha = (0.5 * (1 - np.cos(np.pi * t_interp)))[:, np.newaxis]
     prep_cmds = (1 - alpha) * home_pose + alpha * first_frame
+    _emit_progress(80)
 
     # 4. Stack all segments
     segments = [prep_cmds]
@@ -114,6 +133,7 @@ def generate_hardware_csv(
         segments.append(launch_hw_cmds)
     segments.append(hw_cmds)
     final_cmds = np.vstack(segments)
+    _emit_progress(90)
 
     # 5. Filename
     suffix = f"_L{n_ramp}F{int(ramp_floor * 100)}" if with_launch else ""
@@ -121,6 +141,7 @@ def generate_hardware_csv(
     filepath = os.path.join(output_dir, filename)
 
     np.savetxt(filepath, final_cmds, delimiter=",", fmt="%.6f")
+    _emit_progress(100)
 
     N_launch = len(launch_hw_cmds) if launch_hw_cmds is not None else 0
     print("\n[SUCCESS]")
@@ -138,21 +159,28 @@ if __name__ == "__main__":
         description="Generate CorgiRobot 12-DOF Gait CSV for hardware experiments.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("-g", "--gait",   type=str,   default="Walk",  help="Gait type")
-    parser.add_argument("-vx", "--vx",    type=float, default=0.0,     help="Forward velocity (m/s)")
-    parser.add_argument("-vy", "--vy",    type=float, default=0.1,     help="Lateral velocity (m/s)")
-    parser.add_argument("-wz", "--wz",    type=float, default=0.0,     help="Yaw velocity (rad/s)")
-    parser.add_argument("-z", "--height", type=float, default=0.25,    help="Standing height (m)")
-    parser.add_argument("-s", "--step",   type=float, default=0.04,    help="Step height (m)")
-    parser.add_argument("-p", "--period", type=float, default=4,       help="Gait period (s)")
-    parser.add_argument("-c", "--cycles", type=int,   default=10,      help="Number of gait cycles")
-    parser.add_argument("-dt", "--dt",    type=float, default=0.001,   help="Time step (s)")
-    parser.add_argument("-o", "--outdir", type=str,   default="outputs/csv", help="Output directory")
-    parser.add_argument("--launch",       action="store_true",         help="Prepend launch ramp sequence")
-    parser.add_argument("--ramp-cycles",  type=int,   default=3,       help="Number of ramp cycles")
-    parser.add_argument("--ramp-floor",   type=float, default=0.1,     help="Starting velocity fraction (0–1)")
-    parser.add_argument("--stab-margin",  type=float, default=0.02,
-                        help="Walk CoM stability margin (m); 0 = disabled")
+    parser.add_argument("-g", "--gait", type=str, default="Walk", help="Gait type")
+    parser.add_argument("-vx", "--vx", type=float, default=0.0, help="Forward velocity (m/s)")
+    parser.add_argument("-vy", "--vy", type=float, default=0.1, help="Lateral velocity (m/s)")
+    parser.add_argument("-wz", "--wz", type=float, default=0.0, help="Yaw velocity (rad/s)")
+    parser.add_argument("-z", "--height", type=float, default=0.25, help="Standing height (m)")
+    parser.add_argument("-s", "--step", type=float, default=0.04, help="Step height (m)")
+    parser.add_argument("-p", "--period", type=float, default=1.0, help="Gait period (s)")
+    parser.add_argument("-c", "--cycles", type=int, default=10, help="Number of gait cycles")
+    parser.add_argument("-dt", "--dt", type=float, default=0.001, help="Time step (s)")
+    parser.add_argument("-o", "--outdir", type=str, default="outputs/csv", help="Output directory")
+    parser.add_argument("--launch", action="store_true", help="Prepend launch ramp sequence")
+    parser.add_argument("--ramp-cycles", type=int, default=3, help="Number of ramp cycles")
+    parser.add_argument(
+        "--ramp-floor", type=float, default=0.1, help="Starting velocity fraction (0–1)"
+    )
+    parser.add_argument(
+        "--stab-margin",
+        type=float,
+        default=0.02,
+        help="Walk CoM stability margin (m); 0 = disabled",
+    )
+    parser.add_argument("--duty", type=float, default=None, help="Override stance duty D_f (0–1)")
 
     args = parser.parse_args()
     generate_hardware_csv(
@@ -168,4 +196,5 @@ if __name__ == "__main__":
         n_ramp=args.ramp_cycles,
         ramp_floor=args.ramp_floor,
         stability_margin=args.stab_margin,
+        stance_duty=args.duty,
     )

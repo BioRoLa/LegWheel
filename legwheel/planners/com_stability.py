@@ -65,10 +65,10 @@ from scipy.ndimage import gaussian_filter1d
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.config import RobotParams
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  Low-level geometry helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _hull_signed_margin(
     com_xy: np.ndarray,
@@ -141,7 +141,7 @@ def _hull_signed_margin(
     s = -(hull.equations[:, :2] @ com + hull.equations[:, 2])
     k = int(np.argmin(s))
     margin = float(s[k])
-    inward = -hull.equations[k, :2]           # inward normal at tightest facet
+    inward = -hull.equations[k, :2]  # inward normal at tightest facet
     inward /= np.linalg.norm(inward) + 1e-12
     return margin, inward
 
@@ -149,6 +149,7 @@ def _hull_signed_margin(
 # ─────────────────────────────────────────────────────────────────────────────
 #  Main class
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class COMStabilityPlanner:
     """
@@ -197,9 +198,7 @@ class COMStabilityPlanner:
         self.max_sway = float(max_sway)
 
         if com_bias_xy is None:
-            self.com_xy = np.array(
-                [RobotParams.COM_BIAS_X, RobotParams.COM_BIAS_Y], dtype=float
-            )
+            self.com_xy = np.array([RobotParams.COM_BIAS_X, RobotParams.COM_BIAS_Y], dtype=float)
         else:
             self.com_xy = np.asarray(com_bias_xy, dtype=float)
 
@@ -241,7 +240,7 @@ class COMStabilityPlanner:
         """Return (4, 2) foot XY positions in the body frame for one cmd row."""
         xy = np.zeros((4, 2))
         for i in range(4):
-            p = self.legs[i].forward_kinematics(*cmd_row[i * 3: i * 3 + 3])
+            p = self.legs[i].forward_kinematics(*cmd_row[i * 3 : i * 3 + 3])
             xy[i] = p[:2]
         return xy
 
@@ -278,16 +277,15 @@ class COMStabilityPlanner:
         * **≤1 stance leg (point)** – same as line: target = 0.
         """
         target = self.safety_margin if n_stance >= 3 else 0.0
-        deficit = target - margin          # > 0 → correction needed
+        deficit = target - margin  # > 0 → correction needed
         if deficit <= 0.0:
             return 0.0
 
         iny = float(inward_dir[1])
-        if abs(iny) < 0.08:   # edge mostly along Y – X-violation; Y sway barely helps
-            return float(np.clip(0.005 * np.sign(iny + 1e-10),
-                                 -self.max_sway, self.max_sway))
+        if abs(iny) < 0.08:  # edge mostly along Y – X-violation; Y sway barely helps
+            return float(np.clip(0.005 * np.sign(iny + 1e-10), -self.max_sway, self.max_sway))
 
-        delta_y = deficit * iny          # project deficit onto Y axis
+        delta_y = deficit * iny  # project deficit onto Y axis
         return float(np.clip(delta_y, -self.max_sway, self.max_sway))
 
     # ── Sway application ──────────────────────────────────────────────────────
@@ -318,30 +316,29 @@ class COMStabilityPlanner:
         second-order effect; it is always < 5 mm for the sway values required
         in practice.
         """
-        if abs(sway_y) < 5e-5:           # below 0.05 mm → skip
+        if abs(sway_y) < 5e-5:  # below 0.05 mm → skip
             return cmd_row.copy()
 
         GAMMA_MAX = np.deg2rad(RobotParams.GAMMA_MAX_DEG)
-        EPS = 1e-5   # finite-difference step for ∂foot_y/∂γ
+        EPS = 1e-5  # finite-difference step for ∂foot_y/∂γ
 
         corrected = cmd_row.copy()
         for i in range(4):
-            q = cmd_row[i * 3: i * 3 + 3].copy()
+            q = cmd_row[i * 3 : i * 3 + 3].copy()
 
             # Numerical ∂foot_y / ∂γ  (central difference)
             q_p, q_m = q.copy(), q.copy()
             q_p[2] += EPS
             q_m[2] -= EPS
             dfy_dg = (
-                self.legs[i].forward_kinematics(*q_p)[1]
-                - self.legs[i].forward_kinematics(*q_m)[1]
+                self.legs[i].forward_kinematics(*q_p)[1] - self.legs[i].forward_kinematics(*q_m)[1]
             ) / (2.0 * EPS)
 
             if abs(dfy_dg) > 1e-6:
                 delta_gamma = -sway_y / dfy_dg
                 q[2] = float(np.clip(q[2] + delta_gamma, -GAMMA_MAX, GAMMA_MAX))
 
-            corrected[i * 3: i * 3 + 3] = q
+            corrected[i * 3 : i * 3 + 3] = q
         return corrected
 
     # ── Smoothing ─────────────────────────────────────────────────────────────
@@ -556,21 +553,34 @@ class COMStabilityPlanner:
         # ── Row 1: Stability margin ────────────────────────────────────────────
         ax_m = fig.add_subplot(gs[0, :])
         ax_m.fill_between(
-            t, info["margins"] * 100, 0,
+            t,
+            info["margins"] * 100,
+            0,
             where=info["margins"] < 0,
-            color="red", alpha=0.18, label="Unstable region (before)",
+            color="red",
+            alpha=0.18,
+            label="Unstable region (before)",
         )
         ax_m.plot(
-            t, info["margins"] * 100,
-            color="tomato", lw=1.5, label="Before correction",
+            t,
+            info["margins"] * 100,
+            color="tomato",
+            lw=1.5,
+            label="Before correction",
         )
         if show_correction:
             ax_m.plot(
-                t, info_st["margins"] * 100,
-                color="seagreen", lw=1.5, label="After correction",
+                t,
+                info_st["margins"] * 100,
+                color="seagreen",
+                lw=1.5,
+                label="After correction",
             )
         ax_m.axhline(
-            self.safety_margin * 100, color="darkorange", ls="--", lw=1.2,
+            self.safety_margin * 100,
+            color="darkorange",
+            ls="--",
+            lw=1.2,
             label=f"Safety margin target ({self.safety_margin*100:.0f} cm)",
         )
         ax_m.axhline(0, color="k", lw=0.8, alpha=0.4)
@@ -583,16 +593,29 @@ class COMStabilityPlanner:
         # ── Row 2: Body sway ──────────────────────────────────────────────────
         ax_s = fig.add_subplot(gs[1, :])
         ax_s.plot(
-            t, sway_raw * 100,
-            color="silver", lw=0.9, alpha=0.7, label="Raw sway required",
+            t,
+            sway_raw * 100,
+            color="silver",
+            lw=0.9,
+            alpha=0.7,
+            label="Raw sway required",
         )
         ax_s.plot(
-            t, sway * 100,
-            color="steelblue", lw=2.0, label="Smoothed sway applied",
+            t,
+            sway * 100,
+            color="steelblue",
+            lw=2.0,
+            label="Smoothed sway applied",
         )
         ax_s.axhline(self.max_sway * 100, color="red", ls=":", lw=1, alpha=0.6)
-        ax_s.axhline(-self.max_sway * 100, color="red", ls=":", lw=1, alpha=0.6,
-                     label=f"± max sway ({self.max_sway*100:.0f} cm)")
+        ax_s.axhline(
+            -self.max_sway * 100,
+            color="red",
+            ls=":",
+            lw=1,
+            alpha=0.6,
+            label=f"± max sway ({self.max_sway*100:.0f} cm)",
+        )
         ax_s.axhline(0, color="k", lw=0.8, alpha=0.4)
         ax_s.set_ylabel("Body Sway in Y (cm)")
         ax_s.set_xlabel("Time (s)")
@@ -620,34 +643,32 @@ class COMStabilityPlanner:
         ax_y = fig.add_subplot(gs[3, :])
         for i in range(4):
             foot_y = info["foot_xy"][:, i, 1] * 100
-            mask_i = np.array([
-                self.stance_mask(f % n_points, n_points)[i]
-                for f in range(N)
-            ])
-            ax_y.plot(t, foot_y, color=self._LEG_COLORS[i], lw=0.8,
-                      alpha=0.35, ls="--")
+            mask_i = np.array([self.stance_mask(f % n_points, n_points)[i] for f in range(N)])
+            ax_y.plot(t, foot_y, color=self._LEG_COLORS[i], lw=0.8, alpha=0.35, ls="--")
             stance_y = np.where(mask_i, foot_y, np.nan)
             ax_y.plot(
-                t, stance_y,
-                color=self._LEG_COLORS[i], lw=1.8,
+                t,
+                stance_y,
+                color=self._LEG_COLORS[i],
+                lw=1.8,
                 label=self._LEG_LABELS[i] + " (stance)",
             )
 
         # COM before correction: stays at COM_BIAS_Y (constant in body frame)
         ax_y.axhline(
-            self.com_xy[1] * 100, color="red", lw=1.5, ls="-.",
+            self.com_xy[1] * 100,
+            color="red",
+            lw=1.5,
+            ls="-.",
             label=f"COM Y uncorrected ({self.com_xy[1]*100:.1f} cm)",
         )
         # COM after correction: COM_Y + sway (effective position over support)
         effective_com_y = (self.com_xy[1] + sway) * 100
-        ax_y.plot(t, effective_com_y, color="gold", lw=2.2,
-                  label="COM Y after sway correction")
+        ax_y.plot(t, effective_com_y, color="gold", lw=2.2, label="COM Y after sway correction")
 
         ax_y.set_ylabel("Y Position (cm)")
         ax_y.set_xlabel("Time (s)")
-        ax_y.set_title(
-            "Foot Y-Positions (solid = stance, dashed = swing) and COM Trajectory"
-        )
+        ax_y.set_title("Foot Y-Positions (solid = stance, dashed = swing) and COM Trajectory")
         ax_y.legend(fontsize=7, ncol=3, loc="upper right")
         ax_y.grid(True, alpha=0.3)
 
@@ -659,9 +680,9 @@ class COMStabilityPlanner:
     def _draw_snapshot(
         self,
         ax: plt.Axes,
-        foot_xy: np.ndarray,    # (4, 2)
-        mask: np.ndarray,       # bool (4,)
-        com_xy: np.ndarray,     # (2,)
+        foot_xy: np.ndarray,  # (4, 2)
+        mask: np.ndarray,  # bool (4,)
+        com_xy: np.ndarray,  # (2,)
         sway_y: float,
         title: str,
     ) -> None:
@@ -680,13 +701,25 @@ class COMStabilityPlanner:
             c = self._LEG_COLORS[i]
             mk = "o" if mask[i] else "^"
             ms = 55 if mask[i] else 35
-            ax.scatter(foot_xy[i, 0], foot_xy[i, 1],
-                       c=c, marker=mk, s=ms, zorder=5, edgecolors="k", linewidths=0.4)
+            ax.scatter(
+                foot_xy[i, 0],
+                foot_xy[i, 1],
+                c=c,
+                marker=mk,
+                s=ms,
+                zorder=5,
+                edgecolors="k",
+                linewidths=0.4,
+            )
             ax.annotate(
                 self._LEG_LABELS[i],
                 xy=foot_xy[i],
-                xytext=(0, 5), textcoords="offset points",
-                fontsize=7, ha="center", color=c, fontweight="bold",
+                xytext=(0, 5),
+                textcoords="offset points",
+                fontsize=7,
+                ha="center",
+                color=c,
+                fontweight="bold",
             )
 
         # Support polygon
@@ -698,39 +731,58 @@ class COMStabilityPlanner:
                 verts = stance_pts[hull.vertices]
                 verts_closed = np.vstack([verts, verts[0]])
                 ax.fill(verts[:, 0], verts[:, 1], alpha=0.18, color="limegreen")
-                ax.plot(verts_closed[:, 0], verts_closed[:, 1],
-                        "g-", lw=1.8, label="Support polygon")
+                ax.plot(
+                    verts_closed[:, 0], verts_closed[:, 1], "g-", lw=1.8, label="Support polygon"
+                )
             except Exception:
                 ax.plot(stance_pts[:, 0], stance_pts[:, 1], "g-", lw=2)
         elif n == 2:
-            ax.plot(stance_pts[:, 0], stance_pts[:, 1],
-                    "g-", lw=2.5, label="Support line")
+            ax.plot(stance_pts[:, 0], stance_pts[:, 1], "g-", lw=2.5, label="Support line")
         elif n == 1:
-            ax.scatter(stance_pts[0, 0], stance_pts[0, 1],
-                       c="limegreen", s=100, zorder=6, marker="s")
+            ax.scatter(
+                stance_pts[0, 0], stance_pts[0, 1], c="limegreen", s=100, zorder=6, marker="s"
+            )
 
         # COM positions
         ax.scatter(
-            com_xy[0], com_xy[1],
-            c="red", s=90, marker="*", zorder=10, label="COM (uncorrected)",
+            com_xy[0],
+            com_xy[1],
+            c="red",
+            s=90,
+            marker="*",
+            zorder=10,
+            label="COM (uncorrected)",
         )
         com_corrected = np.array([com_xy[0], com_xy[1] + sway_y])
         ax.scatter(
-            com_corrected[0], com_corrected[1],
-            c="lime", s=90, marker="*", zorder=10, edgecolors="k",
-            linewidths=0.5, label="COM (after sway)",
+            com_corrected[0],
+            com_corrected[1],
+            c="lime",
+            s=90,
+            marker="*",
+            zorder=10,
+            edgecolors="k",
+            linewidths=0.5,
+            label="COM (after sway)",
         )
         if abs(sway_y) > 1e-4:
             ax.annotate(
-                "", xy=com_corrected, xytext=com_xy,
+                "",
+                xy=com_corrected,
+                xytext=com_xy,
                 arrowprops=dict(arrowstyle="->", color="darkgreen", lw=1.2),
             )
 
         # Safety margin circle around corrected COM (for ≥3 leg case)
         if n >= 3:
             circle = plt.Circle(
-                com_corrected, self.safety_margin,
-                color="darkgreen", fill=False, ls=":", lw=1.0, alpha=0.6,
+                com_corrected,
+                self.safety_margin,
+                color="darkgreen",
+                fill=False,
+                ls=":",
+                lw=1.0,
+                alpha=0.6,
             )
             ax.add_patch(circle)
 
@@ -757,22 +809,34 @@ class COMStabilityPlanner:
 
         print("=== COMStabilityPlanner Summary ===")
         print(f"  Gait type  : {self.gen.gait_type}")
-        print(f"  Body twist : ωz={self.gen.omega_z:.3f} rad/s, "
-              f"vx={self.gen.v_com[0]:.3f} m/s, vy={self.gen.v_com[1]:.3f} m/s")
+        print(
+            f"  Body twist : ωz={self.gen.omega_z:.3f} rad/s, "
+            f"vx={self.gen.v_com[0]:.3f} m/s, vy={self.gen.v_com[1]:.3f} m/s"
+        )
         print(f"  COM bias   : {self.com_xy}")
-        print(f"  Safety margin target: {self.safety_margin*100:.1f} cm  "
-              f"(polygon support only; line/point support targets margin=0)")
+        print(
+            f"  Safety margin target: {self.safety_margin*100:.1f} cm  "
+            f"(polygon support only; line/point support targets margin=0)"
+        )
         print()
         print(f"  Support geometry:")
-        print(f"    Frames with ≥2 stance legs (polygon support): "
-              f"{N - n_line}/{N} ({100.0*(N-n_line)/N:.0f}%)")
-        print(f"    Frames with ≤2 stance legs (line/point support): "
-              f"{n_line}/{N} ({pct_line:.0f}%)")
+        print(
+            f"    Frames with ≥2 stance legs (polygon support): "
+            f"{N - n_line}/{N} ({100.0*(N-n_line)/N:.0f}%)"
+        )
+        print(
+            f"    Frames with ≤2 stance legs (line/point support): "
+            f"{n_line}/{N} ({pct_line:.0f}%)"
+        )
         if pct_line > 50:
-            print(f"    ⚠  This gait spends {pct_line:.0f}% of the time in line/point support, "
-                  f"which is inherently statically unstable.")
-            print(f"       'Unstable frame' count will never reach 0 for those frames —"
-                  f" use the *margin improvement* as the key metric.")
+            print(
+                f"    ⚠  This gait spends {pct_line:.0f}% of the time in line/point support, "
+                f"which is inherently statically unstable."
+            )
+            print(
+                f"       'Unstable frame' count will never reach 0 for those frames —"
+                f" use the *margin improvement* as the key metric."
+            )
         print()
         print(f"  BEFORE correction:")
         print(f"    Min margin : {info['margins'].min()*100:+.2f} cm")
@@ -786,8 +850,10 @@ class COMStabilityPlanner:
         n_bad_st = int((info_st["margins"] < 0).sum())
         print(f"    Unstable frames: {n_bad_st}/{N} ({100.*n_bad_st/N:.1f}%)")
         margin_improvement = info_st["margins"].mean() - info["margins"].mean()
-        print(f"    Mean margin improvement: {margin_improvement*100:+.2f} cm "
-              f"({'better' if margin_improvement > 0 else 'worse'})")
+        print(
+            f"    Mean margin improvement: {margin_improvement*100:+.2f} cm "
+            f"({'better' if margin_improvement > 0 else 'worse'})"
+        )
         print()
         print(f"  Sway signal:")
         print(f"    Peak raw  sway: {np.max(np.abs(self._last_sway_raw))*100:.2f} cm")

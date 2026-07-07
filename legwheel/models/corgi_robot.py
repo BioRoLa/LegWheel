@@ -3,29 +3,31 @@ from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.config import RobotParams
 from legwheel.utils.screw import Screw
 
+
 class CorgiRobot:
     """
     Model representing the full Corgi Robot with 4 limbs.
     Coordinates the kinematics of all legs and manages the robot's base pose.
-    
+
     Limbs:
         0: FL (Front-Left)
         1: FR (Front-Right)
         2: RR (Rear-Right)
         3: RL (Rear-Left)
     """
+
     def __init__(self):
         """
         Initializes the Corgi robot with 4 legs and default base pose.
         """
         # Limbs initialization
         self.legs = [CorgiLegKinematics(i) for i in range(4)]
-        
+
         # Robot Base Pose in World Frame {W}
         # [x, y, z, roll, pitch, yaw]
         self.base_pos = np.zeros(3)
-        self.base_ori = np.zeros(3) # Roll, Pitch, Yaw (Euler angles)
-        
+        self.base_ori = np.zeros(3)  # Roll, Pitch, Yaw (Euler angles)
+
         # Dimensions for reference
         self.wheelbase = RobotParams.WHEEL_BASE
         self.trackwidth = RobotParams.BODY_WIDTH
@@ -89,12 +91,14 @@ class CorgiRobot:
         cr, sr = np.cos(r), np.sin(r)
         cp, sp = np.cos(p), np.sin(p)
         cy, sy = np.cos(y), np.sin(y)
-        
-        R = np.array([
-            [cp*cy, sr*sp*cy - cr*sy, cr*sp*cy + sr*sy],
-            [cp*sy, sr*sp*sy + cr*cy, cr*sp*sy - sr*cy],
-            [-sp, sr*cp, cr*cp]
-        ])
+
+        R = np.array(
+            [
+                [cp * cy, sr * sp * cy - cr * sy, cr * sp * cy + sr * sy],
+                [cp * sy, sr * sp * sy + cr * cy, cr * sp * sy - sr * cy],
+                [-sp, sr * cp, cr * cp],
+            ]
+        )
         return R
 
     def body_to_world(self, p_B):

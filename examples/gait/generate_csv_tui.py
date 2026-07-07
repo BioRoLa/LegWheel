@@ -18,6 +18,7 @@ Keys:
     Enter / i / a              Begin editing a text field
     Enter / Esc                Confirm / cancel edit
     F5  / Ctrl+G               Generate CSV
+    F6  (Lean mode)            Check workspace at current height
     1 / 2                      Switch Gait / Lean mode
     F1                         Show / hide key-binding help
     Ctrl+L                     Clear log
@@ -76,6 +77,7 @@ HELP_TEXT = """\
  ║                                           ║
  ║  Commands                                 ║
  ║  F5 / Ctrl+G      Generate CSV           ║
+ ║  F6 (Lean)        Check workspace        ║
  ║  1 / 2 / 3        Gait/Lean/Transform    ║
  ║  Ctrl+L           Clear log              ║
  ║  F1 / Esc         Close this help        ║
@@ -143,7 +145,6 @@ def _gait_fields() -> List[Field]:
         Field("Cycles",       "cycles",      "int",    "10"),
         Field("dt (s)",       "dt",          "float",  "0.001"),
         Field("Output Dir",   "outdir",      "text",   "outputs/csv"),
-        Field("Stab. Margin", "stab_margin", "float",  "0.02",        section="── Walk Stability ──"),
         Field("Launch Enable","launch",      "bool",   False,         section="── Launch Control ──"),
         Field("Ramp Mode",    "ramp_mode",   "choice", "cycles",      ["cycles", "seconds"]),
         Field("Ramp Cycles",  "ramp_cycles", "int",    "3"),
@@ -154,17 +155,23 @@ def _gait_fields() -> List[Field]:
 
 def _lean_fields() -> List[Field]:
     return [
-        Field("Roll (°)",      "roll",    "float", "0.0"),
-        Field("Pitch (°)",     "pitch",   "float", "0.0"),
-        Field("Yaw (°)",       "yaw",     "float", "0.0"),
-        Field("Height (m)",    "height",  "float", "0.30"),
-        Field("Compensation",  "comp",    "float", "0.0"),
-        Field("Steps / Seg",   "steps",   "int",   "500"),
-        Field("Repeats",       "repeats", "int",   "1"),
-        Field("Prep (s)",      "prep",    "float", "5.0"),
-        Field("dt (s)",        "dt",      "float", "0.001"),
-        Field("Return Neutral","ret",     "bool",  True),
-        Field("Output Dir",    "outdir",  "text",  "outputs/csv"),
+        Field("Roll (°)",      "roll",       "float",  "0.0"),
+        Field("Pitch (°)",     "pitch",      "float",  "0.0"),
+        Field("Yaw (°)",       "yaw",        "float",  "0.0"),
+        Field("X offset (m)",  "x",          "float",  "0.0"),
+        Field("Y offset (m)",  "y",          "float",  "0.0"),
+        Field("Height (m)",    "height",     "float",  "0.30"),
+        Field("Compensation",  "comp",       "float",  "0.0"),
+        Field("Steps / Seg",   "steps",      "int",    "500"),
+        Field("Repeats",       "repeats",    "int",    "1"),
+        Field("Prep (s)",      "prep",       "float",  "5.0"),
+        Field("dt (s)",        "dt",         "float",  "0.001"),
+        Field("Return Neutral","ret",        "bool",   True),
+        Field("Rock ±",        "rock",       "bool",   False),
+        Field("Profile",       "profile",    "choice", "cosine",
+              ["cosine", "trapezoid", "linear"]),
+        Field("Ramp Ratio",    "ramp_ratio", "float",  "0.25"),
+        Field("Output Dir",    "outdir",     "text",   "outputs/csv"),
     ]
 
 
@@ -251,7 +258,7 @@ class CSVGeneratorTUI:
             out += [(ls, f"{cur}{f.label.ljust(LABEL_W)}"), (vs, f" {f.display()}\n")]
         out += [
             ("class:hint", "\n  Tab/↑↓/jk  Navigate     ←→/Spc/hl  Toggle\n"),
-            ("class:hint",   "  Enter/i/a  Edit text    F5          Generate\n"),
+            ("class:hint",   "  Enter/i/a  Edit text    F5 Generate" + ("  F6 Workspace" if self.mode == "lean" else "") + "\n"),
             ("class:hint",   "  gg/G       First/Last   1/2         Gait/Lean\n"),
             ("class:hint",   "  F1         Key help     q           Quit\n"),
         ]
@@ -288,9 +295,6 @@ class CSVGeneratorTUI:
             gait_s  = cycles * period
             total_s = 5.0 + gait_s
 
-            stab   = float(self._fval("stab_margin", "0.02"))
-            stab_s = (f" {stab*100:.0f} cm" if gait == "Walk" and stab > 0
-                      else (" disabled" if gait == "Walk" else " N/A"))
             out += [
                 ("class:sum",    f" Gait    {gait}\n"),
                 ("class:sum",    f" Speed   Vx={vx:+.2f}  Vy={vy:+.2f}  Wz={wz:+.2f}\n"),
@@ -298,7 +302,6 @@ class CSVGeneratorTUI:
                 ("class:sum",    f" Period  {period:.2f} s\n"),
                 ("class:sum",    f" Cycles  {cycles}  →  {gait_s:.1f} s\n"),
                 ("class:sum",    f" Prep    5.0 s (fixed)\n"),
-                ("class:sum",    f" CoM Stab{stab_s}\n"),
             ]
             if launch:
                 rmode = self._fval("ramp_mode", "cycles")
@@ -322,22 +325,32 @@ class CSVGeneratorTUI:
             roll    = float(self._fval("roll",    "0"))
             pitch   = float(self._fval("pitch",   "0"))
             yaw     = float(self._fval("yaw",     "0"))
+            x       = float(self._fval("x",       "0"))
+            y       = float(self._fval("y",       "0"))
             h       = float(self._fval("height",  "0.3"))
             steps   = int(float(self._fval("steps",   "500")))
             repeats = int(float(self._fval("repeats", "1")))
             dt      = float(self._fval("dt",      "0.001"))
             prep    = float(self._fval("prep",    "5"))
             ret     = self._fval("ret", True)
+            rock    = self._fval("rock", False)
 
-            segs_per_rep = 2 if ret else 1
-            total_segs   = repeats * segs_per_rep
-            total_s      = prep + steps * total_segs * dt
+            cycle_segs = 4 if rock else 2
+            total_segs = repeats * cycle_segs - (0 if ret else 1)
+            total_s    = prep + steps * total_segs * dt
 
+            profile    = self._fval("profile",    "cosine")
+            ramp_ratio = float(self._fval("ramp_ratio", "0.25"))
+            prof_str   = profile if profile != "trapezoid" else f"trapezoid(r={ramp_ratio:.2f})"
             out += [
                 ("class:sum",    f" Roll    {roll:+.1f}°\n"),
                 ("class:sum",    f" Pitch   {pitch:+.1f}°\n"),
                 ("class:sum",    f" Yaw     {yaw:+.1f}°\n"),
+                ("class:sum",    f" X off   {x:+.4f} m\n"),
+                ("class:sum",    f" Y off   {y:+.4f} m\n"),
                 ("class:sum",    f" Height  {h:.3f} m\n"),
+                ("class:sum",    f" Rock±   {'yes' if rock else 'no'}\n"),
+                ("class:sum",    f" Profile {prof_str}\n"),
                 ("class:sum",    f" Steps   {steps} × {total_segs} seg ({repeats}x)\n"),
                 ("class:sum",    f" Prep    {prep:.1f} s\n"),
                 ("class:sum.hi", f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n"),
@@ -631,6 +644,13 @@ class CSVGeneratorTUI:
         def _gen(ev):
             threading.Thread(target=self._run_gen, args=(ev.app,), daemon=True).start()
 
+        # Workspace check (lean mode only)
+        is_lean = Condition(lambda: self.mode == "lean")
+
+        @kb.add("f6", filter=nav_mode & not_run & is_lean)
+        def _workspace(ev):
+            threading.Thread(target=self._run_workspace_check, args=(ev.app,), daemon=True).start()
+
         # Clear log
         @kb.add("c-l", filter=not_edit)
         def _clear(ev):
@@ -686,6 +706,40 @@ class CSVGeneratorTUI:
             self.is_running = False
             app.invalidate()
 
+    def _run_workspace_check(self, app):
+        self.is_running = True
+        self.status = "Checking workspace…"
+        app.invalidate()
+        try:
+            import sys as _sys
+            _sys.path.insert(0, BASE_DIR)
+            from legwheel.planners.pose_planner import PosePlanner
+            import numpy as np
+
+            h = float(self._fval("height", "0.30"))
+            self._log(f"── Workspace @ height={h:.3f} m ──", app)
+            pp = PosePlanner(stand_height=h)
+            ws = pp.compute_workspace(h)
+
+            r_lo, r_hi   = np.rad2deg(ws["roll"])
+            p_lo, p_hi   = np.rad2deg(ws["pitch"])
+            y_lo, y_hi   = np.rad2deg(ws["yaw"])
+            x_lo, x_hi   = ws["x"]
+            yo_lo, yo_hi = ws["y"]
+
+            self._log(f"  Roll   {r_lo:+.1f}° → {r_hi:+.1f}°", app)
+            self._log(f"  Pitch  {p_lo:+.1f}° → {p_hi:+.1f}°", app)
+            self._log(f"  Yaw    {y_lo:+.1f}° → {y_hi:+.1f}°", app)
+            self._log(f"  X    {x_lo*1000:+.1f}mm → {x_hi*1000:+.1f}mm", app)
+            self._log(f"  Y    {yo_lo*1000:+.1f}mm → {yo_hi*1000:+.1f}mm", app)
+            self.status = f"Workspace @ {h:.3f} m done"
+        except Exception as e:
+            self._log(f"✗ workspace check failed: {e}", app)
+            self.status = f"Error: {e}"
+        finally:
+            self.is_running = False
+            app.invalidate()
+
     def _build_cmd(self) -> List[str]:
         if self.mode == "gait":
             return self._gait_cmd()
@@ -708,8 +762,6 @@ class CSVGeneratorTUI:
             "-dt", self._fval("dt",     "0.001"),
             "-o",  self._fval("outdir", "outputs/csv"),
         ]
-        stab = self._fval("stab_margin", "0.02")
-        cmd += ["--stab-margin", stab]
         if self._fval("launch", False):
             rmode = self._fval("ramp_mode", "cycles")
             if rmode == "seconds":
@@ -735,6 +787,8 @@ class CSVGeneratorTUI:
             "--roll",         self._fval("roll",    "0.0"),
             "--pitch",        self._fval("pitch",   "0.0"),
             "--yaw",          self._fval("yaw",     "0.0"),
+            "--x",            self._fval("x",       "0.0"),
+            "--y",            self._fval("y",       "0.0"),
             "-z",             self._fval("height",  "0.30"),
             "--compensation", self._fval("comp",    "0.0"),
             "-n",             self._fval("steps",   "500"),
@@ -745,6 +799,12 @@ class CSVGeneratorTUI:
         ]
         if not self._fval("ret", True):
             cmd.append("--no-return")
+        if self._fval("rock", False):
+            cmd.append("--rock")
+        profile = self._fval("profile", "cosine")
+        cmd += ["--profile", profile]
+        if profile == "trapezoid":
+            cmd += ["--ramp-ratio", self._fval("ramp_ratio", "0.25")]
         return cmd
 
     def _transform_cmd(self) -> List[str]:
@@ -805,8 +865,6 @@ def _make_parser() -> argparse.ArgumentParser:
                        metavar="N",    help="Number of gait cycles")
     grp_g.add_argument("-dt", dest="dt", type=float, default=None,
                        metavar="S",    help="Time step (s)")
-    grp_g.add_argument("--stab-margin", dest="stab_margin", type=float, default=None,
-                       metavar="M",    help="Walk CoM stability margin (m); 0 = disabled")
     # ── Lean params ────────────────────────────────
     grp_l = p.add_argument_group("Lean defaults")
     grp_l.add_argument("--roll",  type=float, default=None, metavar="DEG")
@@ -849,7 +907,6 @@ _DEST_TO_KEY = {
     "comp": "comp", "steps": "steps", "repeats": "repeats", "prep": "prep",
     "t_theta": "t_theta", "t_beta": "t_beta", "t_gamma": "t_gamma",
     "s_theta": "s_theta", "dur": "dur", "hold": "hold",
-    "stab_margin": "stab_margin",
 }
 
 

@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 class Bezier:
     """
     Implements a general n-th order Bezier curve in N dimensions.
-    
-    A Bezier curve is defined by a set of control points. The curve passes 
-    through the first and last control points and is contained within the 
+
+    A Bezier curve is defined by a set of control points. The curve passes
+    through the first and last control points and is contained within the
     convex hull of all control points.
     """
+
     def __init__(self, control_pts):
         """
         Initializes the Bezier curve with a list of control points.
@@ -36,7 +37,7 @@ class Bezier:
     def bz_coeff(self, cp_list):
         """
         Calculates the static part of Bernstein polynomials (the binomial coefficients).
-        
+
         Args:
             cp_list (list): List of control points to determine the order (n = len - 1).
         """
@@ -49,7 +50,7 @@ class Bezier:
     def bzt_coeff(self, cp_list, t):
         """
         Calculates the time-dependent part of Bernstein polynomials: (1-t)^(n-i) * t^i.
-        
+
         Args:
             cp_list (list): List of control points.
             t (float): Normalized time parameter [0, 1].
@@ -66,7 +67,7 @@ class Bezier:
         """
         Calculates the coordinates of a point on the Bezier curve at time t.
         Supports 2D and 3D curves.
-        
+
         The point is calculated using the formula:
         P(t) = sum_{i=0}^{n} B_{i,n}(t) * P_i + Offset
 
@@ -80,20 +81,22 @@ class Bezier:
             np.ndarray: The [x, y, (z)] position on the curve.
         """
         bzt_cff = self.bzt_coeff(self.control_pts, t)
-        
+
         # Determine dimensionality from the first control point
         dim = len(self.control_pts[0])
         point = np.zeros(dim)
-        
+
         for i in range(len(self.control_pts)):
             weight = bzt_cff[i] * self.bz_cff[i]
             point += weight * self.control_pts[i]
-        
+
         # Apply offsets
         point[0] += offset_x
-        if dim > 1: point[1] += offset_y
-        if dim > 2: point[2] += offset_z
-            
+        if dim > 1:
+            point[1] += offset_y
+        if dim > 2:
+            point[2] += offset_z
+
         return point
 
 

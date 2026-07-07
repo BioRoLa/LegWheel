@@ -16,12 +16,13 @@ The caller is responsible for prepending the hardware prep sequence and
 appending the steady-state gait (see generate_hardware_csv.py).
 """
 
+from typing import Optional
+
 import numpy as np
 from legwheel.planners.gait_generator_3d import GaitGenerator3D, GAIT_LIBRARY
 
 
-def find_all_stance_phase(phase_offsets: list, stance_duty: float,
-                          n_samples: int = 2000) -> float:
+def find_all_stance_phase(phase_offsets: list, stance_duty: float, n_samples: int = 2000) -> float:
     """
     Find the normalized cycle time where all legs are simultaneously in stance.
 
@@ -44,11 +45,11 @@ def find_all_stance_phase(phase_offsets: list, stance_duty: float,
         n_on_ground += in_stance.astype(int)
 
     n_legs = len(phase_offsets)
-    target = n_on_ground.max()   # 4 if all-stance exists, else 3 etc.
+    target = n_on_ground.max()  # 4 if all-stance exists, else 3 etc.
 
     mask = (n_on_ground == target).astype(int)
     # Detect rising edges (transitions into the window)
-    padded = np.concatenate([[mask[-1]], mask])   # wrap-around for circular search
+    padded = np.concatenate([[mask[-1]], mask])  # wrap-around for circular search
     rising = np.where(np.diff(padded) == 1)[0] % n_samples
 
     if len(rising) == 0:
@@ -71,9 +72,11 @@ def find_all_stance_phase(phase_offsets: list, stance_duty: float,
     phase = t[best_start]
 
     if target < n_legs:
-        print(f"  ⚠ Launch: gait has no all-4-stance window "
-              f"(max {target}/{n_legs} legs). "
-              f"Starting at max-ground-contact phase {phase:.3f}.")
+        print(
+            f"  ⚠ Launch: gait has no all-4-stance window "
+            f"(max {target}/{n_legs} legs). "
+            f"Starting at max-ground-contact phase {phase:.3f}."
+        )
     return float(phase)
 
 
@@ -91,6 +94,7 @@ class LaunchController:
         n_ramp (int): Number of ramp cycles (each one gait period long).
         ramp_floor (float): Velocity fraction for the first ramp cycle (0–1).
                             Default 0.1 (10% of target velocity).
+        stance_duty (float): Optional stance duty override ``D_f`` in (0, 1).
     """
 
     def __init__(
@@ -104,10 +108,10 @@ class LaunchController:
         n_ramp: int = 3,
         ramp_floor: float = 0.1,
         stability_margin: float = 0.02,
+        stance_duty: Optional[float] = None,
     ):
         if gait_type not in GAIT_LIBRARY:
-            raise ValueError(
-                f"Unknown gait '{gait_type}'. Choose from {list(GAIT_LIBRARY.keys())}")
+            raise ValueError(f"Unknown gait '{gait_type}'. Choose from {list(GAIT_LIBRARY.keys())}")
 
         self.gait_type = gait_type
         self.stand_height = stand_height
@@ -121,20 +125,24 @@ class LaunchController:
 
         gait_def = GAIT_LIBRARY[gait_type]
         self.phase_offsets = gait_def["phase_offsets"]
-        self.stance_duty = gait_def["stance_duty"]
+        if stance_duty is None:
+            self.stance_duty = gait_def["stance_duty"]
+        else:
+            if not 0.0 < stance_duty < 1.0:
+                raise ValueError("stance_duty must be in the open interval (0, 1).")
+            self.stance_duty = float(stance_duty)
 
         # Find optimal launch start phase once at construction
-        self.start_phase = find_all_stance_phase(
-            self.phase_offsets, self.stance_duty)
+        self.start_phase = find_all_stance_phase(self.phase_offsets, self.stance_duty)
 
     # ------------------------------------------------------------------
 
     def _scale_twist(self, scale: float) -> np.ndarray:
         """Scale the velocity components of the twist, preserving direction."""
         scaled = self.twist.copy()
-        scaled[0] *= scale   # omega_z
-        scaled[1] *= scale   # v_x
-        scaled[2] *= scale   # v_y
+        scaled[0] *= scale  # omega_z
+        scaled[1] *= scale  # v_x
+        scaled[2] *= scale  # v_y
         return scaled
 
     def _generate_one_cycle(self, scale: float) -> np.ndarray:
@@ -154,8 +162,9 @@ class LaunchController:
             gait_type=self.gait_type,
             dt=self.dt,
             stability_margin=self.stability_margin,
+            stance_duty=self.stance_duty,
         )
-        cmds = gen.generate_full_gait(n_cycles=1)   # (n_pts, 12)
+        cmds = gen.generate_full_gait(n_cycles=1)  # (n_pts, 12)
 
         # Apply all-stance phase shift: roll so cycle starts at start_phase
         n_pts = len(cmds)
@@ -171,9 +180,11 @@ class LaunchController:
         """
         scales = np.linspace(self.ramp_floor, 1.0, self.n_ramp)
 
-        print(f"  Launch: {self.n_ramp} ramp cycles, "
-              f"v = {self.ramp_floor*100:.0f}% → 100% of target, "
-              f"start_phase = {self.start_phase:.3f}")
+        print(
+            f"  Launch: {self.n_ramp} ramp cycles, "
+            f"v = {self.ramp_floor*100:.0f}% → 100% of target, "
+            f"start_phase = {self.start_phase:.3f}"
+        )
 
         cycles = []
         for k, s in enumerate(scales):
@@ -186,9 +197,14 @@ class LaunchController:
     def print_summary(self) -> None:
         print("=== LaunchController Summary ===")
         print(f"  Gait          : {self.gait_type}")
-        print(f"  Target twist  : ω_z={self.twist[0]:.3f} rad/s, "
-              f"v_x={self.twist[1]:.3f} m/s, v_y={self.twist[2]:.3f} m/s")
+        print(f"  Stance duty   : {self.stance_duty:.2f}")
+        print(
+            f"  Target twist  : ω_z={self.twist[0]:.3f} rad/s, "
+            f"v_x={self.twist[1]:.3f} m/s, v_y={self.twist[2]:.3f} m/s"
+        )
         print(f"  Ramp cycles   : {self.n_ramp}")
         print(f"  Velocity range: {self.ramp_floor*100:.0f}% → 100%")
-        print(f"  All-stance φ  : {self.start_phase:.4f} ({self.start_phase*self.period*1000:.1f} ms into cycle)")
+        print(
+            f"  All-stance φ  : {self.start_phase:.4f} ({self.start_phase*self.period*1000:.1f} ms into cycle)"
+        )
         print(f"  Ramp duration : {self.n_ramp * self.period:.2f} s")

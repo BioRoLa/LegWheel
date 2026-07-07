@@ -6,20 +6,36 @@ if __name__ == "__main__":
     from bezier import *
 else:
     from .bezier import *
-    
-    
+
+
 class SwingProfile:
     """
     Represents a specific swing trajectory curve based on a 12-point Bezier curve.
     Supports both 2D (x, y) and 3D (x, y, z) trajectories.
-    
+
     The local frame for the profile is:
     - x: Forward progress (from 0 to L)
     - y: Height profile (max height h)
     - z: Lateral progress (from 0 to diff_lat)
     """
-    def __init__(self, L, h, dh, dL1, dL2, dL3, dL4, dH1=0.0, dH2=0.0,
-                 offset_x=0, offset_y=0, offset_z=0, diff_h=0, diff_lat=0):
+
+    def __init__(
+        self,
+        L,
+        h,
+        dh,
+        dL1,
+        dL2,
+        dL3,
+        dL4,
+        dH1=0.0,
+        dH2=0.0,
+        offset_x=0,
+        offset_y=0,
+        offset_z=0,
+        diff_h=0,
+        diff_lat=0,
+    ):
         """
         Initializes the SwingProfile with geometric parameters.
 
@@ -46,15 +62,15 @@ class SwingProfile:
         self.dL2 = dL2
         self.dL3 = dL3
         self.dL4 = dL4
-        self.dH1 = dH1   # liftoff height offset (c1.y)
-        self.dH2 = dH2   # touchdown height offset (c10/c11 y-gap)
-        
+        self.dH1 = dH1  # liftoff height offset (c1.y)
+        self.dH2 = dH2  # touchdown height offset (c10/c11 y-gap)
+
         self.offset_x = offset_x
         self.offset_y = offset_y
         self.offset_z = offset_z
         self.diff_h = diff_h
         self.diff_lat = diff_lat
-        
+
         self.control_points = []
         self.getControlPoint()
         self.bezier = Bezier(self.control_points)
@@ -78,18 +94,18 @@ class SwingProfile:
         # c2-c4: Peak height maintenance at h (adjusted for dH1)
         # c5-c6: Mid-swing at height h
         # c10-c11: Descent and touchdown — dH2 gives downward touch velocity
-        c0  = np.array([0, 0])
-        c1  = c0  - np.array([self.dL1, 0])          + np.array([0, self.dH1])
-        c2  = c1  - np.array([self.dL2, 0])          + np.array([0, self.h - self.dH1])
-        c3  = c2
-        c4  = c2
-        c5  = c4  + np.array([0.5 * self.L + self.dL1 + self.dL2, 0])
-        c6  = c5
-        c7  = c5  + np.array([0, self.dh]) + np.array([0.5 * self.L + self.dL3 + self.dL4, 0])
-        c8  = c7
-        c9  = c8
-        c10 = c8  - np.array([self.dL4, self.h + self.dh]) + np.array([0, self.diff_h + self.dH2])
-        c11 = c10 - np.array([self.dL3, 0])          - np.array([0, self.dH2])
+        c0 = np.array([0, 0])
+        c1 = c0 - np.array([self.dL1, 0]) + np.array([0, self.dH1])
+        c2 = c1 - np.array([self.dL2, 0]) + np.array([0, self.h - self.dH1])
+        c3 = c2
+        c4 = c2
+        c5 = c4 + np.array([0.5 * self.L + self.dL1 + self.dL2, 0])
+        c6 = c5
+        c7 = c5 + np.array([0, self.dh]) + np.array([0.5 * self.L + self.dL3 + self.dL4, 0])
+        c8 = c7
+        c9 = c8
+        c10 = c8 - np.array([self.dL4, self.h + self.dh]) + np.array([0, self.diff_h + self.dH2])
+        c11 = c10 - np.array([self.dL3, 0]) - np.array([0, self.dH2])
 
         raw_2d = [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11]
 
@@ -103,11 +119,11 @@ class SwingProfile:
         """
         pt = self.bezier.getBzPoint(t_duty, self.offset_x, self.offset_y, self.offset_z)
         # Apply backward-step mirroring if needed
-        if hasattr(self, '_step_sign') and self._step_sign < 0:
+        if hasattr(self, "_step_sign") and self._step_sign < 0:
             # x was solved in |L| space relative to offset_x=0.
             # Mirror: x_true = offset_x_true - x_local (where x_local = pt[0])
             pt[0] = self._offset_x_true - pt[0]
-        elif hasattr(self, '_offset_x_true'):
+        elif hasattr(self, "_offset_x_true"):
             pt[0] = self._offset_x_true + pt[0]
         return pt
 
@@ -117,6 +133,7 @@ class SwingLegPlanner:
     Planner for computing optimal swing trajectories in 3D.
     Uses NLopt optimization to match desired lift-off and touchdown velocities.
     """
+
     def __init__(self, dt, T_sw, T_st):
         """
         Args:
@@ -140,16 +157,16 @@ class SwingLegPlanner:
         # dH: height offset at boundary [0, step_h * 0.9] (set dynamically)
         self.opt_lb = np.array([0.0, 0.0, 0.0])
         self.opt_ub = np.array([0.5, 0.5, 0.05])  # dH_ub updated per call
-        
+
         self.optimizerSetup()
-        
+
         # Presets for dL / dH parameters
         self.dL1_preset = 0.05
         self.dL2_preset = 0.0
         self.dL3_preset = 0.05
         self.dL4_preset = 0.0
-        self.dH1_preset = 0.0   # updated in solveSwingTrajectory
-        self.dH2_preset = 0.0   # updated in solveSwingTrajectory
+        self.dH1_preset = 0.0  # updated in solveSwingTrajectory
+        self.dH2_preset = 0.0  # updated in solveSwingTrajectory
 
     def optimizerSetup(self):
         """Configures the COBYLA solver for non-linear optimization.
@@ -157,14 +174,14 @@ class SwingLegPlanner:
         """
         self.opt = nlopt.opt(nlopt.LN_COBYLA, 3)
         self.opt.set_xtol_abs(1e-5)
-        self.opt.set_maxeval(60)   # increased from 40 to handle 3-param space
+        self.opt.set_maxeval(60)  # increased from 40 to handle 3-param space
         self.opt.set_upper_bounds(self.opt_ub)
         self.opt.set_lower_bounds(self.opt_lb)
 
     def solveSwingTrajectory(self, p_lo, p_td, step_h, v_lo, v_td):
         """
         Calculates the optimal 3D swing profile.
-        
+
         Args:
             p_lo (np.ndarray): Lift-off point [x, y, z].
             p_td (np.ndarray): Touchdown point [x, y, z].
@@ -179,7 +196,7 @@ class SwingLegPlanner:
         v_td = np.pad(v_td, (0, 3 - len(v_td)))
 
         diff = p_td - p_lo
-        
+
         # Handle negative step_L (backward-moving legs in yaw turns):
         # The Bezier control point geometry assumes positive L.
         # We mirror the problem to always solve with |L|, then flip the result.
@@ -187,7 +204,7 @@ class SwingLegPlanner:
         self.step_L = abs(diff[0])
         self.diff_h = diff[1]
         self.diff_lat = diff[2]
-        
+
         self.step_h = step_h
         # Mirror velocities if step is backward
         self.v_liftoff = v_lo.copy()
@@ -200,7 +217,7 @@ class SwingLegPlanner:
         # The Bezier endpoint tangent in height: T(0).y = 11 * dH1 / T_sw
         # Matching v_lo[1] (height): 11 * dH1 / T_sw ≈ v_lo[1]
         # → dH1_guess = v_lo[1] * T_sw / 11
-        v_lo_h = abs(self.v_liftoff[1])          # swing-frame Height component
+        v_lo_h = abs(self.v_liftoff[1])  # swing-frame Height component
         v_td_h = abs(self.v_touchdown[1])
         dH1_guess = min(v_lo_h * self.T_sw / 11.0, step_h * 0.8)
         dH2_guess = min(v_td_h * self.T_sw / 11.0, step_h * 0.8)
@@ -212,25 +229,41 @@ class SwingLegPlanner:
         self.opt_ub = np.array([0.5, 0.5, dH_ub])
         self.opt_lb = np.array([0.0, 0.0, 0.0])
 
-        # Optimize Lift-off parameters (dL1, dL2, dH1)
+        # Optimize Lift-off parameters (dL1, dL2, dH1).
+        # dL2 is a shape parameter: it is weakly constrained by the endpoint-velocity
+        # objective but strongly affects early-swing X curvature. Keep it optimizable,
+        # but penalize excessive backward excursion along the intended lift-off →
+        # touchdown progress direction.
+        self._swing_p_lo = p_lo.copy()
+        self._swing_p_td = p_td.copy()
         self.optimizerSetup()
         self.opt.set_min_objective(self.objectiveFunc_lo)
         self.opt.add_inequality_constraint(self.constraint_lo)
         x_lo_opt = self.opt.optimize(np.array([self.dL1_preset, self.dL2_preset, self.dH1_preset]))
+        self._last_liftoff_shape_params = x_lo_opt.copy()
 
         # Optimize Touchdown parameters (dL3, dL4, dH2)
-        self.optimizerSetup() # Reset for second pass
+        self.optimizerSetup()  # Reset for second pass
         self.opt.set_min_objective(self.objectiveFunc_td)
         self.opt.add_inequality_constraint(self.constraint_td)
         x_td_opt = self.opt.optimize(np.array([self.dL3_preset, self.dL4_preset, self.dH2_preset]))
 
         # Build the profile with |L|, then the caller reverses X if needed
         profile = SwingProfile(
-            self.step_L, self.step_h, 0.01,
-            x_lo_opt[0], x_lo_opt[1], x_td_opt[0], x_td_opt[1],
-            dH1=x_lo_opt[2], dH2=x_td_opt[2],
-            offset_x=0, offset_y=p_lo[1], offset_z=p_lo[2],
-            diff_h=self.diff_h, diff_lat=self.diff_lat
+            self.step_L,
+            self.step_h,
+            0.01,
+            x_lo_opt[0],
+            x_lo_opt[1],
+            x_td_opt[0],
+            x_td_opt[1],
+            dH1=x_lo_opt[2],
+            dH2=x_td_opt[2],
+            offset_x=0,
+            offset_y=p_lo[1],
+            offset_z=p_lo[2],
+            diff_h=self.diff_h,
+            diff_lat=self.diff_lat,
         )
         profile._step_sign = self._step_sign
         profile._offset_x_true = p_lo[0]
@@ -240,21 +273,64 @@ class SwingLegPlanner:
         """Calculates 3D velocity error at lift-off.
         x = [dL1, dL2, dH1]
         """
-        sp = SwingProfile(self.step_L, self.step_h, 0.01,
-                          x[0], x[1], self.dL3_preset, self.dL4_preset,
-                          dH1=x[2])
+        sp = self._profile_for_liftoff_params(x)
         p0 = sp.getFootendPoint(0.0)
         p1 = sp.getFootendPoint(0.001 / self.T_sw)
         v_calc = (p1 - p0) / self.dt
-        return np.linalg.norm(self.v_liftoff - v_calc)
+        velocity_error = np.linalg.norm(self.v_liftoff - v_calc)
+        return velocity_error + self._early_swing_backtracking_penalty(sp)
+
+    def _profile_for_liftoff_params(self, x):
+        """Build a SwingProfile for lift-off objective evaluation."""
+        profile = SwingProfile(
+            self.step_L,
+            self.step_h,
+            0.01,
+            x[0],
+            x[1],
+            self.dL3_preset,
+            self.dL4_preset,
+            dH1=x[2],
+            offset_x=0,
+            offset_y=self._swing_p_lo[1],
+            offset_z=self._swing_p_lo[2],
+            diff_h=self.diff_h,
+            diff_lat=self.diff_lat,
+        )
+        profile._step_sign = self._step_sign
+        profile._offset_x_true = self._swing_p_lo[0]
+        return profile
+
+    def _early_swing_backtracking_penalty(self, profile):
+        """Penalize excessive early-swing excursion opposite the step direction.
+
+        The progress coordinate is projected along the actual lift-off → touchdown
+        displacement, so the same penalty applies to forward, backward, turning,
+        and lateral steps. A small allowance is retained because the desired
+        lift-off boundary velocity may legitimately point slightly backward.
+        """
+        allowance = 0.015  # m, tolerated early compliance/backward release
+        weight = 10.0
+        ts = np.linspace(0.0, 0.35, 80)
+        pts = np.asarray([profile.getFootendPoint(t) for t in ts])
+        step_vec = self._swing_p_td - self._swing_p_lo
+        step_len = np.linalg.norm(step_vec)
+        if step_len < 1e-9:
+            return 0.0
+
+        progress_dir = step_vec / step_len
+        progress = (pts - self._swing_p_lo) @ progress_dir
+        backward_excursion = max(0.0, -float(np.min(progress)))
+        excess = max(0.0, backward_excursion - allowance)
+        return weight * (excess / step_len) ** 2
 
     def objectiveFunc_td(self, x, grad):
         """Calculates 3D velocity error at touchdown.
         x = [dL3, dL4, dH2]
         """
-        sp = SwingProfile(self.step_L, self.step_h, 0.01,
-                          self.dL1_preset, self.dL2_preset, x[0], x[1],
-                          dH2=x[2])
+        sp = SwingProfile(
+            self.step_L, self.step_h, 0.01, self.dL1_preset, self.dL2_preset, x[0], x[1], dH2=x[2]
+        )
         p2 = sp.getFootendPoint(1.0 - (0.001 / self.T_sw))
         p3 = sp.getFootendPoint(1.0)
         v_calc = (p3 - p2) / self.dt
@@ -277,20 +353,21 @@ if __name__ == "__main__":
     # Test 3D Trajectory
     planner = SwingLegPlanner(0.01, 0.6, 1.8)
     p_start = np.array([0, 0, 0])
-    p_end = np.array([0.3, 0.05, 0.1]) # Forward 0.3, Up 0.05, Lateral 0.1
+    p_end = np.array([0.3, 0.05, 0.1])  # Forward 0.3, Up 0.05, Lateral 0.1
     v_start = np.array([0.5, 0, 0])
     v_end = np.array([0, -0.1, 0])
-    
+
     profile = planner.solveSwingTrajectory(p_start, p_end, 0.1, v_start, v_end)
-    
+
     t = np.linspace(0, 1, 50)
     path = np.array([profile.getFootendPoint(ti) for ti in t])
-    
+
     import matplotlib.pyplot as plt
+
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot(path[:,0], path[:,2], path[:,1], label='Swing 3D') # Plot X-Z-Y (Front, Lat, Height)
-    ax.set_xlabel('Forward (X)')
-    ax.set_ylabel('Lateral (Z)')
-    ax.set_zlabel('Height (Y)')
+    ax = fig.add_subplot(111, projection="3d")
+    ax.plot(path[:, 0], path[:, 2], path[:, 1], label="Swing 3D")  # Plot X-Z-Y (Front, Lat, Height)
+    ax.set_xlabel("Forward (X)")
+    ax.set_ylabel("Lateral (Z)")
+    ax.set_zlabel("Height (Y)")
     plt.show()

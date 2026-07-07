@@ -18,8 +18,14 @@ from datetime import datetime
 
 import numpy as np
 
-
 LEG_NAMES = ("FL", "FR", "RR", "RL")
+PROGRESS_PREFIX = "::progress::"
+
+
+def _emit_progress(percent):
+    """Emit a machine-readable progress percentage for TUI consumers."""
+    percent = max(0, min(100, int(round(percent))))
+    print("{}{}".format(PROGRESS_PREFIX, percent), flush=True)
 
 
 def _get_safety_limits_deg():
@@ -163,6 +169,8 @@ def generate_transform_csv(
     Returns:
         str: Saved CSV filepath.
     """
+    _emit_progress(5)
+
     if dt <= 0:
         raise ValueError("dt must be positive")
     if duration < 0:
@@ -176,6 +184,7 @@ def generate_transform_csv(
 
     validate_pose_limits(start_theta, start_beta, start_gamma, unit=unit)
     validate_pose_limits(target_theta, target_beta, target_gamma, unit=unit)
+    _emit_progress(20)
 
     start_pose = build_hw_pose(start_theta, start_beta, start_gamma, unit=unit)
     target_pose = build_hw_pose(target_theta, target_beta, target_gamma, unit=unit)
@@ -188,6 +197,7 @@ def generate_transform_csv(
         alpha = 0.5 * (1.0 - np.cos(np.pi * t_interp))
         alpha = alpha[:, np.newaxis]
         transform_cmds = (1.0 - alpha) * start_pose + alpha * target_pose
+    _emit_progress(70)
 
     n_hold = int(hold_time / dt)
     if n_hold > 0:
@@ -195,6 +205,7 @@ def generate_transform_csv(
         final_cmds = np.vstack((transform_cmds, hold_cmds))
     else:
         final_cmds = transform_cmds
+    _emit_progress(85)
 
     if output_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -205,6 +216,7 @@ def generate_transform_csv(
         os.makedirs(output_dir, exist_ok=True)
 
     np.savetxt(output_path, final_cmds, delimiter=",", fmt="%.6f")
+    _emit_progress(100)
     return output_path
 
 

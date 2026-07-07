@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.models.leg_model import LegModel
@@ -15,9 +16,19 @@ class TrajectoryPlanner3D:
     Extends the 2D logic to support the Abduction/Adduction (gamma) DOF.
     """
 
-    def __init__(self, stand_height=0.3, velocity=None, step_height=0.04,
-                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0, step_scale=None,
-                 x_bias=0.0, y_bias=0.0):
+    def __init__(
+        self,
+        stand_height=0.3,
+        velocity=None,
+        step_height=0.04,
+        period=1.0,
+        dt=0.001,
+        stance_duty=0.75,
+        leg_index=0,
+        step_scale=None,
+        x_bias=0.0,
+        y_bias=0.0,
+    ):
         """
         Initializes the 3D trajectory planner.
 
@@ -35,8 +46,7 @@ class TrajectoryPlanner3D:
         self.x_bias = float(x_bias)
         self.y_bias = float(y_bias)
         self.stand_height = stand_height
-        self.velocity = np.array(
-            velocity if velocity is not None else [0.15, 0.0, 0.0])
+        self.velocity = np.array(velocity if velocity is not None else [0.15, 0.0, 0.0])
         self.step_height = step_height
         self.T = period
         self.dt = dt
@@ -47,7 +57,7 @@ class TrajectoryPlanner3D:
         self.kin = CorgiLegKinematics(leg_index)
 
         # Geometric constants for the rolling foot arc
-        # Rolling arc radius (0.1345m)
+        # Rolling arc radius (0.140m = WHEEL_RADIUS_OUTER)
         self.R_arc = self.kin.solver.foot_radius
         # Distance from Arc Center to G (0.1m)
         self.R_link = self.kin.solver.R
@@ -63,15 +73,14 @@ class TrajectoryPlanner3D:
 
         # Derived gait distances (from unified gait equation)
         self.D_stance = 0.0  # Hip travel during stance = v_x * T * D_f
-        self.D_swing = 0.0   # Hip travel during swing  = v_x * T * (1 - D_f)
+        self.D_swing = 0.0  # Hip travel during swing  = v_x * T * (1 - D_f)
 
         self._calculate_initial_pose()
 
         # Swing Planner (3D)
         self.swing_planner = swing.SwingLegPlanner(
-            dt=dt,
-            T_sw=self.T * (1 - self.stance_duty),
-            T_st=self.T * self.stance_duty)
+            dt=dt, T_sw=self.T * (1 - self.stance_duty), T_st=self.T * self.stance_duty
+        )
 
     @property
     def step_length(self):
@@ -80,64 +89,31 @@ class TrajectoryPlanner3D:
 
     def _calculate_initial_pose(self):
         """
-        Calculates theta0 and beta0 using the unified gait equation:
-            v_x · T · D_f = 2(H − R)·tan(β) + 2R·β
+        Calculates theta0, beta0, and gamma0 for the touchdown configuration.
 
-        Uses small-angle approximation for initial guess, then refines
-        with the exact nonlinear equation via Secant method.
+        Order of operations matters: gamma0/gamma_td are solved first because
+        lateral tilt changes the effective sagittal drop height (H_O_eff), which
+        in turn affects beta0 and theta0.
+
+        Lateral kinematics (one-sided sweep):
+            Δy = H·(sin γ_td − sin γ_floor)  →  γ_td, γ0 = arcsin(Δy / 2H)
+
+        Corrected sagittal height (wheel edge contact when gamma ≠ 0):
+            d_eff    = gamma_sign·d_wheel − half_w
+            H_O_eff  = (H_hip + sin(γ₀)·d_eff) / cos(γ₀) − R_arc
+
+        Sagittal kinematics with corrected height:
+            v_x·T·D_f = 2·H_O_eff·tan(β₀) + 2·R_arc·β₀
         """
         v_x = np.abs(self.velocity[0])
         target = v_x * self.T * self.stance_duty  # D_stance
 
-        # Small-angle initial guess: β ≈ D_stance / (2H_O)
-        beta_guess = target / \
-            (2 * self.H_O) if self.H_O > 0 else 0.01
-        beta_guess = np.clip(beta_guess, 0.001, np.deg2rad(40))
-
-        # Exact solve: 2H_O·tan(β) + 2R_arc·β - D_stance = 0
-        def func(b):
-            return 2 * self.H_O * np.tan(b) + 2 * self.R_arc * b - target
-
-        def dfunc(b):
-            return 2 * self.H_O / (np.cos(b) ** 2) + 2 * self.R_arc
-
-        solver = Solver(
-            method="Secant",
-            tol=1e-6,
-            max_iter=100,
-            function=func,
-            derivative=dfunc
-        )
-        self.beta0 = solver.solve(0.001, beta_guess)
-
-        # Geometric constraint constants (for step-height scaling)
-        BETA_MAX = np.deg2rad(40)   # From α geometric limit ±40°
-        GAMMA_MAX = np.deg2rad(15)   # Safe lateral sweep limit
-
-        G_dist = self.H_O / np.cos(self.beta0) + self.R_link
-        self.theta0 = inv_G_dist_poly(G_dist)
-
-        # Store derived gait distances
-        self.D_stance = target
-        self.D_swing = np.abs(
-            self.velocity[0]) * self.T * (1 - self.stance_duty)
-
-        # --- Lateral (Y-axis) ABAD sweep ---
-        # Lateral travel comes from the ABAD tilt sweeping the contact: Δy = H·Δsin(γ).
-        #
-        # ONE-SIDED sweep (not symmetric ±γ₀ about upright). The leg touches down at
-        # the outer tilt extreme γ_td and rolls inward to a small floor γ_floor > 0,
-        # so the LOADED wheel never crosses γ = 0. Crossing upright would flip the
-        # ground-contact tread edge (center of pressure jumps side to side) at mid-
-        # stance, which causes wobble. Staying one-sided keeps contact on a single
-        # tread edge for the whole stance.
-        #
-        #   Δy = H·(sin γ_td − sin γ_floor)  ⇒  sin γ_td = sin γ_floor + Δy / H
-        #
-        # γ0 (symmetric half-amplitude) is retained for reference / workspace ratios.
+        # --- Step 1: Lateral ABAD angles (must come first) ---
+        # ONE-SIDED sweep: touchdown at γ_td, liftoff near γ_floor.
+        # γ0 (symmetric half-amplitude) is kept for workspace ratio checks.
         v_y = np.abs(self.velocity[1])
-        D_lateral = v_y * self.T * self.stance_duty   # total lateral travel during stance
-        H_true = self.H_hip  # Hip to ground (full length)
+        D_lateral = v_y * self.T * self.stance_duty
+        H_true = self.H_hip
         self.gamma_floor = np.deg2rad(RobotParams.GAMMA_FLOOR_DEG)
         if D_lateral > 0 and H_true > 0:
             self.gamma0 = np.arcsin(np.clip(D_lateral / (2 * H_true), -1.0, 1.0))
@@ -146,6 +122,43 @@ class TrajectoryPlanner3D:
         else:
             self.gamma0 = 0.0
             self.gamma_td = 0.0
+
+        # --- Step 2: Corrected sagittal height for lateral tilt ---
+        # When gamma0 != 0 the wheel contacts at its edge, not the center.
+        # Effective lateral offset at touchdown:
+        #   d_eff = gamma_sign * d_wheel − half_w
+        gamma_sign = 1.0 if self.velocity[1] >= 0 else -1.0
+        d_w = self.kin.d_wheel
+        half_w = self.kin.wheel_thickness / 2.0
+        d_eff = gamma_sign * d_w - half_w
+        if abs(self.gamma0) > 1e-6:
+            H_O_eff = (self.H_hip + np.sin(self.gamma0) * d_eff) / np.cos(self.gamma0) - self.R_arc
+        else:
+            H_O_eff = self.H_O
+
+        # --- Step 3: Sagittal beta0/theta0 using corrected height ---
+        beta_guess = target / (2 * H_O_eff) if H_O_eff > 0 else 0.01
+        beta_guess = np.clip(beta_guess, 0.001, np.deg2rad(40))
+
+        def func(b):
+            return 2 * H_O_eff * np.tan(b) + 2 * self.R_arc * b - target
+
+        def dfunc(b):
+            return 2 * H_O_eff / (np.cos(b) ** 2) + 2 * self.R_arc
+
+        solver = Solver(method="Secant", tol=1e-6, max_iter=100, function=func, derivative=dfunc)
+        self.beta0 = solver.solve(0.001, beta_guess)
+
+        # Geometric constraint constants (for step-height scaling)
+        BETA_MAX = np.deg2rad(40)  # From α geometric limit ±40°
+        GAMMA_MAX = np.deg2rad(15)  # Safe lateral sweep limit
+
+        G_dist = H_O_eff / np.cos(self.beta0) + self.R_link
+        self.theta0 = inv_G_dist_poly(G_dist)
+
+        # Store derived gait distances
+        self.D_stance = target
+        self.D_swing = np.abs(self.velocity[0]) * self.T * (1 - self.stance_duty)
 
         # --- Swing velocity scaling ---
         # Instead of reducing step_height (which clips clearance), we scale
@@ -157,8 +170,7 @@ class TrajectoryPlanner3D:
             beta_ratio = abs(self.beta0) / BETA_MAX
             # One-sided sweep peaks at γ_td (≈2·γ0), so workspace usage is measured
             # against the touchdown extreme, not the symmetric half-amplitude.
-            gamma_ratio = abs(self.gamma_td) / \
-                GAMMA_MAX if GAMMA_MAX > 0 else 0.0
+            gamma_ratio = abs(self.gamma_td) / GAMMA_MAX if GAMMA_MAX > 0 else 0.0
             usage = max(beta_ratio, gamma_ratio)
             threshold = RobotParams.STEP_USAGE_THRESHOLD
             if usage <= threshold:
@@ -166,8 +178,8 @@ class TrajectoryPlanner3D:
             else:
                 eff_usage = (usage - threshold) / (1.0 - threshold)
                 self.swing_velocity_scale = max(
-                    1.0 - RobotParams.STEP_DECAY_COEFF * eff_usage,
-                    RobotParams.STEP_FLOOR)
+                    1.0 - RobotParams.STEP_DECAY_COEFF * eff_usage, RobotParams.STEP_FLOOR
+                )
         # NOTE: self.step_height is NOT modified
 
     def solve_theta(self, beta):
@@ -193,13 +205,13 @@ class TrajectoryPlanner3D:
         the tilt it ends up using.
         """
         alpha0, _ = self.kin.foot_rim_contact_fk(self.theta0, -self.beta0, 0.0)
-        nom = self.kin.forward_kinematics(
-            self.theta0, -self.beta0, 0.0, alpha=alpha0, w=0.0)
+        nom = self.kin.forward_kinematics(self.theta0, -self.beta0, 0.0, alpha=alpha0, w=0.0)
         D_lat = np.abs(self.velocity[1]) * self.T * self.stance_duty
         lead_y = np.sign(self.velocity[1]) * D_lat
         target = np.array([nom[0] + self.x_bias, nom[1] + lead_y + self.y_bias, nom[2]])
         return self.kin.inverse_kinematics(
-            target, guess_q=np.array([self.theta0, -self.beta0, 0.0]))
+            target, guess_q=np.array([self.theta0, -self.beta0, 0.0])
+        )
 
     def generate_trajectory(self, lateral_offset=0.0):
         """
@@ -251,8 +263,7 @@ class TrajectoryPlanner3D:
 
         # --- Step 2: Virtual liftoff point (alpha_td evaluated at liftoff config) ---
         last_q = np.array(self.cmd[-1])
-        p_lo_virtual = self.kin.forward_kinematics(
-            *last_q, alpha=alpha_td, w=0.0)
+        p_lo_virtual = self.kin.forward_kinematics(*last_q, alpha=alpha_td, w=0.0)
 
         # --- Step 3: Liftoff velocity via Jacobian twist mapping ---
         # The leg's joint velocity at end of stance:
@@ -270,32 +281,48 @@ class TrajectoryPlanner3D:
         J_lo = numerical_jacobian(fk_at_alpha_td, last_q, diff=1e-5)
         v_lo_virtual = J_lo @ q_dot_lo  # 3D velocity of the material point at liftoff
 
-        # --- Liftoff vertical velocity correction ---
-        # BUG FIX: original code used `v_mag = |body_velocity|` as the upward kick,
-        # which has no physical relationship to the required liftoff velocity.
-        # The correct estimate is kinematic: to clear step_height h in swing time T_sw,
-        # the required vertical velocity at liftoff is v_z = 2*h / T_sw (parabolic).
+        # --- Acceleration-budget model for liftoff/touchdown velocities ---
+        # SWING_ACCEL_MAX (m/s²) is a unified Cartesian acceleration budget that replaces
+        # the previous kinematic (2h/T_sw) liftoff estimate and the swing_delta/T_sw
+        # touchdown estimate. Physical rationale:
         #
-        # Additionally, the Bezier objectiveFunc_lo uses a finite-diff step of
-        # dt_norm = 0.001/T_sw. For short T_sw (high-freq gaits), this step is large
-        # enough that c2's height contribution (h) appears in v_calc, giving a natural
-        # upward v_y ≈ c2.y * B(dt_norm) / dt. This natural value already covers a
-        # significant portion of the required liftoff velocity.
-        # Setting v_z_target too high (e.g. v_mag) creates a permanent residual that
-        # the optimizer (COBYLA, 40 evals, only dL1/dL2 = x-direction params) cannot
-        # reduce, wasting evaluations and degrading x-direction convergence.
+        # Liftoff vertical: setting v_lo_z = 0 means the Bézier starts with zero
+        # vertical tangent (dH1 initial guess = 0). Height clearance is guaranteed
+        # by the Bézier control point structure (c2.y = step_height regardless of dH1).
+        # This eliminates the unachievable v_z_kinematic target (0.32 m/s for Walk)
+        # that previously consumed optimizer budget without being matchable by dL1/dL2.
         #
-        # Fix: use the physics-based target. The Jacobian Z component (≈0) captures
-        # the true end-of-stance vertical velocity; we ADD the kinematic estimate
-        # on top so the optimizer targets a value the Bezier can actually match.
+        # Touchdown vertical: v_td_z = 0 → dH2 initial guess = 0 → foot arrives with
+        # zero vertical velocity → zero vertical impulse at touchdown → no body bounce.
+        #
+        # Feasibility: SWING_ACCEL_MAX ≥ 8*h/T_sw² (from parabolic height clearance).
+        # At SWING_ACCEL_MAX = 10 m/s²: Walk a_min = 5.12 (2× margin), Trot = 8.0 (1.25×).
+        # Peak joint acc ≈ SWING_ACCEL_MAX / J_x ≈ 526 rad/s² (vs 5000+ previously).
         T_sw = self.T * (1.0 - self.stance_duty)
-        v_z_kinematic = 2.0 * self.step_height / T_sw  # parabolic clearance target
-        # Replace the previous v_lo[2] += v_mag with a physically grounded value:
-        v_lo_virtual[2] += v_z_kinematic
+        a_max = RobotParams.SWING_ACCEL_MAX
+        a_min_feasible = 8.0 * self.step_height / T_sw**2
+        if a_max < a_min_feasible * 0.95:
+            warnings.warn(
+                f"SWING_ACCEL_MAX={a_max:.1f} < a_min={a_min_feasible:.2f} m/s² "
+                f"(h={self.step_height:.3f}, T_sw={T_sw:.3f}). Step height clearance may be insufficient.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+        # Liftoff: zero vertical target (Bézier handles height via shape; see above).
+        # Horizontal: keep Jacobian-derived velocity to maintain stance→swing continuity.
+        v_lo_virtual[2] = 0.0
 
         # --- Step 4: Touchdown velocity ---
-        v_mag = np.linalg.norm(self.velocity)  # still used for touchdown damping
-        v_td = np.array([-self.velocity[0], -self.velocity[1], -v_mag / 10])
+        # Horizontal: match body stance velocity to minimize foot-ground slip at landing.
+        # Vertical: zero → no vertical impact impulse → eliminates body bounce.
+        v_td_xy_body = self.velocity[:2].copy()
+        v_td_h_max = RobotParams.TOUCHDOWN_VEL_H_MAX
+        v_td_h_norm = np.linalg.norm(v_td_xy_body)
+        if v_td_h_norm > v_td_h_max:
+            v_td_xy_body *= v_td_h_max / v_td_h_norm
+        v_td = np.array([v_td_xy_body[0], v_td_xy_body[1], 0.0])
+        self._last_swing_boundary_velocities_B = (v_lo_virtual.copy(), v_td.copy())
 
         # --- Apply swing velocity scaling ---
         # Scale liftoff & touchdown velocities to reduce joint speed demands
@@ -306,18 +333,17 @@ class TrajectoryPlanner3D:
             v_td *= svs
 
         # Convert from Body Frame [X, Y, Z] to Swing Frame [Forward, Up, Lateral] → [x, z, y]
-        p_lo_swing = np.array(
-            [p_lo_virtual[0], p_lo_virtual[2], p_lo_virtual[1]])
+        p_lo_swing = np.array([p_lo_virtual[0], p_lo_virtual[2], p_lo_virtual[1]])
         p_td_swing = np.array([p_td[0], p_td[2], p_td[1]])
-        v_lo_swing = np.array(
-            [v_lo_virtual[0], v_lo_virtual[2], v_lo_virtual[1]])
+        v_lo_swing = np.array([v_lo_virtual[0], v_lo_virtual[2], v_lo_virtual[1]])
         v_td_swing = np.array([v_td[0], v_td[2], v_td[1]])
 
         # --- Solve 3D Bezier Swing ---
         swing_duration = self.T * (1 - self.stance_duty)
         N_steps = int(swing_duration / self.dt)
         swing_profile = self.swing_planner.solveSwingTrajectory(
-            p_lo_swing, p_td_swing, self.step_height, v_lo_swing, v_td_swing)
+            p_lo_swing, p_td_swing, self.step_height, v_lo_swing, v_td_swing
+        )
 
         # --- Step 5: Generate target points and IK (all at fixed alpha_td) ---
         swing_points_3d = []
@@ -330,8 +356,9 @@ class TrajectoryPlanner3D:
 
         # Inverse Kinematics: track the material point alpha_td throughout
         for p, alpha_t in swing_points_3d:
-            q = self.kin.inverse_kinematics(p, guess_q=np.array(
-                self.cmd[-1]), rim_point=(alpha_t, 0.0))
+            q = self.kin.inverse_kinematics(
+                p, guess_q=np.array(self.cmd[-1]), rim_point=(alpha_t, 0.0)
+            )
             self.cmd.append(q.tolist())
 
         return self.cmd
@@ -359,8 +386,7 @@ class TrajectoryPlanner3D:
         Returns:
             np.ndarray: Updated joint angles [theta, beta, gamma].
         """
-        q = np.array(q, dtype=float) if q is not None else np.array(
-            [self.theta0, self.beta0, 0.0])
+        q = np.array(q, dtype=float) if q is not None else np.array([self.theta0, self.beta0, 0.0])
 
         # --- Rolling Jacobian ---
         # FK wrapper with state-dependent contact angle α(q) = δ - β.
@@ -374,10 +400,8 @@ class TrajectoryPlanner3D:
         # because of the ±half_w edge flip at γ = 0, a yaw-inducing impulse. Use
         # w = 0 so the lateral velocity comes purely from the pendulum (γ) motion.
         def rolling_fk(q_eval):
-            contact = self.kin.foot_rim_contact_fk(
-                *q_eval, ground_slope=ground_slope)
-            return self.kin.forward_kinematics(
-                *q_eval, alpha=contact[0], w=0.0)
+            contact = self.kin.foot_rim_contact_fk(*q_eval, ground_slope=ground_slope)
+            return self.kin.forward_kinematics(*q_eval, alpha=contact[0], w=0.0)
 
         # Numerical Jacobian evaluated at the continuously shifting contact
         J = numerical_jacobian(rolling_fk, q, diff=1e-5)
@@ -401,11 +425,7 @@ class TrajectoryPlanner3D:
         velocity_scale_x = geom_grad / (geom_grad + self.R_arc)
 
         # v_target: rolling-corrected for X, direct for Y and Z
-        v_target = np.array([
-            -v_hip[0] * velocity_scale_x,
-            -v_hip[1],
-            -v_hip[2]
-        ])
+        v_target = np.array([-v_hip[0] * velocity_scale_x, -v_hip[1], -v_hip[2]])
         J_star = pseudo_inverse_dls(J, damping_factor=damping)
         q_dot = J_star @ v_target
 
@@ -443,8 +463,7 @@ class TrajectoryPlanner3D:
         p_hip = self.kin.p_Mi_in_B  # Hip origin in {B}
 
         # Get the rotation from Module to Body to express screw axes in {B}
-        _, R_M_to_B = self.kin._get_transformation_matrices(
-            gamma=q[2], type="vec")
+        _, R_M_to_B = self.kin._get_transformation_matrices(gamma=q[2], type="vec")
 
         # Module frame axes mapped to Body frame
         axis_theta = R_M_to_B @ np.array([0, 0, 1])  # Z_M → extension axis
@@ -453,7 +472,7 @@ class TrajectoryPlanner3D:
 
         # Construct unit screws (pure rotation, pitch h=0)
         S_theta = Screw.from_axis(p_hip, axis_theta, h=0.0)
-        S_beta = Screw.from_axis(p_hip, axis_beta,  h=0.0)
+        S_beta = Screw.from_axis(p_hip, axis_beta, h=0.0)
         S_gamma = Screw.from_axis(p_hip, axis_gamma, h=0.0)
 
         # Spatial twist superposition: [V]_leg = Σ [S_i] · q̇_i

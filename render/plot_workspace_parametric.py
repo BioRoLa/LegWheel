@@ -90,9 +90,12 @@ def _module_pts(leg: CorgiLegKinematics, t: float, b: float, g: float) -> np.nda
     """Wheel rim + linkage joints for collision check."""
     alphas = np.linspace(-180, 180, 18, endpoint=False)
     half_w = leg.wheel_thickness / 2.0
+    # Sample w=0 (torus crown, r_eff is maximum) and ±half_w (hard rim face)
+    # so the bounding volume covers both the widest and outermost contact points.
+    w_samples = (0.0, half_w, -half_w)
     pts = []
     for a in alphas:
-        for w in (half_w, -half_w):
+        for w in w_samples:
             try:
                 pts.append(leg.forward_kinematics(t, b, g, alpha=float(a), w=w))
             except Exception:

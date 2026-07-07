@@ -113,20 +113,25 @@ class PosePlanner:
         roll: float = 0.0,
         pitch: float = 0.0,
         yaw: float = 0.0,
+        x_offset: float = 0.0,
+        y_offset: float = 0.0,
         q_guess: np.ndarray | None = None,
         height_compensation: float = 0.0,
     ) -> np.ndarray:
         """
         Compute joint angles for all 4 legs for a given body pose.
 
-        The body frame origin is placed at (0, 0, height) in world, rotated by
-        (roll, pitch, yaw). Each foot remains at its fixed world contact point.
+        The body frame origin is placed at (x_offset, y_offset, height) in
+        world, rotated by (roll, pitch, yaw). Each foot remains at its fixed
+        world contact point.
 
         Args:
             height (float): Body height above ground (m).
             roll   (float): Lateral tilt, rad. Positive = left-side up.
             pitch  (float): Fore-aft tilt, rad. Positive = nose down.
             yaw    (float): Heading rotation, rad.
+            x_offset (float): Body X translation from world origin (m, +X forward).
+            y_offset (float): Body Y translation from world origin (m, +Y left).
             q_guess (np.ndarray | None): (4, 3) warm-start joint angles.
                                          Defaults to neutral pose.
             height_compensation (float): Auto-lower body height proportional to
@@ -139,7 +144,7 @@ class PosePlanner:
         lean_mag = np.sqrt(roll ** 2 + pitch ** 2)
         height = height - height_compensation * lean_mag
         R_WB = _rot_zyx(roll, pitch, yaw)   # body → world
-        p_body_W = np.array([0.0, 0.0, height])
+        p_body_W = np.array([x_offset, y_offset, height])
 
         if q_guess is None:
             q_guess = self._q_neutral.copy()
@@ -178,21 +183,149 @@ class PosePlanner:
                         print(f"  ⚠ Leg {i}: IK failed — using neutral pose.")
         return q_result
 
+    def _is_feasible(
+        self,
+        height: float,
+        roll: float = 0.0,
+        pitch: float = 0.0,
+        yaw: float = 0.0,
+        x_offset: float = 0.0,
+        y_offset: float = 0.0,
+    ) -> bool:
+        """Return True only if all 4 legs reach the pose without any IK fallback."""
+        R_WB = _rot_zyx(roll, pitch, yaw)
+        p_body_W = np.array([x_offset, y_offset, height])
+        for i, kin in enumerate(self._kins):
+            p_foot_B = R_WB.T @ (self._p_feet_W[i] - p_body_W)
+            try:
+                kin.inverse_kinematics(p_foot_B, guess_q=self._q_neutral[i], rim_point=(0.0, 0.0))
+            except RuntimeError:
+                return False
+        return True
+
+    def compute_workspace(
+        self,
+        height: float | None = None,
+        tol_deg: float = 0.1,
+        tol_m: float = 0.0005,
+    ) -> dict:
+        """
+        Binary-search the feasible movement range at a given stand height.
+
+        Each DOF is swept independently (others held at zero/neutral).
+        Returns a dict with keys: roll, pitch, yaw, x, y — each a (min, max) tuple.
+
+        Args:
+            height  : Body height to evaluate (defaults to stand_height).
+            tol_deg : Angular resolution for roll/pitch/yaw search (degrees).
+            tol_m   : Linear resolution for x/y search (metres).
+        """
+        h = height if height is not None else self.stand_height
+
+        def bisect_positive(fn, hi_init, tol):
+            lo, hi = 0.0, hi_init
+            if not fn(hi):
+                while hi > tol and not fn(hi):
+                    hi /= 2.0
+            for _ in range(60):
+                mid = (lo + hi) / 2.0
+                if fn(mid):
+                    lo = mid
+                else:
+                    hi = mid
+                if hi - lo < tol:
+                    break
+            return lo
+
+        tr = np.deg2rad(tol_deg)
+
+        roll_max  = bisect_positive(lambda v: self._is_feasible(h, roll=v),    np.deg2rad(45), tr)
+        roll_min  = bisect_positive(lambda v: self._is_feasible(h, roll=-v),   np.deg2rad(45), tr)
+        pitch_max = bisect_positive(lambda v: self._is_feasible(h, pitch=v),   np.deg2rad(45), tr)
+        pitch_min = bisect_positive(lambda v: self._is_feasible(h, pitch=-v),  np.deg2rad(45), tr)
+        yaw_max   = bisect_positive(lambda v: self._is_feasible(h, yaw=v),     np.deg2rad(60), tr)
+        yaw_min   = bisect_positive(lambda v: self._is_feasible(h, yaw=-v),    np.deg2rad(60), tr)
+        x_max     = bisect_positive(lambda v: self._is_feasible(h, x_offset=v),  0.15, tol_m)
+        x_min     = bisect_positive(lambda v: self._is_feasible(h, x_offset=-v), 0.15, tol_m)
+        y_max     = bisect_positive(lambda v: self._is_feasible(h, y_offset=v),  0.15, tol_m)
+        y_min     = bisect_positive(lambda v: self._is_feasible(h, y_offset=-v), 0.15, tol_m)
+
+        result = {
+            "height": h,
+            "roll":  (-roll_min,  roll_max),
+            "pitch": (-pitch_min, pitch_max),
+            "yaw":   (-yaw_min,   yaw_max),
+            "x":     (-x_min,     x_max),
+            "y":     (-y_min,     y_max),
+        }
+        return result
+
+    def print_workspace(self, height: float | None = None, **kwargs) -> dict:
+        """Compute and print the feasible workspace table at a given height."""
+        h = height if height is not None else self.stand_height
+        print(f"Computing workspace at height = {h:.3f} m …")
+        ws = self.compute_workspace(h, **kwargs)
+        print(f"\n{'─'*42}")
+        print(f"  Workspace at stand_height = {h:.3f} m")
+        print(f"{'─'*42}")
+        r_lo, r_hi = np.rad2deg(ws['roll'])
+        p_lo, p_hi = np.rad2deg(ws['pitch'])
+        y_lo, y_hi = np.rad2deg(ws['yaw'])
+        print(f"  Roll   : {r_lo:+6.1f}°  →  {r_hi:+6.1f}°")
+        print(f"  Pitch  : {p_lo:+6.1f}°  →  {p_hi:+6.1f}°")
+        print(f"  Yaw    : {y_lo:+6.1f}°  →  {y_hi:+6.1f}°")
+        print(f"  X      : {ws['x'][0]*1000:+6.1f} mm  →  {ws['x'][1]*1000:+6.1f} mm")
+        print(f"  Y      : {ws['y'][0]*1000:+6.1f} mm  →  {ws['y'][1]*1000:+6.1f} mm")
+        print(f"{'─'*42}\n")
+        return ws
+
     # ------------------------------------------------------------------
     # Sequence / trajectory planning
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _profile_map(ts: np.ndarray, profile: str, ramp_ratio: float) -> np.ndarray:
+        """
+        Map a linear parameter array ts ∈ [0, 1] through a velocity profile,
+        returning a position array s ∈ [0, 1] with zero velocity at both ends.
+
+        profile='cosine'   : smooth S-curve (sinusoidal velocity, no jerk steps)
+        profile='trapezoid': constant-accel ramp + cruise + ramp-down
+        profile='linear'   : no remapping (original behaviour)
+        """
+        if profile == "cosine":
+            return 0.5 * (1.0 - np.cos(np.pi * ts))
+        if profile == "trapezoid":
+            r = float(np.clip(ramp_ratio, 1e-3, 0.499))
+            # v_max chosen so that area under trapezoid = 1
+            v_max = 1.0 / (1.0 - r)
+            denom = 2.0 * r * (1.0 - r)
+            s = np.where(
+                ts < r,
+                ts ** 2 / denom,
+                np.where(
+                    ts <= 1.0 - r,
+                    r / (2.0 * (1.0 - r)) + (ts - r) / (1.0 - r),
+                    1.0 - (1.0 - ts) ** 2 / denom,
+                ),
+            )
+            return np.clip(s, 0.0, 1.0)
+        # 'linear' – no remapping
+        return ts
 
     def plan_sequence(
         self,
         waypoints: list[dict],
         n_steps: int | list[int] = 200,
         height_compensation: float = 0.0,
+        profile: str = "cosine",
+        ramp_ratio: float = 0.25,
     ) -> np.ndarray:
         """
         Generate a trajectory by interpolating between body-pose waypoints.
 
         Each waypoint is a dict with keys (all optional, defaulting to current):
-            height, roll, pitch, yaw
+            height, roll, pitch, yaw, x_offset, y_offset
 
         Args:
             waypoints (list[dict]): Ordered list of target poses.
@@ -200,6 +333,13 @@ class PosePlanner:
             n_steps (int | list[int]): Number of IK samples between consecutive
                                        waypoints. A single int is broadcast to
                                        all segments.
+            profile (str): Velocity profile for each segment.
+                'cosine'    – smooth S-curve, zero velocity at endpoints (default).
+                'trapezoid' – ramp-up / cruise / ramp-down, zero at endpoints.
+                'linear'    – constant velocity (original behaviour).
+            ramp_ratio (float): Fraction of segment time used for accel (and decel)
+                                in 'trapezoid' mode. Must be in (0, 0.5).
+                                Ignored for other profiles.
         Returns:
             np.ndarray: (N, 12) joint-angle trajectory.
         """
@@ -208,10 +348,12 @@ class PosePlanner:
 
         def _parse(wp):
             return (
-                float(wp.get("height", self.stand_height)),
-                float(wp.get("roll",   0.0)),
-                float(wp.get("pitch",  0.0)),
-                float(wp.get("yaw",    0.0)),
+                float(wp.get("height",   self.stand_height)),
+                float(wp.get("roll",     0.0)),
+                float(wp.get("pitch",    0.0)),
+                float(wp.get("yaw",      0.0)),
+                float(wp.get("x_offset", 0.0)),
+                float(wp.get("y_offset", 0.0)),
             )
 
         n_segs = len(waypoints) - 1
@@ -228,16 +370,20 @@ class PosePlanner:
         for seg, (n, wp_start, wp_end) in enumerate(
             zip(steps_per_seg, waypoints[:-1], waypoints[1:])
         ):
-            h0, r0, p0, y0 = _parse(wp_start)
-            h1, r1, p1, y1 = _parse(wp_end)
+            h0, r0, p0, y0, x0, yo0 = _parse(wp_start)
+            h1, r1, p1, y1, x1, yo1 = _parse(wp_end)
 
-            ts = np.linspace(0.0, 1.0, n, endpoint=(seg == n_segs - 1))
+            ts_linear = np.linspace(0.0, 1.0, n, endpoint=(seg == n_segs - 1))
+            ts = self._profile_map(ts_linear, profile, ramp_ratio)
+
             for t in ts:
                 pose = (
                     h0 + t * (h1 - h0),
                     r0 + t * (r1 - r0),
                     p0 + t * (p1 - p0),
                     y0 + t * (y1 - y0),
+                    x0 + t * (x1 - x0),
+                    yo0 + t * (yo1 - yo0),
                 )
                 q = self.solve_pose(*pose, q_guess=q_prev,
                                     height_compensation=height_compensation)
@@ -253,25 +399,34 @@ class PosePlanner:
         pitch: float = 0.0,
         yaw: float = 0.0,
         height: float | None = None,
+        x_offset: float = 0.0,
+        y_offset: float = 0.0,
         n_steps: int = 200,
         return_to_neutral: bool = True,
         height_compensation: float = 0.0,
         n_repeats: int = 1,
+        rock: bool = False,
+        profile: str = "cosine",
+        ramp_ratio: float = 0.25,
     ) -> np.ndarray:
         """
         Convenience wrapper: ramp from neutral to a target lean pose,
         optionally hold, then return to neutral.  Repeat N times.
 
         Args:
-            roll   (float): Target roll (rad).
-            pitch  (float): Target pitch (rad).
-            yaw    (float): Target yaw (rad).
-            height (float | None): Target height; defaults to stand_height.
-            n_steps (int): Steps for each ramp segment.
+            roll     (float): Target roll (rad).
+            pitch    (float): Target pitch (rad).
+            yaw      (float): Target yaw (rad).
+            height   (float | None): Target height; defaults to stand_height.
+            x_offset (float): Body X translation from neutral (m, +X forward).
+            y_offset (float): Body Y translation from neutral (m, +Y left).
+            n_steps  (int): Steps for each ramp segment.
             return_to_neutral (bool): Append a return ramp after the last rep.
             height_compensation (float): Lower body height per rad of lean (m/rad).
-            n_repeats (int): Number of lean cycles (neutral→target→neutral per cycle).
-                             Must be >= 1.
+            n_repeats (int): Number of lean cycles. Must be >= 1.
+            rock (bool): If True, each cycle goes +target → neutral → -target → neutral,
+                         oscillating symmetrically around neutral. RPY and XY are negated
+                         for the minus phase; height stays the same.
 
         Returns:
             np.ndarray: (N, 12) trajectory array.
@@ -279,19 +434,37 @@ class PosePlanner:
         if n_repeats < 1:
             raise ValueError("n_repeats must be >= 1")
         h = height if height is not None else self.stand_height
-        neutral = {"height": self.stand_height, "roll": 0.0, "pitch": 0.0, "yaw": 0.0}
-        target  = {"height": h, "roll": roll, "pitch": pitch, "yaw": yaw}
+        neutral = {
+            "height": self.stand_height, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+            "x_offset": 0.0, "y_offset": 0.0,
+        }
+        target_pos = {
+            "height": h, "roll": roll, "pitch": pitch, "yaw": yaw,
+            "x_offset": x_offset, "y_offset": y_offset,
+        }
+        target_neg = {
+            "height": h, "roll": -roll, "pitch": -pitch, "yaw": -yaw,
+            "x_offset": -x_offset, "y_offset": -y_offset,
+        }
 
         wps = [neutral]
         for _ in range(n_repeats):
-            wps.append(target)
+            wps.append(target_pos)
             wps.append(neutral)
+            if rock:
+                wps.append(target_neg)
+                wps.append(neutral)
         if not return_to_neutral:
             wps = wps[:-1]
 
         steps = [n_steps] * (len(wps) - 1)
-        return self.plan_sequence(wps, n_steps=steps,
-                                  height_compensation=height_compensation)
+        return self.plan_sequence(
+            wps,
+            n_steps=steps,
+            height_compensation=height_compensation,
+            profile=profile,
+            ramp_ratio=ramp_ratio,
+        )
 
     # ------------------------------------------------------------------
     # Output

@@ -93,9 +93,14 @@ class RobotParams:
     # Leg & Wheel Configuration
     ABAD_AXIS_OFFSET = 0.057166     # Offset from Hip Roll axis to Leg Pitch plane
     WHEEL_AXIAL_OFFSET = 0.091675   # Lateral offset from leg plane to wheel center
-    WHEEL_RADIUS_PITCH = 0.100      # Effective radius for kinematics
-    WHEEL_RADIUS_OUTER = 0.135      # Physical outer radius (collision)
+    WHEEL_RADIUS_PITCH = 0.100      # Effective radius for kinematics (R: linkage joint circle)
     WHEEL_THICKNESS    = 0.04       # Thickness of the wheel (for collision and visualization)
+
+    # Tire geometry (toroidal cross-section)
+    TIRE_RIM_OFFSET    = 0.010      # Hard rim radial thickness beyond R (R → hard rim outer edge)
+    TIRE_TREAD_RADIUS  = 0.130      # Torus major radius: tread arc center = R + TIRE_RIM_OFFSET + 0.020
+    TIRE_CORNER_RADIUS = 0.015      # Torus minor radius (corner fillet); max contact = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
+    WHEEL_RADIUS_OUTER = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS  # = 0.145, physical outer radius (collision)
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass
@@ -118,14 +123,24 @@ class RobotParams:
 
     # Workspace Guard Constants  only used for trajectory planning and velocity limiting
     BETA_MAX_DEG = 40.0         # Sagittal swing geometric limit (°)
-    GAMMA_MAX_DEG = 30.0        # ABAD lateral sweep geometric limit (°)
-    GAMMA_GUARD_DEG = 30.27     # Velocity guard limit (°) — sized so vy=0.6 @ h=0.30/T=1.0 sits on the boundary
+    GAMMA_MAX_DEG = 70.0        # ABAD lateral sweep geometric limit (°)
+    GAMMA_GUARD_DEG = 70.0      # Velocity guard limit (°)
     GAMMA_FLOOR_DEG = 1.0       # Lateral one-sided sweep floor (°): liftoff ABAD tilt kept this far
                                 # from upright so the loaded wheel never crosses gamma=0 (no contact
                                 # edge / center-of-pressure flip mid-stance).
     STEP_DECAY_COEFF = 0.3      # Step height linear decay coefficient (was 0.8→0.5→0.3)
     STEP_FLOOR = 0.2            # Minimum step height scale lower bound
     STEP_USAGE_THRESHOLD = 0.15 # Deadband: no scaling when workspace usage < 15%
+
+    # Touchdown velocity targets — tune to reduce body bounce at landing
+    TOUCHDOWN_VEL_H_MAX = 0.3   # m/s: horizontal cap; prevents swing_delta/T_sw overshoot
+    TOUCHDOWN_VEL_Z_SCALE = 0.1 # vertical = -2*step_h/T_sw * scale; 0.1 → ~gentle descent (legacy, unused by accel model)
+
+    # Swing acceleration budget — unified a_max (m/s²) for liftoff/touchdown velocity design.
+    # Feasibility constraint: SWING_ACCEL_MAX >= 8 * step_height / T_sw²
+    # Example: Walk h=0.04, T_sw=0.25 → a_min = 5.12 m/s²; Trot T_sw=0.20 → 8.0 m/s²
+    # At a_max=10: peak joint acc ≈ a_max / J_x = 10/0.019 ≈ 526 rad/s² (vs 5000+ in old model).
+    SWING_ACCEL_MAX = 10.0      # m/s²: liftoff/touchdown Cartesian acceleration budget
 
 class TrajectoryParams:
     """Current trajectory parameters."""
