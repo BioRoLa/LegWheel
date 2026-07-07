@@ -1,7 +1,49 @@
 import numpy as np
+from scipy.spatial import ConvexHull
 from legwheel.planners.trajectory_planning_3d import TrajectoryPlanner3D
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.config import RobotParams
+
+
+def _hull_signed_margin(
+    com_xy: np.ndarray,
+    stance_pts: np.ndarray,
+) -> tuple[float, np.ndarray]:
+    """Signed distance from COM to nearest support-polygon boundary (+ = inside)."""
+    com = np.asarray(com_xy, dtype=float)
+    pts = np.asarray(stance_pts, dtype=float)
+    n = len(pts)
+
+    if n == 0:
+        return -np.inf, np.array([0.0, 1.0])
+
+    if n == 1:
+        vec = pts[0] - com
+        dist = np.linalg.norm(vec)
+        return -dist, vec / (dist + 1e-12)
+
+    if n == 2:
+        seg = pts[1] - pts[0]
+        seg_len = np.linalg.norm(seg)
+        if seg_len < 1e-9:
+            return _hull_signed_margin(com, pts[[0]])
+        normal = np.array([-seg[1], seg[0]]) / seg_len
+        d = float(np.dot(com - pts[0], normal))
+        inward = -np.sign(d) * normal if abs(d) > 1e-9 else normal
+        return -abs(d), inward
+
+    try:
+        hull = ConvexHull(pts)
+    except Exception:
+        dists = np.linalg.norm(pts[:, None] - pts[None, :], axis=-1)
+        i, j = np.unravel_index(np.argmax(dists), dists.shape)
+        return _hull_signed_margin(com, pts[[i, j]])
+
+    s = -(hull.equations[:, :2] @ com + hull.equations[:, 2])
+    k = int(np.argmin(s))
+    inward = -hull.equations[k, :2]
+    inward /= np.linalg.norm(inward) + 1e-12
+    return float(s[k]), inward
 
 # --- Gait Type Definitions ---
 # Each gait defines: phase_offsets [FL, FR, RR, RL] and stance_duty
@@ -224,7 +266,7 @@ class GaitGenerator3D:
         # Computes (x_bias, y_bias) for each leg so the CoM lies inside every
         # support triangle with the requested safety margin.  Only Walk has
         # triangular (3-leg) support where a static offset is sufficient;
-        # other gaits rely on COMStabilityPlanner for dynamic correction.
+        # other gaits (Trot/Pace) have line support where static offsets don't help.
         self.x_biases = np.zeros(4)
         self.y_biases = np.zeros(4)
         if gait_type == "Walk" and stability_margin > 0.0:
@@ -267,8 +309,6 @@ class GaitGenerator3D:
             Shape (4, 2): ``[[x_bias_FL, y_bias_FL], ..., [x_bias_RL, y_bias_RL]]``
             in metres, body-frame.
         """
-        from legwheel.planners.com_stability import _hull_signed_margin
-
         com_xy = np.array([RobotParams.COM_BIAS_X, RobotParams.COM_BIAS_Y])
         biases = np.zeros((4, 2))
         labels = ["FL", "FR", "RR", "RL"]
