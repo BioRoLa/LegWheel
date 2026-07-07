@@ -142,9 +142,11 @@ def _gait_fields() -> List[Field]:
         Field("Height (m)",   "height",      "float",  "0.25"),
         Field("Step H (m)",   "step",        "float",  "0.04"),
         Field("Period (s)",   "period",      "float",  "4.0"),
+        Field("Duty D_f",     "duty",        "float",  ""),
         Field("Cycles",       "cycles",      "int",    "10"),
         Field("dt (s)",       "dt",          "float",  "0.001"),
         Field("Output Dir",   "outdir",      "text",   "outputs/csv"),
+        Field("Stab. Margin", "stab_margin", "float",  "0.02",        section="── Walk Stability ──"),
         Field("Launch Enable","launch",      "bool",   False,         section="── Launch Control ──"),
         Field("Ramp Mode",    "ramp_mode",   "choice", "cycles",      ["cycles", "seconds"]),
         Field("Ramp Cycles",  "ramp_cycles", "int",    "3"),
@@ -287,19 +289,31 @@ class CSVGeneratorTUI:
             vy     = float(self._fval("vy",     "0"))
             wz     = float(self._fval("wz",     "0"))
             h      = float(self._fval("height", "0.25"))
-            period = float(self._fval("period", "4"))
-            cycles = int(float(self._fval("cycles", "10")))
-            dt     = float(self._fval("dt",     "0.001"))
-            launch = self._fval("launch", False)
+            period   = float(self._fval("period", "4"))
+            duty_raw = str(self._fval("duty", "")).strip()
+            duty     = float(duty_raw) if duty_raw else None
+            cycles   = int(float(self._fval("cycles", "10")))
+            dt       = float(self._fval("dt",     "0.001"))
+            launch   = self._fval("launch", False)
+            stab     = float(self._fval("stab_margin", "0.02"))
 
             gait_s  = cycles * period
             total_s = 5.0 + gait_s
 
+            stab_s = (
+                f" {stab*100:.0f} cm" if gait == "Walk" and stab > 0
+                else (" disabled" if gait == "Walk" else " N/A")
+            )
             out += [
                 ("class:sum",    f" Gait    {gait}\n"),
                 ("class:sum",    f" Speed   Vx={vx:+.2f}  Vy={vy:+.2f}  Wz={wz:+.2f}\n"),
                 ("class:sum",    f" Height  {h:.3f} m\n"),
                 ("class:sum",    f" Period  {period:.2f} s\n"),
+                ("class:sum",    (
+                    f" Duty    {duty:.2f} (override)\n" if duty is not None
+                    else " Duty    gait default\n"
+                )),
+                ("class:sum",    f" Stab   {stab_s}\n"),
                 ("class:sum",    f" Cycles  {cycles}  →  {gait_s:.1f} s\n"),
                 ("class:sum",    f" Prep    5.0 s (fixed)\n"),
             ]
@@ -762,6 +776,10 @@ class CSVGeneratorTUI:
             "-dt", self._fval("dt",     "0.001"),
             "-o",  self._fval("outdir", "outputs/csv"),
         ]
+        duty = str(self._fval("duty", "")).strip()
+        if duty:
+            cmd += ["--duty", duty]
+        cmd += ["--stab-margin", self._fval("stab_margin", "0.02")]
         if self._fval("launch", False):
             rmode = self._fval("ramp_mode", "cycles")
             if rmode == "seconds":
@@ -861,6 +879,10 @@ def _make_parser() -> argparse.ArgumentParser:
                        metavar="M",    help="Step height (m)")
     grp_g.add_argument("-p", "--period", type=float, default=None,
                        metavar="S",    help="Gait period (s)")
+    grp_g.add_argument("--duty", type=float, default=None,
+                       metavar="D",    help="Override stance duty D_f (0–1)")
+    grp_g.add_argument("--stab-margin", dest="stab_margin", type=float, default=None,
+                       metavar="M",    help="Walk CoM stability margin (m); 0 = disabled")
     grp_g.add_argument("-c", "--cycles", type=int, default=None,
                        metavar="N",    help="Number of gait cycles")
     grp_g.add_argument("-dt", dest="dt", type=float, default=None,
@@ -902,11 +924,12 @@ def _make_parser() -> argparse.ArgumentParser:
 _DEST_TO_KEY = {
     "gait": "gait", "vx": "vx", "vy": "vy", "wz": "wz",
     "height": "height", "step": "step", "period": "period",
-    "cycles": "cycles", "dt": "dt", "outdir": "outdir",
+    "duty": "duty", "cycles": "cycles", "dt": "dt", "outdir": "outdir",
     "roll": "roll", "pitch": "pitch", "yaw": "yaw",
     "comp": "comp", "steps": "steps", "repeats": "repeats", "prep": "prep",
     "t_theta": "t_theta", "t_beta": "t_beta", "t_gamma": "t_gamma",
     "s_theta": "s_theta", "dur": "dur", "hold": "hold",
+    "stab_margin": "stab_margin",
 }
 
 
