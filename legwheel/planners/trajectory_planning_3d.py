@@ -89,56 +89,31 @@ class TrajectoryPlanner3D:
 
     def _calculate_initial_pose(self):
         """
-        Calculates theta0 and beta0 using the unified gait equation:
-            v_x · T · D_f = 2(H − R)·tan(β) + 2R·β
+        Calculates theta0, beta0, and gamma0 for the touchdown configuration.
 
-        Uses small-angle approximation for initial guess, then refines
-        with the exact nonlinear equation via Secant method.
+        Order of operations matters: gamma0/gamma_td are solved first because
+        lateral tilt changes the effective sagittal drop height (H_O_eff), which
+        in turn affects beta0 and theta0.
+
+        Lateral kinematics (one-sided sweep):
+            Δy = H·(sin γ_td − sin γ_floor)  →  γ_td, γ0 = arcsin(Δy / 2H)
+
+        Corrected sagittal height (wheel edge contact when gamma ≠ 0):
+            d_eff    = gamma_sign·d_wheel − half_w
+            H_O_eff  = (H_hip + sin(γ₀)·d_eff) / cos(γ₀) − R_arc
+
+        Sagittal kinematics with corrected height:
+            v_x·T·D_f = 2·H_O_eff·tan(β₀) + 2·R_arc·β₀
         """
         v_x = np.abs(self.velocity[0])
         target = v_x * self.T * self.stance_duty  # D_stance
 
-        # Small-angle initial guess: β ≈ D_stance / (2H_O)
-        beta_guess = target / (2 * self.H_O) if self.H_O > 0 else 0.01
-        beta_guess = np.clip(beta_guess, 0.001, np.deg2rad(40))
-
-        # Exact solve: 2H_O·tan(β) + 2R_arc·β - D_stance = 0
-        def func(b):
-            return 2 * self.H_O * np.tan(b) + 2 * self.R_arc * b - target
-
-        def dfunc(b):
-            return 2 * self.H_O / (np.cos(b) ** 2) + 2 * self.R_arc
-
-        solver = Solver(method="Secant", tol=1e-6, max_iter=100, function=func, derivative=dfunc)
-        self.beta0 = solver.solve(0.001, beta_guess)
-
-        # Geometric constraint constants (for step-height scaling)
-        BETA_MAX = np.deg2rad(40)  # From α geometric limit ±40°
-        GAMMA_MAX = np.deg2rad(15)  # Safe lateral sweep limit
-
-        G_dist = self.H_O / np.cos(self.beta0) + self.R_link
-        self.theta0 = inv_G_dist_poly(G_dist)
-
-        # Store derived gait distances
-        self.D_stance = target
-        self.D_swing = np.abs(self.velocity[0]) * self.T * (1 - self.stance_duty)
-
-        # --- Lateral (Y-axis) ABAD sweep ---
-        # Lateral travel comes from the ABAD tilt sweeping the contact: Δy = H·Δsin(γ).
-        #
-        # ONE-SIDED sweep (not symmetric ±γ₀ about upright). The leg touches down at
-        # the outer tilt extreme γ_td and rolls inward to a small floor γ_floor > 0,
-        # so the LOADED wheel never crosses γ = 0. Crossing upright would flip the
-        # ground-contact tread edge (center of pressure jumps side to side) at mid-
-        # stance, which causes wobble. Staying one-sided keeps contact on a single
-        # tread edge for the whole stance.
-        #
-        #   Δy = H·(sin γ_td − sin γ_floor)  ⇒  sin γ_td = sin γ_floor + Δy / H
-        #
-        # γ0 (symmetric half-amplitude) is retained for reference / workspace ratios.
+        # --- Step 1: Lateral ABAD angles (must come first) ---
+        # ONE-SIDED sweep: touchdown at γ_td, liftoff near γ_floor.
+        # γ0 (symmetric half-amplitude) is kept for workspace ratio checks.
         v_y = np.abs(self.velocity[1])
-        D_lateral = v_y * self.T * self.stance_duty  # total lateral travel during stance
-        H_true = self.H_hip  # Hip to ground (full length)
+        D_lateral = v_y * self.T * self.stance_duty
+        H_true = self.H_hip
         self.gamma_floor = np.deg2rad(RobotParams.GAMMA_FLOOR_DEG)
         if D_lateral > 0 and H_true > 0:
             self.gamma0 = np.arcsin(np.clip(D_lateral / (2 * H_true), -1.0, 1.0))
@@ -147,6 +122,43 @@ class TrajectoryPlanner3D:
         else:
             self.gamma0 = 0.0
             self.gamma_td = 0.0
+
+        # --- Step 2: Corrected sagittal height for lateral tilt ---
+        # When gamma0 != 0 the wheel contacts at its edge, not the center.
+        # Effective lateral offset at touchdown:
+        #   d_eff = gamma_sign * d_wheel − half_w
+        gamma_sign = 1.0 if self.velocity[1] >= 0 else -1.0
+        d_w = self.kin.d_wheel
+        half_w = self.kin.wheel_thickness / 2.0
+        d_eff = gamma_sign * d_w - half_w
+        if abs(self.gamma0) > 1e-6:
+            H_O_eff = (self.H_hip + np.sin(self.gamma0) * d_eff) / np.cos(self.gamma0) - self.R_arc
+        else:
+            H_O_eff = self.H_O
+
+        # --- Step 3: Sagittal beta0/theta0 using corrected height ---
+        beta_guess = target / (2 * H_O_eff) if H_O_eff > 0 else 0.01
+        beta_guess = np.clip(beta_guess, 0.001, np.deg2rad(40))
+
+        def func(b):
+            return 2 * H_O_eff * np.tan(b) + 2 * self.R_arc * b - target
+
+        def dfunc(b):
+            return 2 * H_O_eff / (np.cos(b) ** 2) + 2 * self.R_arc
+
+        solver = Solver(method="Secant", tol=1e-6, max_iter=100, function=func, derivative=dfunc)
+        self.beta0 = solver.solve(0.001, beta_guess)
+
+        # Geometric constraint constants (for step-height scaling)
+        BETA_MAX = np.deg2rad(40)  # From α geometric limit ±40°
+        GAMMA_MAX = np.deg2rad(15)  # Safe lateral sweep limit
+
+        G_dist = H_O_eff / np.cos(self.beta0) + self.R_link
+        self.theta0 = inv_G_dist_poly(G_dist)
+
+        # Store derived gait distances
+        self.D_stance = target
+        self.D_swing = np.abs(self.velocity[0]) * self.T * (1 - self.stance_duty)
 
         # --- Swing velocity scaling ---
         # Instead of reducing step_height (which clips clearance), we scale
