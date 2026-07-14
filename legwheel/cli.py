@@ -185,8 +185,10 @@ def cmd_generate(args):
     import os
     import sys
 
-    # Try importing directly from examples directory if available
-    examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "examples"))
+    # Try importing directly from examples/gait directory if available
+    # (generate_hardware_csv.py lives alongside generate_lean_csv.py /
+    # generate_transform_csv.py, not directly under examples/)
+    examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "examples", "gait"))
     if os.path.isdir(examples_dir):
         sys.path.append(examples_dir)
         try:
