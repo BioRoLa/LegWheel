@@ -210,7 +210,9 @@ class TrajectoryPlanner3D:
         lead_y = np.sign(self.velocity[1]) * D_lat
         target = np.array([nom[0] + self.x_bias, nom[1] + lead_y + self.y_bias, nom[2]])
         return self.kin.inverse_kinematics(
-            target, guess_q=np.array([self.theta0, -self.beta0, 0.0])
+            target,
+            guess_q=np.array([self.theta0, -self.beta0, 0.0]),
+            rim_point=(alpha0, 0.0),
         )
 
     def generate_trajectory(self, lateral_offset=0.0):
