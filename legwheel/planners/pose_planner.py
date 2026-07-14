@@ -113,20 +113,25 @@ class PosePlanner:
         roll: float = 0.0,
         pitch: float = 0.0,
         yaw: float = 0.0,
+        x_offset: float = 0.0,
+        y_offset: float = 0.0,
         q_guess: np.ndarray | None = None,
         height_compensation: float = 0.0,
     ) -> np.ndarray:
         """
         Compute joint angles for all 4 legs for a given body pose.
 
-        The body frame origin is placed at (0, 0, height) in world, rotated by
-        (roll, pitch, yaw). Each foot remains at its fixed world contact point.
+        The body frame origin is placed at (x_offset, y_offset, height) in
+        world, rotated by (roll, pitch, yaw). Each foot remains at its fixed
+        world contact point.
 
         Args:
             height (float): Body height above ground (m).
             roll   (float): Lateral tilt, rad. Positive = left-side up.
             pitch  (float): Fore-aft tilt, rad. Positive = nose down.
             yaw    (float): Heading rotation, rad.
+            x_offset (float): Body X translation from world origin (m, +X forward).
+            y_offset (float): Body Y translation from world origin (m, +Y left).
             q_guess (np.ndarray | None): (4, 3) warm-start joint angles.
                                          Defaults to neutral pose.
             height_compensation (float): Auto-lower body height proportional to
@@ -139,7 +144,7 @@ class PosePlanner:
         lean_mag = np.sqrt(roll ** 2 + pitch ** 2)
         height = height - height_compensation * lean_mag
         R_WB = _rot_zyx(roll, pitch, yaw)   # body → world
-        p_body_W = np.array([0.0, 0.0, height])
+        p_body_W = np.array([x_offset, y_offset, height])
 
         if q_guess is None:
             q_guess = self._q_neutral.copy()
@@ -208,10 +213,12 @@ class PosePlanner:
 
         def _parse(wp):
             return (
-                float(wp.get("height", self.stand_height)),
-                float(wp.get("roll",   0.0)),
-                float(wp.get("pitch",  0.0)),
-                float(wp.get("yaw",    0.0)),
+                float(wp.get("height",   self.stand_height)),
+                float(wp.get("roll",     0.0)),
+                float(wp.get("pitch",    0.0)),
+                float(wp.get("yaw",      0.0)),
+                float(wp.get("x_offset", 0.0)),
+                float(wp.get("y_offset", 0.0)),
             )
 
         n_segs = len(waypoints) - 1
@@ -228,8 +235,8 @@ class PosePlanner:
         for seg, (n, wp_start, wp_end) in enumerate(
             zip(steps_per_seg, waypoints[:-1], waypoints[1:])
         ):
-            h0, r0, p0, y0 = _parse(wp_start)
-            h1, r1, p1, y1 = _parse(wp_end)
+            h0, r0, p0, y0, x0, yo0 = _parse(wp_start)
+            h1, r1, p1, y1, x1, yo1 = _parse(wp_end)
 
             ts = np.linspace(0.0, 1.0, n, endpoint=(seg == n_segs - 1))
             for t in ts:
@@ -238,6 +245,8 @@ class PosePlanner:
                     r0 + t * (r1 - r0),
                     p0 + t * (p1 - p0),
                     y0 + t * (y1 - y0),
+                    x0 + t * (x1 - x0),
+                    yo0 + t * (yo1 - yo0),
                 )
                 q = self.solve_pose(*pose, q_guess=q_prev,
                                     height_compensation=height_compensation)
@@ -253,25 +262,32 @@ class PosePlanner:
         pitch: float = 0.0,
         yaw: float = 0.0,
         height: float | None = None,
+        x_offset: float = 0.0,
+        y_offset: float = 0.0,
         n_steps: int = 200,
         return_to_neutral: bool = True,
         height_compensation: float = 0.0,
         n_repeats: int = 1,
+        rock: bool = False,
     ) -> np.ndarray:
         """
         Convenience wrapper: ramp from neutral to a target lean pose,
         optionally hold, then return to neutral.  Repeat N times.
 
         Args:
-            roll   (float): Target roll (rad).
-            pitch  (float): Target pitch (rad).
-            yaw    (float): Target yaw (rad).
-            height (float | None): Target height; defaults to stand_height.
-            n_steps (int): Steps for each ramp segment.
+            roll     (float): Target roll (rad).
+            pitch    (float): Target pitch (rad).
+            yaw      (float): Target yaw (rad).
+            height   (float | None): Target height; defaults to stand_height.
+            x_offset (float): Body X translation from neutral (m, +X forward).
+            y_offset (float): Body Y translation from neutral (m, +Y left).
+            n_steps  (int): Steps for each ramp segment.
             return_to_neutral (bool): Append a return ramp after the last rep.
             height_compensation (float): Lower body height per rad of lean (m/rad).
-            n_repeats (int): Number of lean cycles (neutral→target→neutral per cycle).
-                             Must be >= 1.
+            n_repeats (int): Number of lean cycles. Must be >= 1.
+            rock (bool): If True, each cycle goes +target → neutral → -target → neutral,
+                         oscillating symmetrically around neutral. RPY and XY are negated
+                         for the minus phase; height stays the same.
 
         Returns:
             np.ndarray: (N, 12) trajectory array.
@@ -279,13 +295,26 @@ class PosePlanner:
         if n_repeats < 1:
             raise ValueError("n_repeats must be >= 1")
         h = height if height is not None else self.stand_height
-        neutral = {"height": self.stand_height, "roll": 0.0, "pitch": 0.0, "yaw": 0.0}
-        target  = {"height": h, "roll": roll, "pitch": pitch, "yaw": yaw}
+        neutral = {
+            "height": self.stand_height, "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+            "x_offset": 0.0, "y_offset": 0.0,
+        }
+        target_pos = {
+            "height": h, "roll": roll, "pitch": pitch, "yaw": yaw,
+            "x_offset": x_offset, "y_offset": y_offset,
+        }
+        target_neg = {
+            "height": h, "roll": -roll, "pitch": -pitch, "yaw": -yaw,
+            "x_offset": -x_offset, "y_offset": -y_offset,
+        }
 
         wps = [neutral]
         for _ in range(n_repeats):
-            wps.append(target)
+            wps.append(target_pos)
             wps.append(neutral)
+            if rock:
+                wps.append(target_neg)
+                wps.append(neutral)
         if not return_to_neutral:
             wps = wps[:-1]
 

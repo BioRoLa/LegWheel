@@ -156,6 +156,8 @@ def _lean_fields() -> List[Field]:
         Field("Roll (°)",      "roll",    "float", "0.0"),
         Field("Pitch (°)",     "pitch",   "float", "0.0"),
         Field("Yaw (°)",       "yaw",     "float", "0.0"),
+        Field("X offset (m)",  "x",       "float", "0.0"),
+        Field("Y offset (m)",  "y",       "float", "0.0"),
         Field("Height (m)",    "height",  "float", "0.30"),
         Field("Compensation",  "comp",    "float", "0.0"),
         Field("Steps / Seg",   "steps",   "int",   "500"),
@@ -163,6 +165,7 @@ def _lean_fields() -> List[Field]:
         Field("Prep (s)",      "prep",    "float", "5.0"),
         Field("dt (s)",        "dt",      "float", "0.001"),
         Field("Return Neutral","ret",     "bool",  True),
+        Field("Rock ±",        "rock",    "bool",  False),
         Field("Output Dir",    "outdir",  "text",  "outputs/csv"),
     ]
 
@@ -317,22 +320,28 @@ class CSVGeneratorTUI:
             roll    = float(self._fval("roll",    "0"))
             pitch   = float(self._fval("pitch",   "0"))
             yaw     = float(self._fval("yaw",     "0"))
+            x       = float(self._fval("x",       "0"))
+            y       = float(self._fval("y",       "0"))
             h       = float(self._fval("height",  "0.3"))
             steps   = int(float(self._fval("steps",   "500")))
             repeats = int(float(self._fval("repeats", "1")))
             dt      = float(self._fval("dt",      "0.001"))
             prep    = float(self._fval("prep",    "5"))
             ret     = self._fval("ret", True)
+            rock    = self._fval("rock", False)
 
-            segs_per_rep = 2 if ret else 1
-            total_segs   = repeats * segs_per_rep
-            total_s      = prep + steps * total_segs * dt
+            cycle_segs = 4 if rock else 2
+            total_segs = repeats * cycle_segs - (0 if ret else 1)
+            total_s    = prep + steps * total_segs * dt
 
             out += [
                 ("class:sum",    f" Roll    {roll:+.1f}°\n"),
                 ("class:sum",    f" Pitch   {pitch:+.1f}°\n"),
                 ("class:sum",    f" Yaw     {yaw:+.1f}°\n"),
+                ("class:sum",    f" X off   {x:+.4f} m\n"),
+                ("class:sum",    f" Y off   {y:+.4f} m\n"),
                 ("class:sum",    f" Height  {h:.3f} m\n"),
+                ("class:sum",    f" Rock±   {'yes' if rock else 'no'}\n"),
                 ("class:sum",    f" Steps   {steps} × {total_segs} seg ({repeats}x)\n"),
                 ("class:sum",    f" Prep    {prep:.1f} s\n"),
                 ("class:sum.hi", f" Total   {total_s:.1f} s  ({int(total_s / max(dt, 1e-9)):,} frames)\n"),
@@ -728,6 +737,8 @@ class CSVGeneratorTUI:
             "--roll",         self._fval("roll",    "0.0"),
             "--pitch",        self._fval("pitch",   "0.0"),
             "--yaw",          self._fval("yaw",     "0.0"),
+            "--x",            self._fval("x",       "0.0"),
+            "--y",            self._fval("y",       "0.0"),
             "-z",             self._fval("height",  "0.30"),
             "--compensation", self._fval("comp",    "0.0"),
             "-n",             self._fval("steps",   "500"),
@@ -738,6 +749,8 @@ class CSVGeneratorTUI:
         ]
         if not self._fval("ret", True):
             cmd.append("--no-return")
+        if self._fval("rock", False):
+            cmd.append("--rock")
         return cmd
 
     def _transform_cmd(self) -> List[str]:
