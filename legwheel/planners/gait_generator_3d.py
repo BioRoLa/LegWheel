@@ -400,13 +400,24 @@ class GaitGenerator3D:
         # 2. Apply phase offsets
         total_len = n_points * n_cycles
         cmds = np.zeros((total_len, 12))  # 4 legs * 3 joints
+        phase = np.zeros((total_len, 4))  # per-leg stance(0)/swing(1) flag
+
+        # Stance samples occupy the front of each leg's one-cycle trajectory
+        # (see TrajectoryPlanner3D.generate_trajectory: stance loop appended
+        # first, swing points appended after). n_stance is identical across
+        # legs since all planners share T, dt, stance_duty.
+        n_stance = int(round(self.stance_duty * n_points))
+        phase_pattern = np.zeros(n_points)
+        phase_pattern[n_stance:] = 1
 
         for i in range(4):
             shift = int(self.phase_offsets[i] * n_points)
             indices = (np.arange(total_len) + shift) % n_points
             cmds[:, i * 3 : i * 3 + 3] = all_leg_trajs[i][indices]
+            phase[:, i] = phase_pattern[indices]
 
         self.CMDS = cmds
+        self.PHASE = phase
         return cmds
 
     def get_parameter_string(self) -> str:
@@ -456,17 +467,20 @@ class GaitGenerator3D:
             )
 
     def export_to_csv(self, base_name="gait_3d"):
-        """Exports the 12-DOF gait commands to CSV."""
+        """Exports the 12-DOF gait commands, plus per-leg stance/swing phase, to CSV."""
         if not hasattr(self, "CMDS"):
             self.generate_full_gait()
 
         import pandas as pd
 
+        legs = ["FL", "FR", "RR", "RL"]
         cols = []
-        for l in ["FL", "FR", "RR", "RL"]:
+        for l in legs:
             cols += [f"{l}_Theta", f"{l}_Beta", f"{l}_Gamma"]
+        cols += [f"{l}_Phase" for l in legs]
 
-        df = pd.DataFrame(self.CMDS, columns=cols)
+        data = np.concatenate([self.CMDS, self.PHASE], axis=1)
+        df = pd.DataFrame(data, columns=cols)
         df.to_csv(base_name + "_12dof.csv", index=False)
         print(f"3D Gait exported to {base_name}_12dof.csv")
 

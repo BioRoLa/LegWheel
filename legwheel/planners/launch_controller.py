@@ -145,13 +145,14 @@ class LaunchController:
         scaled[2] *= scale  # v_y
         return scaled
 
-    def _generate_one_cycle(self, scale: float) -> np.ndarray:
+    def _generate_one_cycle(self, scale: float) -> tuple[np.ndarray, np.ndarray]:
         """
         Generate one gait cycle at `scale × target velocity`, phase-shifted
         to the all-stance window.
 
         Returns:
-            np.ndarray: (n_points, 12) joint commands in planner column order.
+            tuple: ((n_points, 12) joint commands, (n_points, 4) per-leg
+                    stance(0)/swing(1) flags), both in planner leg order.
         """
         twist_k = self._scale_twist(scale)
         gen = GaitGenerator3D(
@@ -165,11 +166,12 @@ class LaunchController:
             stance_duty=self.stance_duty,
         )
         cmds = gen.generate_full_gait(n_cycles=1)  # (n_pts, 12)
+        phase = gen.PHASE  # (n_pts, 4)
 
         # Apply all-stance phase shift: roll so cycle starts at start_phase
         n_pts = len(cmds)
         shift = int(round(self.start_phase * n_pts)) % n_pts
-        return np.roll(cmds, -shift, axis=0)
+        return np.roll(cmds, -shift, axis=0), np.roll(phase, -shift, axis=0)
 
     def generate_launch_sequence(self) -> np.ndarray:
         """
@@ -178,6 +180,11 @@ class LaunchController:
         Returns:
             np.ndarray: (N_ramp × n_points_per_cycle, 12) commands.
         """
+        cmds, _ = self._generate_launch_sequence_with_phase()
+        return cmds
+
+    def _generate_launch_sequence_with_phase(self) -> tuple[np.ndarray, np.ndarray]:
+        """Same as generate_launch_sequence, but also returns per-leg phase."""
         scales = np.linspace(self.ramp_floor, 1.0, self.n_ramp)
 
         print(
@@ -187,12 +194,15 @@ class LaunchController:
         )
 
         cycles = []
+        phases = []
         for k, s in enumerate(scales):
             v_pct = s * 100
             print(f"    Ramp cycle {k+1}/{self.n_ramp}: {v_pct:.0f}% v_target")
-            cycles.append(self._generate_one_cycle(s))
+            cmds, phase = self._generate_one_cycle(s)
+            cycles.append(cmds)
+            phases.append(phase)
 
-        return np.vstack(cycles)
+        return np.vstack(cycles), np.vstack(phases)
 
     def print_summary(self) -> None:
         print("=== LaunchController Summary ===")

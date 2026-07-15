@@ -32,6 +32,10 @@ def _emit_progress(percent):
     print("{}{}".format(PROGRESS_PREFIX, percent), flush=True)
 
 
+def _phase_header() -> str:
+    return "FL_Phase,FR_Phase,RR_Phase,RL_Phase"
+
+
 def _to_hw_order(raw_cmds: np.ndarray) -> np.ndarray:
     """Reorder (N, 12) planner output to hardware column order."""
     N = raw_cmds.shape[0]
@@ -90,10 +94,12 @@ def generate_hardware_csv(
 
     print(f"\nGenerating {n_cycles} steady cycles of {gait_type}...")
     hw_cmds = _to_hw_order(gait.generate_full_gait(n_cycles=n_cycles))
+    steady_phase = gait.PHASE  # (n_pts, 4) [FL, FR, RR, RL] stance(0)/swing(1)
     _emit_progress(50)
 
     # 2. Optional launch ramp sequence
     launch_hw_cmds = None
+    launch_phase = None
     if with_launch:
         from legwheel.planners.launch_controller import LaunchController
 
@@ -111,7 +117,8 @@ def generate_hardware_csv(
         )
         lc.print_summary()
         _emit_progress(60)
-        launch_hw_cmds = _to_hw_order(lc.generate_launch_sequence())
+        launch_cmds, launch_phase = lc._generate_launch_sequence_with_phase()
+        launch_hw_cmds = _to_hw_order(launch_cmds)
         _emit_progress(70)
 
     # 3. Prep sequence: cosine ramp from home (θ=17°) to first gait frame
@@ -125,14 +132,20 @@ def generate_hardware_csv(
     t_interp = np.linspace(0, 1, N_prep)
     alpha = (0.5 * (1 - np.cos(np.pi * t_interp)))[:, np.newaxis]
     prep_cmds = (1 - alpha) * home_pose + alpha * first_frame
+    # All 4 legs are quasi-statically ramping to touchdown pose, treat as stance.
+    prep_phase = np.zeros((N_prep, 4))
     _emit_progress(80)
 
     # 4. Stack all segments
     segments = [prep_cmds]
+    phase_segments = [prep_phase]
     if launch_hw_cmds is not None:
         segments.append(launch_hw_cmds)
+        phase_segments.append(launch_phase)
     segments.append(hw_cmds)
+    phase_segments.append(steady_phase)
     final_cmds = np.vstack(segments)
+    final_phase = np.vstack(phase_segments)
     _emit_progress(90)
 
     # 5. Filename
@@ -141,6 +154,14 @@ def generate_hardware_csv(
     filepath = os.path.join(output_dir, filename)
 
     np.savetxt(filepath, final_cmds, delimiter=",", fmt="%.6f")
+
+    # Sidecar phase CSV: per-leg stance(0)/swing(1) flag, row-aligned with the
+    # main hardware CSV. Kept separate because the hardware controller expects
+    # the main file to be exactly 12 columns with no header.
+    phase_filepath = filepath[:-4] + "_phase.csv"
+    np.savetxt(
+        phase_filepath, final_phase, delimiter=",", fmt="%.0f", header=_phase_header(), comments=""
+    )
     _emit_progress(100)
 
     N_launch = len(launch_hw_cmds) if launch_hw_cmds is not None else 0
@@ -151,6 +172,7 @@ def generate_hardware_csv(
     print(f"  Steady    : {len(hw_cmds)} frames ({len(hw_cmds)*dt:.1f} s, {n_cycles} cycles)")
     print(f"  Total     : {len(final_cmds)} frames ({len(final_cmds)*dt:.1f} s)")
     print(f"  Saved to  : {filepath}")
+    print(f"  Phase to  : {phase_filepath}")
     return filepath
 
 
