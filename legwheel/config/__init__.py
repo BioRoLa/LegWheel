@@ -1,4 +1,5 @@
 """Configuration and path management for LegWheel package."""
+
 from pathlib import Path
 import os
 
@@ -28,32 +29,34 @@ COORD_DEFINITIONS_PDF = DOCS_DIR / "Coord definitions.pdf"
 FK_IK_PDF = DOCS_DIR / "FK & IK.pdf"
 SYSTEM_PARAMETERS_PDF = DOCS_DIR / "System_Parameters.pdf"
 
+
 # Archived Parameters (Old Design)
 class OLD_Design:
     """Archived parameters for the previous robot design."""
+
     class RobotParams:
         # Body dimensions
         BODY_LENGTH = 0.444  # 44.4 cm
-        BODY_HEIGHT = 0.2    # 20 cm
-        BODY_WIDTH = 0.33    # 33 cm
-        COM_BIAS = 0.0       # x bias of center of mass
-        
+        BODY_HEIGHT = 0.2  # 20 cm
+        BODY_WIDTH = 0.33  # 33 cm
+        COM_BIAS = 0.0  # x bias of center of mass
+
         # Leg parameters
-        WHEEL_RADIUS = 0.1   # 10 cm
+        WHEEL_RADIUS = 0.1  # 10 cm
         TIRE_RADIUS_REAL = 0.019  # 1.9 cm (with tire)
-        FOOT_OFFSET = 0.02225     # 22.25 mm
+        FOOT_OFFSET = 0.02225  # 22.25 mm
         TYRE_THICKNESS = 0.01225  # 12.25 mm
-        
+
         # Linkage parameters
         ARC_HF_DEG = 130.0
         ARC_BC_DEG = 101.0
         L1_RATIO = 0.8  # l1: OA = 0.8 * R
         L5_RATIO = 0.9  # l5: AD = 0.9 * R
         L6_RATIO = 0.4  # l6: DE = 0.4 * R
-        
+
         # Calculated dimensions (standard Corgi)
         FOOT_RADIUS = 0.1345  # 134.5 mm
-        
+
         # Angle limits
         MAX_THETA_DEG = 160.0
         MIN_THETA_DEG = 17.0
@@ -79,42 +82,89 @@ class OLD_Design:
         SWING_TIME = 0.2
         SAMPLING_RATE = 1000  # Hz
 
+
 # Default parameters (Current Corgi Design)
 class RobotParams:
     """Current robot parameters based on System_Parameters.pdf."""
+
     # Chassis & Body Dimensions
     CHASSIS_LENGTH = 0.694
     CHASSIS_WIDTH = 0.352
     CHASSIS_HEIGHT = 0.138
-    
-    WHEEL_BASE = 0.510              # Distance between front and rear wheel centers
-    BODY_WIDTH = 0.240              # Hip-to-hip distance
-    
+
+    WHEEL_BASE = 0.510  # Distance between front and rear wheel centers
+    BODY_WIDTH = 0.240  # Hip-to-hip distance
+
     # Leg & Wheel Configuration
-    ABAD_AXIS_OFFSET = 0.057166     # Offset from Hip Roll axis to Leg Pitch plane
-    WHEEL_AXIAL_OFFSET = 0.091675   # Lateral offset from leg plane to wheel center
-    WHEEL_RADIUS_PITCH = 0.100      # Effective radius for kinematics (R: linkage joint circle)
-    WHEEL_THICKNESS    = 0.04       # Thickness of the wheel (for collision and visualization)
+    ABAD_AXIS_OFFSET = 0.057166  # Offset from Hip Roll axis to Leg Pitch plane
+    WHEEL_AXIAL_OFFSET = 0.091675  # Lateral offset from leg plane to wheel center
+    WHEEL_RADIUS_PITCH = 0.100  # Effective radius for kinematics (R: linkage joint circle)
+    WHEEL_THICKNESS = 0.04  # Thickness of the wheel (for collision and visualization)
 
     # Tire geometry (toroidal cross-section)
-    TIRE_RIM_OFFSET    = 0.010      # Hard rim radial thickness beyond R (R → hard rim outer edge)
-    TIRE_TREAD_RADIUS  = 0.130      # Torus major radius: tread arc center = R + TIRE_RIM_OFFSET + 0.020
-    TIRE_CORNER_RADIUS = 0.015      # Torus minor radius (corner fillet); max contact = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
-    WHEEL_RADIUS_OUTER = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS  # = 0.145, physical outer radius (collision)
-    
+    TIRE_RIM_OFFSET = 0.010  # Hard rim radial thickness beyond R (R → hard rim outer edge)
+    TIRE_TREAD_RADIUS = 0.130  # Torus major radius: tread arc center = R + TIRE_RIM_OFFSET + 0.020
+    TIRE_CORNER_RADIUS = 0.015  # Torus minor radius (corner fillet); max contact = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
+    WHEEL_RADIUS_OUTER = (
+        TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
+    )  # = 0.145, physical outer radius (collision)
+
+    # Mass (from Webots CorgiRobotABAD.proto — sum of all 68 rigid body Solid nodes)
+    #
+    # Three-tier mass classification for wheeled dynamics:
+    #
+    #  ┌─ Sprung (簧上) ────────────────────────────────────────────────────┐
+    #  │  Chassis body                                     7.491 kg         │
+    #  ├─ Active Camber Arm (主動外傾臂) ──────────────────────────────────┤
+    #  │  ABAD endPoint "B Module" × 4  (rotates with γ)  18.80 kg         │
+    #  │  CoM shifts with γ → affects overall CoM height                   │
+    #  ├─ Unsprung (簧下) ──────────────────────────────────────────────────┤
+    #  │  LegWheel linkage + rim × 4   (moves with θ,β)   ~4.55 kg         │
+    #  └────────────────────────────────────────────────────────────────────┘
+    #  Total                                               30.84 kg
+    #
+    MASS = 30.84  # Total mass (kg)
+    SPRUNG_MASS = 7.4913  # Chassis body (簧上), kg
+    CAMBER_ARM_MASS = 4.70  # ABAD endPoint "B Module" per leg (主動外傾臂), kg
+    CAMBER_ARM_MASS_TOTAL = 18.80  # 4 × CAMBER_ARM_MASS
+    # LegWheel linkage + rim per leg (簧下), kg
+    # ≈ (MASS - SPRUNG_MASS - CAMBER_ARM_MASS_TOTAL) / 4
+    LEGWHEEL_MASS_PER_LEG = 1.14
+    LEGWHEEL_MASS_TOTAL = 4.55  # 4 × LEGWHEEL_MASS_PER_LEG
+
+    # B Module CoM geometry (from Webots proto rotation-matrix decomposition):
+    #   ABAD axis height above body origin:      ABAD_AXIS_OFFSET = 57.2 mm
+    #   CoM radial distance from ABAD axis:      ~11 mm (proto estimate; see note below)
+    #   CoM Z-shift across γ = 0→30°:           ≤ 6 mm
+    #                                             (arm starts nearly horizontal)
+    # → For steady-state cornering, B Module CoM Z ≈ stand_height + ABAD_AXIS_OFFSET (±6 mm error)
+    #
+    # NOTE: Physical measurement of r is NOT required.
+    # The ABAD uses a QDD motor, but the B Module (4.7 kg, without LegWheel attached) holds position
+    # at any angle without current — it does NOT backdrive under its own weight.
+    # This is direct experimental evidence that m_B·g·r < τ_friction_QDD, i.e., r is small enough
+    # that its gravitational torque falls below even the QDD's residual static friction.
+    # QDD backdrivability requires load torque to EXCEED the friction threshold;
+    # small r means it does not.
+    # → Treat r ≈ 0: CoM lies on the ABAD axis. The dominant height term is
+    # d_abad = 57.2 mm above the body origin.
+    CAMBER_ARM_COM_RADIAL = (
+        0.011  # Radial distance from ABAD axis to B Module CoM (m); proto estimate, treated as ≈ 0
+    )
+
     # Center of Mass (COM) Biases
-    COM_BIAS = 0.0                  # x bias of center of mass
-    COM_BIAS_X = 0.0                # x bias of center of mass
-    COM_BIAS_Y = 0.0                # y bias of center of mass
-    COM_BIAS_Z = ABAD_AXIS_OFFSET   # z bias of center of mass
-    
+    COM_BIAS = 0.0  # x bias of center of mass
+    COM_BIAS_X = 0.0  # x bias of center of mass
+    COM_BIAS_Y = 0.0  # y bias of center of mass
+    COM_BIAS_Z = ABAD_AXIS_OFFSET  # z bias of center of mass
+
     # Linkage parameters (Standard ratios)
     ARC_HF_DEG = 130.0
     ARC_BC_DEG = 101.0
     L1_RATIO = 0.8  # l1: OA = 0.8 * WHEEL_RADIUS_PITCH
     L5_RATIO = 0.9  # l5: AD = 0.9 * WHEEL_RADIUS_PITCH
     L6_RATIO = 0.4  # l6: DE = 0.4 * WHEEL_RADIUS_PITCH
-    
+
     # Angle limits
     MAX_THETA_DEG = 160.0
     MIN_THETA_DEG = 17.0
@@ -122,28 +172,30 @@ class RobotParams:
     BETA0_DEG = 90.0
 
     # Workspace Guard Constants  only used for trajectory planning and velocity limiting
-    BETA_MAX_DEG = 40.0         # Sagittal swing geometric limit (°)
-    GAMMA_MAX_DEG = 70.0        # ABAD lateral sweep geometric limit (°)
-    GAMMA_GUARD_DEG = 70.0      # Velocity guard limit (°)
-    GAMMA_FLOOR_DEG = 1.0       # Lateral one-sided sweep floor (°): liftoff ABAD tilt kept this far
-                                # from upright so the loaded wheel never crosses gamma=0 (no contact
-                                # edge / center-of-pressure flip mid-stance).
-    STEP_DECAY_COEFF = 0.3      # Step height linear decay coefficient (was 0.8→0.5→0.3)
-    STEP_FLOOR = 0.2            # Minimum step height scale lower bound
-    STEP_USAGE_THRESHOLD = 0.15 # Deadband: no scaling when workspace usage < 15%
+    BETA_MAX_DEG = 40.0  # Sagittal swing geometric limit (°)
+    GAMMA_MAX_DEG = 70.0  # ABAD lateral sweep geometric limit (°)
+    GAMMA_GUARD_DEG = 70.0  # Velocity guard limit (°)
+    GAMMA_FLOOR_DEG = 1.0  # Lateral one-sided sweep floor (°): liftoff ABAD tilt kept this far
+    # from upright so the loaded wheel never crosses gamma=0 (no contact
+    # edge / center-of-pressure flip mid-stance).
+    STEP_DECAY_COEFF = 0.3  # Step height linear decay coefficient (was 0.8→0.5→0.3)
+    STEP_FLOOR = 0.2  # Minimum step height scale lower bound
+    STEP_USAGE_THRESHOLD = 0.15  # Deadband: no scaling when workspace usage < 15%
 
     # Touchdown velocity targets — tune to reduce body bounce at landing
-    TOUCHDOWN_VEL_H_MAX = 0.3   # m/s: horizontal cap; prevents swing_delta/T_sw overshoot
-    TOUCHDOWN_VEL_Z_SCALE = 0.1 # vertical = -2*step_h/T_sw * scale; 0.1 → ~gentle descent (legacy, unused by accel model)
+    TOUCHDOWN_VEL_H_MAX = 0.3  # m/s: horizontal cap; prevents swing_delta/T_sw overshoot
+    TOUCHDOWN_VEL_Z_SCALE = 0.1  # vertical = -2*step_h/T_sw * scale; 0.1 → ~gentle descent (legacy, unused by accel model)
 
     # Swing acceleration budget — unified a_max (m/s²) for liftoff/touchdown velocity design.
     # Feasibility constraint: SWING_ACCEL_MAX >= 8 * step_height / T_sw²
     # Example: Walk h=0.04, T_sw=0.25 → a_min = 5.12 m/s²; Trot T_sw=0.20 → 8.0 m/s²
     # At a_max=10: peak joint acc ≈ a_max / J_x = 10/0.019 ≈ 526 rad/s² (vs 5000+ in old model).
-    SWING_ACCEL_MAX = 10.0      # m/s²: liftoff/touchdown Cartesian acceleration budget
+    SWING_ACCEL_MAX = 10.0  # m/s²: liftoff/touchdown Cartesian acceleration budget
+
 
 class TrajectoryParams:
     """Current trajectory parameters."""
+
     STAND_HEIGHT = 0.3
     STEP_LENGTH = 0.4
     STEP_HEIGHT = 0.04
@@ -153,8 +205,10 @@ class TrajectoryParams:
     OVERLAP = 0.0
     VELOCITY = 0.1  # m/s
 
+
 class GaitParams:
     """Current gait parameters."""
+
     WALK_GAIT = [4, 2, 3, 1]
     TROT_GAIT = [1, 3, 1, 3]
     PACE_GAIT = [1, 3, 3, 1]
