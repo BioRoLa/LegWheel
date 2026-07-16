@@ -199,13 +199,18 @@ def leg_mechanism_traces(
     shape = kin.solver.leg_shape
     shape.get_shape(shape.O)
 
+    half_w = kin.wheel_thickness / 2
     component_specs = [
-        (kin.wheel_thickness / 2, {"rims", "joints"}),
-        (-kin.wheel_thickness / 2, {"rims", "joints"}),
-        (0.0, {"bars"}),
+        (half_w, {"rims"}),
+        (-half_w, {"rims"}),
+        (0.0, {"bars", "rims", "joints"}),
     ]
 
     for z_offset, components in component_specs:
+        # The tyre cross-section narrows at each wheel face. Rebuild the 2D
+        # primitives for this lateral plane so rendered rim outlines agree with
+        # rim_point(alpha, w) used by forward_kinematics below.
+        shape.get_shape(shape.O, tyre_offset=kin.solver.tyre_offset_at_w(z_offset))
         for key, value in shape.__dict__.items():
             if "bar" in key and hasattr(value, "get_xdata") and "bars" in components:
                 pts = _project_shape_trace(
@@ -227,7 +232,10 @@ def leg_mechanism_traces(
                         diff -= 2 * np.pi
                     while diff < -np.pi:
                         diff += 2 * np.pi
-                    arc_angles = np.linspace(theta1, theta1 + diff, 24)
+                    # Match the FK tyre-profile resolution so the rim outline
+                    # remains visually coincident with profile endpoints at
+                    # w = ±wheel_thickness / 2.
+                    arc_angles = np.linspace(theta1, theta1 + diff, 100)
                     center_x, center_y = arc.center
                     x_data = center_x + (arc.width / 2) * np.cos(arc_angles)
                     y_data = center_y + (arc.height / 2) * np.sin(arc_angles)
@@ -256,16 +264,17 @@ def leg_mechanism_traces(
                 )
 
     if include_rim_thickness:
-        for alpha in np.linspace(-180, 180, 28):
-            rim_pos = kin.forward_kinematics(
-                theta, beta, gamma, alpha=alpha, w=kin.wheel_thickness / 2
-            )
-            rim_neg = kin.forward_kinematics(
-                theta, beta, gamma, alpha=alpha, w=-kin.wheel_thickness / 2
+        # Render each rim profile directly from FK. Sampling across w preserves
+        # the rounded toroidal foot surface instead of joining wheel faces with
+        # a straight line.
+        w_samples = np.linspace(-half_w, half_w, 15)
+        for alpha in np.linspace(-180, 180, 100):
+            profile = np.array(
+                [kin.forward_kinematics(theta, beta, gamma, alpha=alpha, w=w) for w in w_samples]
             )
             traces.append(
                 _line_trace(
-                    np.vstack([rim_pos, rim_neg]),
+                    profile,
                     name=f"{LIMB_NAMES[leg_index]} tyre width",
                     color="gray",
                     width=2,
