@@ -69,6 +69,8 @@ def generate_hardware_csv(
     ramp_floor=0.1,
     stability_margin=0.02,
     stance_duty=None,
+    attitude_osc_amplitude=0.0,
+    attitude_osc_phase_lead=0.0,
 ):
     _emit_progress(5)
     print("=========================================")
@@ -88,6 +90,8 @@ def generate_hardware_csv(
         dt=dt,
         stability_margin=stability_margin,
         stance_duty=stance_duty,
+        attitude_osc_amplitude=attitude_osc_amplitude,
+        attitude_osc_phase_lead=attitude_osc_phase_lead,
     )
     gait.print_summary()
     _emit_progress(20)

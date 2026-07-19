@@ -184,6 +184,7 @@ def _resolve_n_ramp(args) -> int:
 def cmd_generate(args):
     import os
     import sys
+    import numpy as np
 
     # Try importing directly from examples/gait directory if available
     # (generate_hardware_csv.py lives alongside generate_lean_csv.py /
@@ -207,6 +208,10 @@ def cmd_generate(args):
                 n_ramp=_resolve_n_ramp(args),
                 ramp_floor=getattr(args, "ramp_floor", 0.1),
                 stance_duty=getattr(args, "duty", None),
+                attitude_osc_amplitude=np.deg2rad(
+                    getattr(args, "attitude_osc_amplitude", 0.0)
+                ),
+                attitude_osc_phase_lead=getattr(args, "attitude_osc_phase_lead", 0.0),
             )
             return
         except ImportError:
@@ -544,6 +549,20 @@ def main():
     )
     parser_gen.add_argument(
         "--duty", type=float, default=None, help="Override stance duty D_f (0–1)"
+    )
+    parser_gen.add_argument(
+        "--attitude-osc-amplitude",
+        type=float,
+        default=0.0,
+        help="Phase-locked pitch (Bound) / roll (Pace) oscillation amplitude, degrees "
+        "(default: 0.0 = disabled). Only valid for --gait Bound or Pace.",
+    )
+    parser_gen.add_argument(
+        "--attitude-osc-phase-lead",
+        type=float,
+        default=0.0,
+        help="Anticipatory phase-lead for the attitude oscillation, in gait-phase "
+        "units (default: 0.0 = in phase with the stance-pair transition)",
     )
 
     # Subcommand: transform
