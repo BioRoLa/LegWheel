@@ -1,4 +1,6 @@
 import warnings
+from typing import Callable
+
 import numpy as np
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.models.leg_model import LegModel
@@ -28,6 +30,7 @@ class TrajectoryPlanner3D:
         step_scale=None,
         x_bias=0.0,
         y_bias=0.0,
+        hip_velocity_fn: Callable[[float], np.ndarray] | None = None,
     ):
         """
         Initializes the 3D trajectory planner.
@@ -41,10 +44,21 @@ class TrajectoryPlanner3D:
             stance_duty (float) :   Stance phase duty cycle (D_f).  default: 0.75
             leg_index (int)     :   Index of the leg (0-3).         default: 0
             step_scale (float)  :   Swing velocity scaling factor (1.0 = full speed).
+            hip_velocity_fn (Callable[[float], np.ndarray] | None):
+                Optional additive stance hip-velocity term as a function of
+                local stance time (s since touchdown, i.e. the loop time ``t``
+                below). Added on top of ``velocity`` before each
+                ``stance_rt_solver`` call, so it passes through the same
+                rolling-arc scaling (sagittal-only) as the base velocity. Used
+                by the Bound/Pace attitude-oscillation compensation (see
+                ``legwheel/planners/attitude_oscillation.py`` and CH4 Theory
+                doc "Attitude Oscillation Compensation for Line-Support
+                Gaits"); ``None`` (default) reproduces prior behavior exactly.
         """
         self.input_step_scale = step_scale
         self.x_bias = float(x_bias)
         self.y_bias = float(y_bias)
+        self.hip_velocity_fn = hip_velocity_fn
         self.stand_height = stand_height
         self.velocity = np.array(velocity if velocity is not None else [0.15, 0.0, 0.0])
         self.step_height = step_height
@@ -239,7 +253,12 @@ class TrajectoryPlanner3D:
         self.cmd.append(q.tolist())
 
         for t in np.arange(self.dt, stance_duration, self.dt):
-            q = self.stance_rt_solver(v_hip=self.velocity, q=q)
+            v_hip_t = (
+                self.velocity
+                if self.hip_velocity_fn is None
+                else self.velocity + self.hip_velocity_fn(t)
+            )
+            q = self.stance_rt_solver(v_hip=v_hip_t, q=q)
             if abs(q[1]) > np.deg2rad(45):
                 break
             self.cmd.append(q.tolist())

@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial import ConvexHull
 from legwheel.planners.trajectory_planning_3d import TrajectoryPlanner3D
+from legwheel.planners.attitude_oscillation import oscillation_rate
 from legwheel.models.corgi_leg import CorgiLegKinematics
 from legwheel.config import RobotParams
 
@@ -93,6 +94,18 @@ class GaitGenerator3D:
         gait_type (str): One of "Walk", "Trot", "Pace", "Bound", "Pronk".
         dt (float): Planner time step (s).
         stance_duty (float): Optional stance duty override ``D_f`` in (0, 1).
+        attitude_osc_amplitude (float): Phase-locked pitch (Bound) / roll (Pace)
+            oscillation amplitude, rad. Default 0.0 (disabled). Only valid for
+            gait_type in {"Bound", "Pace"} -- these are the only gaits whose
+            support base degenerates into a line (see CH4 Theory doc "Attitude
+            Oscillation Compensation for Line-Support Gaits"). This is a
+            scalar, gait-internal parameter, not a generic body-twist field:
+            it is realized as an additive per-leg stance hip-velocity term
+            (via ``TrajectoryPlanner3D.hip_velocity_fn``), never exposed as
+            omega_x/omega_y on ``twist`` (see Theory doc Section 4.3).
+        attitude_osc_phase_lead (float): Anticipatory phase-lead ``delta_phi``
+            for the oscillation, in gait-phase units (not seconds). Default 0.0
+            = in phase with the stance-pair transition.
     """
 
     def __init__(
@@ -105,6 +118,8 @@ class GaitGenerator3D:
         dt=0.001,
         stability_margin=0.02,
         stance_duty=None,
+        attitude_osc_amplitude=0.0,
+        attitude_osc_phase_lead=0.0,
     ):
 
         self.stand_height = stand_height
@@ -129,6 +144,21 @@ class GaitGenerator3D:
                 raise ValueError("stance_duty must be in the open interval (0, 1).")
             self.stance_duty = float(stance_duty)
             self.custom_stance_duty = self.stance_duty
+
+        # --- Attitude Oscillation Compensation (Bound/Pace only) ---
+        # Only these two gaits reduce the support base to a line (front/rear
+        # pair for Bound, left/right pair for Pace); Walk/Trot/Pronk retain
+        # >=3-leg or diagonal support and have no line-support sag to correct
+        # (CH4 Theory doc "Attitude Oscillation Compensation for Line-Support
+        # Gaits", Section 3.3).
+        if attitude_osc_amplitude != 0.0 and gait_type not in ("Bound", "Pace"):
+            raise ValueError(
+                f"attitude_osc_amplitude is only valid for gait_type in "
+                f"('Bound', 'Pace'); got gait_type='{gait_type}' with "
+                f"attitude_osc_amplitude={attitude_osc_amplitude}."
+            )
+        self.attitude_osc_amplitude = float(attitude_osc_amplitude)
+        self.attitude_osc_phase_lead = float(attitude_osc_phase_lead)
 
         # Parse the planar twist: [omega_z, v_x, v_y]
         self.twist = np.array(twist, dtype=float)
@@ -248,6 +278,46 @@ class GaitGenerator3D:
             )
 
         # --- Initialize 4 TrajectoryPlanner3D instances with safe per-leg velocities ---
+        def _make_attitude_osc_hip_velocity_fn(leg_index):
+            """
+            Build the per-leg stance hip-velocity callback for the Bound/Pace
+            attitude-oscillation compensation (CH4 Theory doc Section 4,
+            TODO_AND_PLANNING plan Step 3). Returns None when disabled, which
+            preserves TrajectoryPlanner3D's default constant-velocity stance
+            behavior exactly (Step 2 zero-regression guarantee).
+
+            The lever arm r_{M_i,z} = ABAD_AXIS_OFFSET is identical for all
+            four legs (corgi_leg.py: p_Mi_in_B[2] = d_abad), so no per-leg
+            lookup beyond the leg's own phase_offset is needed.
+            """
+            if self.attitude_osc_amplitude == 0.0:
+                return None
+
+            leg_phase_offset = self.phase_offsets[leg_index]
+            r_z = RobotParams.ABAD_AXIS_OFFSET
+
+            def hip_velocity_fn(t_local):
+                # Map this leg's local stance time back to the global gait
+                # phase phi_g, so every stance leg injects the SAME
+                # body-level oscillation reference regardless of which pair
+                # (front/rear or left/right) is currently on the ground.
+                phi_g = (leg_phase_offset + t_local / self.T) % 1.0
+                omega = oscillation_rate(
+                    phi_g, self.attitude_osc_amplitude, self.T, self.attitude_osc_phase_lead
+                )
+                if self.gait_type == "Bound":
+                    # Pitch rate -> extra SAGITTAL hip velocity (v_hip[0]).
+                    # Rolling-arc coupled: stance_rt_solver applies the s_x
+                    # scale to this component automatically (Theory §4.2).
+                    return np.array([omega * r_z, 0.0, 0.0])
+                if self.gait_type == "Pace":
+                    # Roll rate -> extra LATERAL hip velocity (v_hip[1]).
+                    # ABAD-driven, no rolling-arc coupling (Theory §4.2).
+                    return np.array([0.0, -omega * r_z, 0.0])
+                return np.zeros(3)  # unreachable: guarded in __init__
+
+            return hip_velocity_fn
+
         self.planners = [
             TrajectoryPlanner3D(
                 stand_height=stand_height,
@@ -258,6 +328,7 @@ class GaitGenerator3D:
                 dt=dt,
                 leg_index=i,
                 step_scale=global_step_scale,
+                hip_velocity_fn=_make_attitude_osc_hip_velocity_fn(i),
             )
             for i in range(4)
         ]
