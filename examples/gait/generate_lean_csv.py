@@ -49,7 +49,7 @@ def generate_lean_csv(
     x_offset: float = 0.0,
     y_offset: float = 0.0,
     height_compensation: float = 0.0,
-    n_steps: int = 500,
+    n_steps: int = 1000,
     return_to_neutral: bool = True,
     n_repeats: int = 1,
     rock: bool = False,
@@ -180,8 +180,14 @@ if __name__ == "__main__":
     parser.add_argument("--y",   type=float, default=0.0,  help="Body Y translation (m, + = left)")
     parser.add_argument("--compensation", type=float, default=0.0,
                         help="Height compensation (m/rad). Use 0.15–0.2 for large angles.")
-    parser.add_argument("-n", "--steps", type=int, default=500,
-                        help="IK samples per ramp segment")
+    parser.add_argument("-n", "--steps", type=int, default=1000,
+                        help="IK samples per ramp segment (default 1000 => T=1.0s at "
+                             "the default dt=0.001s; a lower n_steps/T raises peak "
+                             "commanded angular acceleration (~1/T^2) and can exceed "
+                             "foot-ground friction during yaw rocking, causing "
+                             "intermittent foot lift-off -- see "
+                             "Biorola Notes/03_Simulation/05_Experiment/"
+                             "21_Lean_Rock_FK_IK_Validation.md")
     parser.add_argument("--no-return", action="store_true",
                         help="Do NOT append a return-to-neutral ramp")
     parser.add_argument("-r", "--repeats", type=int, default=1,

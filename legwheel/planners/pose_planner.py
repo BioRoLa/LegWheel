@@ -401,7 +401,7 @@ class PosePlanner:
         height: float | None = None,
         x_offset: float = 0.0,
         y_offset: float = 0.0,
-        n_steps: int = 200,
+        n_steps: int = 1000,
         return_to_neutral: bool = True,
         height_compensation: float = 0.0,
         n_repeats: int = 1,
@@ -420,7 +420,16 @@ class PosePlanner:
             height   (float | None): Target height; defaults to stand_height.
             x_offset (float): Body X translation from neutral (m, +X forward).
             y_offset (float): Body Y translation from neutral (m, +Y left).
-            n_steps  (int): Steps for each ramp segment.
+            n_steps  (int): Steps for each ramp segment (segment duration T = n_steps*dt).
+                         Peak commanded angular acceleration for the cosine profile is
+                         0.5*A*(pi/T)^2 (A = ramp amplitude), so a smaller n_steps/T
+                         raises acceleration roughly with 1/T^2. Default 1000 (T=1.0s
+                         at dt=0.001s) was chosen after the previous default of 200
+                         (T=0.2s) was found to command enough angular acceleration
+                         during yaw rocking to exceed foot-ground friction and cause
+                         intermittent foot lift-off (100% ground contact restored at
+                         T=1.0s vs. 62.8% at T=0.5s, same amplitude) -- see
+                         Biorola Notes/03_Simulation/05_Experiment/21_Lean_Rock_FK_IK_Validation.md.
             return_to_neutral (bool): Append a return ramp after the last rep.
             height_compensation (float): Lower body height per rad of lean (m/rad).
             n_repeats (int): Number of lean cycles. Must be >= 1.
