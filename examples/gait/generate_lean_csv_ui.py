@@ -82,7 +82,7 @@ class LeanCSVUI(tk.Tk):
         self.var_yaw    = tk.DoubleVar(value=0.0)
         self.var_height = tk.DoubleVar(value=0.30)
         self.var_comp   = tk.DoubleVar(value=0.0)
-        self.var_steps   = tk.IntVar(value=500)
+        self.var_steps   = tk.IntVar(value=1000)
         self.var_return  = tk.BooleanVar(value=True)
         self.var_repeats = tk.IntVar(value=1)
         self.var_dt      = tk.DoubleVar(value=0.001)
