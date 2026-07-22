@@ -13,6 +13,7 @@ import os
 import sys
 import argparse
 import numpy as np
+import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -78,8 +79,12 @@ def generate_lean_csv(
         output_dir (str): Output directory for the CSV file.
         prep_time (float): Cosine ramp from home θ=17° to neutral pose (seconds).
 
+    The generator also writes an aligned ``*_body_command.csv`` sidecar.
+    Its prep rows are labelled ``phase=prep`` and contain NaN body poses
+    because the prep trajectory is interpolated directly in joint space.
+
     Returns:
-        str: Path of the generated CSV file.
+        str: Path of the generated hardware CSV file.
     """
     from legwheel.planners.pose_planner import PosePlanner
 
@@ -160,10 +165,39 @@ def generate_lean_csv(
 
     np.savetxt(filepath, final_cmds, delimiter=",", fmt="%.6f")
 
+    if pp.POSE_CMDS is None:
+        raise RuntimeError("PosePlanner did not retain the planned body commands.")
+    prep_pose_cmds = np.full((N_prep, 6), np.nan)
+    body_pose_cmds = np.vstack([prep_pose_cmds, pp.POSE_CMDS])
     total = final_cmds.shape[0]
+    if len(body_pose_cmds) != total:
+        raise RuntimeError("Body-command sidecar is not aligned with the hardware CSV.")
+
+    body_df = pd.DataFrame(
+        {
+            "source_row": np.arange(total),
+            "time_s": np.arange(total) * dt,
+            "phase": np.concatenate(
+                [
+                    np.full(N_prep, "prep", dtype=object),
+                    np.full(len(pp.POSE_CMDS), "lean", dtype=object),
+                ]
+            ),
+            "height_m": body_pose_cmds[:, 0],
+            "roll_rad": body_pose_cmds[:, 1],
+            "pitch_rad": body_pose_cmds[:, 2],
+            "yaw_rad": body_pose_cmds[:, 3],
+            "x_m": body_pose_cmds[:, 4],
+            "y_m": body_pose_cmds[:, 5],
+        }
+    )
+    body_filepath = os.path.splitext(filepath)[0] + "_body_command.csv"
+    body_df.to_csv(body_filepath, index=False, float_format="%.9f")
+
     print(f"\n[SUCCESS]")
     print(f"  Total frames : {total} ({total*dt:.1f} s including {prep_time:.1f}s prep)")
     print(f"  Saved to     : {filepath}")
+    print(f"  Body command : {body_filepath}")
     return filepath
 
 
