@@ -168,6 +168,7 @@ def cmd_generate(args):
                 with_launch=getattr(args, 'launch', False),
                 n_ramp=_resolve_n_ramp(args),
                 ramp_floor=getattr(args, 'ramp_floor', 0.1),
+                lead_fraction=getattr(args, 'lead_fraction', 0.5),
             )
             return
         except ImportError:
@@ -448,6 +449,8 @@ def main():
                             help="Ramp duration in seconds (converted to cycles via period; overrides --ramp-cycles)")
     parser_gen.add_argument("--ramp-floor", type=float, default=0.1,
                             help="First ramp cycle velocity fraction (default: 0.1 = 10%%)")
+    parser_gen.add_argument("--lead-fraction", type=float, default=0.5,
+                            help="Lateral stance lead fraction κ (0–1)")
 
     # Subcommand: transform
     parser_transform = subparsers.add_parser(

@@ -103,6 +103,7 @@ class LaunchController:
         dt: float = 0.001,
         n_ramp: int = 3,
         ramp_floor: float = 0.1,
+        lead_fraction: float = 0.5,
     ):
         if gait_type not in GAIT_LIBRARY:
             raise ValueError(
@@ -116,6 +117,9 @@ class LaunchController:
         self.dt = dt
         self.n_ramp = n_ramp
         self.ramp_floor = ramp_floor
+        if not 0.0 <= lead_fraction <= 1.0:
+            raise ValueError("lead_fraction must be in the closed interval [0, 1].")
+        self.lead_fraction = float(lead_fraction)
 
         gait_def = GAIT_LIBRARY[gait_type]
         self.phase_offsets = gait_def["phase_offsets"]
@@ -151,6 +155,7 @@ class LaunchController:
             period=self.period,
             gait_type=self.gait_type,
             dt=self.dt,
+            lead_fraction=self.lead_fraction,
         )
         cmds = gen.generate_full_gait(n_cycles=1)   # (n_pts, 12)
 

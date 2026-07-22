@@ -51,15 +51,20 @@ class GaitGenerator3D:
         period (float): Gait cycle duration (s).
         gait_type (str): One of "Walk", "Trot", "Pace", "Bound", "Pronk".
         dt (float): Planner time step (s).
+        lead_fraction (float): Fraction κ of lateral stance travel before the centered pose.
     """
 
     def __init__(self, stand_height=0.31, twist=np.array([0.0, 0.15, 0.0]),
-                 step_height=0.04, period=1.0, gait_type="Trot", dt=0.001):
+                 step_height=0.04, period=1.0, gait_type="Trot", dt=0.001,
+                 lead_fraction=0.5):
 
         self.stand_height = stand_height
         self.step_height = step_height
         self.T = period
         self.dt = dt
+        if not 0.0 <= lead_fraction <= 1.0:
+            raise ValueError("lead_fraction must be in the closed interval [0, 1].")
+        self.lead_fraction = float(lead_fraction)
         self.n_cycles: int | None = None   # set by generate_full_gait()
 
         # Validate gait type
@@ -110,7 +115,12 @@ class GaitGenerator3D:
         D_x_max = 2 * H_O * np.tan(BETA_MAX) + 2 * R_arc * BETA_MAX
         v_x_limit = D_x_max / (self.T * self.stance_duty)
         
-        D_y_max = 2 * H_hip * np.sin(GAMMA_GUARD)
+        if self.lead_fraction == 0.5:
+            # Preserve the exact operation order and output of commit 64ffb406.
+            D_y_max = 2 * H_hip * np.sin(GAMMA_GUARD)
+        else:
+            max_lateral_fraction = max(self.lead_fraction, 1.0 - self.lead_fraction)
+            D_y_max = H_hip * np.sin(GAMMA_GUARD) / max_lateral_fraction
         v_y_limit = D_y_max / (self.T * self.stance_duty)
 
         # Find maximum required scale down across all legs
@@ -182,7 +192,8 @@ class GaitGenerator3D:
                 stance_duty=self.stance_duty,
                 dt=dt,
                 leg_index=i,
-                step_scale=global_step_scale
+                step_scale=global_step_scale,
+                lead_fraction=self.lead_fraction
             )
             for i in range(4)
         ]

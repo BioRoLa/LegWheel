@@ -55,6 +55,7 @@ def generate_hardware_csv(
     with_launch=False,
     n_ramp=3,
     ramp_floor=0.1,
+    lead_fraction=0.5,
 ):
     print("=========================================")
     print(" CorgiRobot Hardware CSV Generator       ")
@@ -70,6 +71,7 @@ def generate_hardware_csv(
         period=period,
         gait_type=gait_type,
         dt=dt,
+        lead_fraction=lead_fraction,
     )
     gait.print_summary()
 
@@ -89,6 +91,7 @@ def generate_hardware_csv(
             dt=dt,
             n_ramp=n_ramp,
             ramp_floor=ramp_floor,
+            lead_fraction=lead_fraction,
         )
         lc.print_summary()
         launch_hw_cmds = _to_hw_order(lc.generate_launch_sequence())
@@ -148,6 +151,8 @@ if __name__ == "__main__":
     parser.add_argument("--launch",       action="store_true",         help="Prepend launch ramp sequence")
     parser.add_argument("--ramp-cycles",  type=int,   default=3,       help="Number of ramp cycles")
     parser.add_argument("--ramp-floor",   type=float, default=0.1,     help="Starting velocity fraction (0–1)")
+    parser.add_argument("--lead-fraction", type=float, default=0.5,
+                        help="Lateral stance lead fraction κ (0–1)")
 
     args = parser.parse_args()
     generate_hardware_csv(
@@ -162,4 +167,5 @@ if __name__ == "__main__":
         with_launch=args.launch,
         n_ramp=args.ramp_cycles,
         ramp_floor=args.ramp_floor,
+        lead_fraction=args.lead_fraction,
     )

@@ -16,7 +16,8 @@ class TrajectoryPlanner3D:
     """
 
     def __init__(self, stand_height=0.3, velocity=None, step_height=0.04,
-                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0, step_scale=None):
+                 period=1.0, dt=0.001, stance_duty=0.75, leg_index=0, step_scale=None,
+                 lead_fraction=0.5):
         """
         Initializes the 3D trajectory planner.
 
@@ -29,7 +30,12 @@ class TrajectoryPlanner3D:
             stance_duty (float) :   Stance phase duty cycle (D_f).  default: 0.75
             leg_index (int)     :   Index of the leg (0-3).         default: 0
             step_scale (float)  :   Swing velocity scaling factor (1.0 = full speed).
+            lead_fraction (float): Fraction κ of lateral stance travel placed before
+                                   the centered pose; must be in [0, 1].
         """
+        if not 0.0 <= lead_fraction <= 1.0:
+            raise ValueError("lead_fraction must be in the closed interval [0, 1].")
+        self.lead_fraction = float(lead_fraction)
         self.input_step_scale = step_scale
         self.stand_height = stand_height
         self.velocity = np.array(
@@ -127,9 +133,26 @@ class TrajectoryPlanner3D:
         D_lateral = v_y * self.T * self.stance_duty
         H_true = self.H_hip  # Hip to ground (full length)
         if D_lateral > 0 and H_true > 0:
-            sin_arg = np.clip(D_lateral / (2 * H_true), -1.0, 1.0)
-            self.gamma0 = np.arcsin(sin_arg)
+            gamma_sign = 1.0 if self.velocity[1] >= 0 else -1.0
+            symmetric_arg = np.clip(D_lateral / (2 * H_true), -1.0, 1.0)
+            legacy_gamma0 = np.arcsin(symmetric_arg)
+            if self.lead_fraction == 0.5:
+                # Preserve the exact operation order and output of commit 64ffb406.
+                self.gamma_touchdown = gamma_sign * legacy_gamma0
+                self.gamma_liftoff = -gamma_sign * legacy_gamma0
+            else:
+                touchdown_arg = np.clip(
+                    self.lead_fraction * D_lateral / H_true, -1.0, 1.0
+                )
+                liftoff_arg = np.clip(
+                    (1.0 - self.lead_fraction) * D_lateral / H_true, -1.0, 1.0
+                )
+                self.gamma_touchdown = gamma_sign * np.arcsin(touchdown_arg)
+                self.gamma_liftoff = -gamma_sign * np.arcsin(liftoff_arg)
+            self.gamma0 = max(abs(self.gamma_touchdown), abs(self.gamma_liftoff))
         else:
+            self.gamma_touchdown = 0.0
+            self.gamma_liftoff = 0.0
             self.gamma0 = 0.0
 
         # --- Swing velocity scaling ---
@@ -179,8 +202,7 @@ class TrajectoryPlanner3D:
         # For X: beta starts at -beta0 (foot forward), sweeps to +beta0 (foot backward)
         # For Y: gamma starts at +gamma0 (foot outward), sweeps to -gamma0 (foot inward)
         #         when vy > 0 (body moving in +Y), foot in body frame retracts in -Y.
-        gamma_sign = 1.0 if self.velocity[1] >= 0 else -1.0
-        q = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma0])
+        q = np.array([self.theta0, -self.beta0, self.gamma_touchdown])
         self.cmd.append(q.tolist())
 
         for t in np.arange(self.dt, stance_duration, self.dt):
@@ -204,7 +226,7 @@ class TrajectoryPlanner3D:
         #   5. IK tracks all swing points at fixed alpha_td (no interpolation)
 
         # --- Step 1: Touchdown target ---
-        q_td = np.array([self.theta0, -self.beta0, gamma_sign * self.gamma0])
+        q_td = np.array([self.theta0, -self.beta0, self.gamma_touchdown])
         alpha_td, _ = self.kin.foot_rim_contact_fk(*q_td)
         p_td = self.kin.forward_kinematics(*q_td, alpha=alpha_td, w=0.0)
 
