@@ -69,6 +69,7 @@ class PosePlanner:
 
         # Trajectory storage (populated by plan_sequence / plan_lean)
         self.CMDS: np.ndarray | None = None
+        self.POSE_CMDS: np.ndarray | None = None
 
     # ------------------------------------------------------------------
     # Initialisation helpers
@@ -365,6 +366,7 @@ class PosePlanner:
             steps_per_seg = list(n_steps)
 
         all_cmds = []
+        all_pose_cmds = []
         q_prev = self._q_neutral.copy()
 
         for seg, (n, wp_start, wp_end) in enumerate(
@@ -385,12 +387,21 @@ class PosePlanner:
                     x0 + t * (x1 - x0),
                     yo0 + t * (yo1 - yo0),
                 )
-                q = self.solve_pose(*pose, q_guess=q_prev,
-                                    height_compensation=height_compensation)
+                q = self.solve_pose(
+                    *pose, q_guess=q_prev, height_compensation=height_compensation
+                )
+                commanded_height = pose[0] - height_compensation * np.sqrt(
+                    pose[1] ** 2 + pose[2] ** 2
+                )
                 all_cmds.append(q.flatten())
+                all_pose_cmds.append(
+                    [commanded_height, pose[1], pose[2], pose[3], pose[4], pose[5]]
+                )
                 q_prev = q
 
         self.CMDS = np.array(all_cmds)
+        # Columns: height_m, roll_rad, pitch_rad, yaw_rad, x_m, y_m.
+        self.POSE_CMDS = np.array(all_pose_cmds)
         return self.CMDS
 
     def plan_lean(
