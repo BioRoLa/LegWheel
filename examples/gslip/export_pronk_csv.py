@@ -102,11 +102,21 @@ def main() -> None:
     out = OUTPUT_CSV_DIR / "gslip_pronk.csv"
     cycles = 5
     g2c.to_csv(traj, out, cycles=cycles)
+    template_out = OUTPUT_CSV_DIR / "gslip_pronk_template.csv"
+    g2c.to_template_csv(traj, template_out)
     dt_ms = 1000 * traj.period / (len(traj.t) - 1)
     print()
     print(f"  wrote {out}")
-    print(f"  {len(traj.t)} samples/stride x {cycles} cycles, 12 columns, "
-          f"{dt_ms:.3f} ms per row")
+    print(f"    open-loop replay: {len(traj.t)} samples/stride x {cycles} cycles, "
+          f"12 columns, {dt_ms:.3f} ms per row")
+    print(f"  wrote {template_out}")
+    print(f"    controller reference: one leg + stance flag, "
+          f"{int(traj.in_stance.sum())} stance / "
+          f"{int((~traj.in_stance).sum())} flight samples")
+
+    print()
+    print("  stiffness for the leg-frame impedance command (per leg, pronk):")
+    print(f"    k_radial = {K_REL * MASS * G / HIP_TO_ARC / N_LEGS:.0f} N/m")
     print()
 
 

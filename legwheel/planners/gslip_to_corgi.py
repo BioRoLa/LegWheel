@@ -210,6 +210,32 @@ def to_csv(traj: JointTrajectory, path, cycles: int = 1) -> None:
                 writer.writerow([f"{value:.6f}" for value in row])
 
 
+def to_template_csv(traj: JointTrajectory, path) -> None:
+    """Write the stride reference for the G-SLIP controller node.
+
+    Distinct from `to_csv`, which emits the 12-DOF format corgi_csv_control
+    replays open-loop. The controller additionally needs to know which samples
+    are stance, because the virtual spring is only active there, so this
+    carries one leg's reference plus the phase flag. Pronk applies the same
+    row to all four modules, so one leg is enough.
+
+    Columns: t, theta, beta, gamma, in_stance
+    """
+    import csv
+
+    with open(path, "w", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["t", "theta", "beta", "gamma", "in_stance"])
+        for i in range(len(traj.t)):
+            writer.writerow([
+                f"{traj.t[i]:.6f}",
+                f"{traj.theta[i]:.6f}",
+                f"{traj.beta[i]:.6f}",
+                f"{traj.gamma[i]:.6f}",
+                int(bool(traj.in_stance[i])),
+            ])
+
+
 def motor_torque_for(leg_force: float, theta: float,
                      leg_map: LegLengthMap | None = None) -> float:
     """Motor torque realizing a radial leg force (N.m).

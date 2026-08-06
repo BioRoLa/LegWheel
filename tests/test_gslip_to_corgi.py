@@ -142,6 +142,32 @@ def test_samples_for_rate_matches_the_control_tick(template) -> None:
     assert dt == pytest.approx(1e-3, rel=0.01)
 
 
+def test_template_csv_carries_the_stance_flag(tmp_path, template) -> None:
+    """The controller node needs to know which samples are stance."""
+    traj = g2c.map_template(template, n=40)
+    path = tmp_path / "template.csv"
+    g2c.to_template_csv(traj, path)
+    lines = path.read_text().strip().splitlines()
+
+    assert lines[0] == "t,theta,beta,gamma,in_stance"
+    assert len(lines) == 1 + 40
+
+    flags = [int(row.split(",")[4]) for row in lines[1:]]
+    assert set(flags) == {0, 1}
+    # Stance comes first and is contiguous: the stride starts at touchdown.
+    assert flags[0] == 1
+    assert flags[-1] == 0
+    assert flags.count(1) == int(traj.in_stance.sum())
+
+
+def test_template_csv_duty_matches_the_model(tmp_path, template) -> None:
+    traj = g2c.map_template(template, n=200)
+    path = tmp_path / "template.csv"
+    g2c.to_template_csv(traj, path)
+    flags = [int(r.split(",")[4]) for r in path.read_text().strip().splitlines()[1:]]
+    assert sum(flags) / len(flags) == pytest.approx(template.duty_factor, abs=0.01)
+
+
 def test_motor_torque_conversion(leg_map) -> None:
     """tau = F * (dl/dtheta)/2; 678 N per leg should sit at the 35 N.m limit."""
     theta = np.deg2rad(65.89)
