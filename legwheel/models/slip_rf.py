@@ -219,6 +219,28 @@ def simulate_stance(
     return sol
 
 
+def next_touchdown(p: SlipRfParams, v: float, alpha: float, beta: float) -> tuple[float, float]:
+    """Next touchdown states (v, alpha) only -- the Poincare map, cheaply.
+
+    Skips the dense output and the peak-force pass that `stride` does, which
+    together cost about 1.6x. Fixed-point root-finding calls this thousands of
+    times, so the saving is worth the separate entry point.
+    """
+    sol = simulate_stance(p, v, alpha, beta, rtol=1e-8, atol=1e-10)
+    length, phi, dl, dphi = sol.y_events[0][0]
+    vx, vz = jacobian(p, length, phi) @ np.array([dl, dphi])
+    _, z_lo = position(p, length, phi)
+
+    disc = vz**2 + 2 * p.g * (z_lo - p.touchdown_height(beta))
+    if disc < 0:
+        raise GSlipFailure("apex never reaches the touchdown height")
+    t_flight = (vz + np.sqrt(disc)) / p.g
+    if t_flight <= 0:
+        raise GSlipFailure("model does not leave the ground at liftoff")
+    vz_td = vz - p.g * t_flight
+    return float(np.hypot(vx, vz_td)), float(np.arctan2(-vz_td, vx))
+
+
 def stride(p: SlipRfParams, v: float, alpha: float, beta: float) -> dict:
     """One stride: stance then ballistic flight, returning next touchdown states."""
     sol = simulate_stance(p, v, alpha, beta, dense=True)
