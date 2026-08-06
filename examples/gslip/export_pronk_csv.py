@@ -21,19 +21,43 @@ from legwheel.planners import gslip_template as tpl
 from legwheel.planners import gslip_to_corgi as g2c
 
 MASS, G = 30.0, 9.81
-FOOT_RADIUS, HIP_TO_ARC = 0.145, 0.0850
 K_REL = 18.0
 V_TILDE = 1.2
 MOTOR_TORQUE_LIMIT = 35.0
 N_LEGS = 4
 
+# Nominal stance, as leg extension. Phase 0 originally used 65.89 deg because
+# that hits the paper's combined-indicator optimum r~ = 0.6303, but because the
+# Corgi's foot radius is a large fraction of its leg, that optimum is a 0.230 m
+# crouch -- too low to clear the support block, and needlessly harsh on the
+# hardware. stance_height_tradeoff.py shows a taller stance costs only a slope
+# penalty (1.154 -> 1.224 at 95 deg) while roughly halving peak ground reaction
+# and motor torque and softening the spring, which matters because a softer
+# virtual spring is far less corrupted by the 0.36-0.68 N.m joint friction.
+NOMINAL_THETA_DEG = 100.0
+
 
 def main() -> None:
+    # Derive the stance geometry from the real linkage at the nominal pose,
+    # rather than carrying hardcoded lengths that can drift out of step.
+    leg_map = g2c.LegLengthMap()
+    foot_radius = leg_map.leg.foot_radius
+    hip_to_arc = leg_map.length(np.deg2rad(NOMINAL_THETA_DEG))
+
     p = slip_rf.SlipRfParams(
-        m=MASS, l0=HIP_TO_ARC + FOOT_RADIUS,
-        k=K_REL * MASS * G / HIP_TO_ARC, r=FOOT_RADIUS,
+        m=MASS, l0=hip_to_arc + foot_radius,
+        k=K_REL * MASS * G / hip_to_arc, r=foot_radius,
     )
     v = V_TILDE * np.sqrt(G * p.l0)
+
+    print()
+    print("=" * 72)
+    print(f"NOMINAL STANCE   theta = {NOMINAL_THETA_DEG} deg")
+    print("=" * 72)
+    print(f"  hip-to-arc-center l0 = {hip_to_arc:.4f} m")
+    print(f"  standing hip height  = {p.l0:.4f} m")
+    print(f"  r~ = {foot_radius/p.l0:.4f}   (paper optimum 0.6303)")
+    print(f"  k  = {p.k:.0f} N/m total, {p.k/N_LEGS:.0f} N/m per leg")
 
     # Best-conditioned fixed point near the stability-sweep optimum.
     best = None
@@ -87,7 +111,6 @@ def main() -> None:
 
     traj.assert_feasible()
 
-    leg_map = g2c.LegLengthMap()
     res = slip_rf.stride(p, v, best.alpha, best.beta)
     f_leg = res["peak_grf_mag"] / N_LEGS
     theta_at_peak = float(traj.theta[int(np.argmin(traj.theta))])
@@ -115,8 +138,9 @@ def main() -> None:
           f"{int((~traj.in_stance).sum())} flight samples")
 
     print()
-    print("  stiffness for the leg-frame impedance command (per leg, pronk):")
-    print(f"    k_radial = {K_REL * MASS * G / HIP_TO_ARC / N_LEGS:.0f} N/m")
+    print("  gslip_pronk_node parameters for this stance:")
+    print(f"    k_radial:={p.k / N_LEGS:.0f}.0   (leg-frame radial spring, per leg)")
+    print(f"    b_radial:={0.008 * p.k / N_LEGS:.0f}.0")
     print()
 
 
