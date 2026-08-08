@@ -79,6 +79,43 @@ def test_mapping_round_trips_through_forward_kinematics(template, leg_map) -> No
         )
 
 
+def test_touchdown_foot_lands_ahead_in_the_body_frame(template) -> None:
+    """The cross-boundary guard: does the foot land AHEAD, in the BODY frame?
+
+    Every other check in this file is a leg-frame round trip and is blind to
+    how the module is mounted in the body -- which is exactly how beta_c = -phi
+    survived a green suite while driving the robot backwards. This one uses the
+    measured LEG_X_SIGN_IN_BODY, so it can see what the others cannot.
+    """
+    traj = g2c.map_template(template, n=60)
+    r = traj.guard_report()
+    assert r["is_forward_gait"], "fixture should be a forward gait"
+    assert r["foot_ahead_at_touchdown"], (
+        f"touchdown beta {r['touchdown_beta_deg']:+.2f} deg puts the foot behind"
+    )
+    traj.assert_feasible()
+
+
+def test_the_backwards_template_is_rejected(template) -> None:
+    """Negating beta is precisely the old bug; the guard must catch it."""
+    traj = g2c.map_template(template, n=60)
+    traj.beta = -traj.beta
+    r = traj.guard_report()
+    assert not r["foot_ahead_at_touchdown"]
+    with pytest.raises(g2c.WorkspaceViolation, match="BEHIND"):
+        traj.assert_feasible()
+
+
+def test_in_place_gait_is_exempt(template) -> None:
+    """A hop commands beta == 0 and is sign-agnostic -- it must not trip."""
+    traj = g2c.map_template(template, n=60)
+    traj.beta = np.zeros_like(traj.beta)
+    r = traj.guard_report()
+    assert not r["is_forward_gait"]
+    assert r["foot_ahead_at_touchdown"]
+    traj.assert_feasible()
+
+
 def test_beta_equals_leg_angle(template) -> None:
     """beta_c = +phi. The negated form drove the robot backwards; see the
     gslip_to_corgi module docstring for the measurement that settles it."""

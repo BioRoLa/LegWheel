@@ -63,6 +63,29 @@ from legwheel.planners.gslip_template import StrideTemplate
 # Foot-arc angular half-span (LegModel.rim_point switches arcs at +/-40 deg).
 FOOT_ARC_HALF_SPAN_DEG = 40.0
 
+# Which way the leg/module frame's fore-aft axis points in the BODY frame.
+#
+# THIS CONSTANT EXISTS BECAUSE NOTHING ELSE IN THIS PACKAGE KNOWS IT.
+# Every check here -- including test_gslip_to_corgi's forward-kinematics round
+# trip -- lives in the leg frame, and the modules are mounted in the body with a
+# 120 deg rotation (about (1,1,1)/sqrt(3) for A,B and (1,-1,-1)/sqrt(3) for
+# C,D). A within-codebase round trip therefore CANNOT catch a between-frame
+# sign error, and one survived 126 green tests: the template ran the robot
+# backwards for the whole of Phase 5.
+#
+# Measured in Webots, holding theta = 100 deg and reading each foot's body-frame
+# position from the Supervisor (CORGI_FOOT_DEBUG=1):
+#
+#     beta = +10 deg -> foot 39-43 mm BEHIND its own hip, on all four legs
+#     beta = -10 deg -> foot 42-43 mm AHEAD
+#
+# Slope -0.0041..-0.0043 m/deg, matching this package's own forward kinematics
+# in magnitude to within 4% and differing only in sign; intercepts under 2.5 mm,
+# so a sign flip and not an offset. Uniform across legs.
+#
+# If the robot's leg modules are ever remounted, THIS is the number to re-measure.
+LEG_X_SIGN_IN_BODY = -1.0
+
 
 class WorkspaceViolation(Exception):
     """A commanded pose falls outside the Corgi's reachable range."""
@@ -83,11 +106,34 @@ class JointTrajectory:
     def period(self) -> float:
         return float(self.t[-1])
 
+    def touchdown_index(self) -> int:
+        """Sample at which stance begins. Templates usually start there."""
+        st = np.asarray(self.in_stance, dtype=bool)
+        if st[0]:
+            return 0
+        rising = np.flatnonzero(st & ~np.roll(st, 1))
+        return int(rising[0]) if len(rising) else 0
+
     def guard_report(self) -> dict:
         """Every constraint the trajectory has to satisfy, with margins."""
         theta_deg = np.rad2deg(self.theta)
         beta_deg = np.rad2deg(self.beta)
         arc_deg = np.abs(self.contact_alpha)
+
+        # Cross-boundary check: does the foot land AHEAD of the hip in the
+        # BODY frame? Everything else here is a leg-frame check and cannot see
+        # a frame mismatch -- this is the one guard that can.
+        #
+        # Leg-frame fore-aft offset is monotonic in beta (measured: G_x is
+        # +0.0767 m at beta = +18 deg, 0 at 0, -0.0767 at -18), so the body-
+        # frame sign is LEG_X_SIGN_IN_BODY * sign(beta). Forward running needs
+        # the foot ahead at touchdown, hence beta_td * LEG_X_SIGN_IN_BODY > 0.
+        td = self.touchdown_index()
+        beta_td = float(beta_deg[td])
+        # An in-place gait (the hop) commands beta == 0 and is sign-agnostic;
+        # it must not trip this guard.
+        forward = bool(np.abs(beta_deg).max() > 1.0)
+
         return {
             "theta_min_deg": float(theta_deg.min()),
             "theta_max_deg": float(theta_deg.max()),
@@ -99,11 +145,22 @@ class JointTrajectory:
             "beta_ok": bool(np.abs(beta_deg).max() <= RobotParams.BETA_MAX_DEG),
             "arc_max_deg": float(arc_deg.max()),
             "stays_on_foot_arc": bool(arc_deg.max() <= FOOT_ARC_HALF_SPAN_DEG),
+            "is_forward_gait": forward,
+            "touchdown_beta_deg": beta_td,
+            "foot_ahead_at_touchdown": bool(
+                (not forward) or beta_td * LEG_X_SIGN_IN_BODY > 0.0
+            ),
         }
 
     def assert_feasible(self) -> None:
         r = self.guard_report()
         problems = []
+        if not r["foot_ahead_at_touchdown"]:
+            problems.append(
+                f"touchdown beta {r['touchdown_beta_deg']:+.2f} deg puts the foot "
+                f"BEHIND the hip in the body frame -- this template would drive "
+                f"the robot backwards (see LEG_X_SIGN_IN_BODY)"
+            )
         if not r["theta_ok"]:
             problems.append(
                 f"theta {r['theta_min_deg']:.1f}-{r['theta_max_deg']:.1f} deg outside "
