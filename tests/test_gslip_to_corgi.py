@@ -51,9 +51,15 @@ def test_unreachable_length_is_rejected(leg_map) -> None:
 def test_mapping_round_trips_through_forward_kinematics(template, leg_map) -> None:
     """The commanded (theta, beta) must place the foot arc where SLIP-RF wants it.
 
-    This is the check that catches a sign error in beta_c = -phi: it compares
-    the Corgi's actual hip-to-arc-center vector against the model's, in both
-    magnitude and bearing.
+    Magnitude and bearing of the hip-to-arc-center vector, in the LEG frame.
+
+    Scope, and why it matters: this is a within-codebase round trip. It proves
+    map_template agrees with this package's own forward kinematics, and that is
+    all it proves. It is blind to how the module is mounted in the body, so it
+    passed just as happily with the old beta_c = -phi, which drove the robot
+    backwards. The body-frame sign is established by measurement instead -- see
+    the gslip_to_corgi module docstring. Do not treat a green run here as
+    evidence about direction of travel.
     """
     traj = g2c.map_template(template, n=40)
     leg = LegModel()
@@ -62,19 +68,23 @@ def test_mapping_round_trips_through_forward_kinematics(template, leg_map) -> No
     for i in range(40):
         leg.forward(traj.theta[i], traj.beta[i], vector=False)
         actual = complex(leg.O_r)
-        # Model: mass -> foot center is (l - r)*(-sin phi, -cos phi).
+        # Model: mass -> foot center is (l - r)*(-sin phi, -cos phi) in the
+        # SLIP frame. The leg frame's fore-aft axis is anti-aligned with it,
+        # hence +sin here against the model's -sin.
         length = s["leg_length"][i] - CORGI.r
         phi = s["leg_angle"][i]
-        expected = complex(-length * np.sin(phi), -length * np.cos(phi))
+        expected = complex(length * np.sin(phi), -length * np.cos(phi))
         assert abs(actual - expected) < 1e-6, (
             f"sample {i}: got {actual}, expected {expected}"
         )
 
 
-def test_beta_is_negated_leg_angle(template) -> None:
+def test_beta_equals_leg_angle(template) -> None:
+    """beta_c = +phi. The negated form drove the robot backwards; see the
+    gslip_to_corgi module docstring for the measurement that settles it."""
     traj = g2c.map_template(template, n=30)
     s = template.sample(30)
-    assert traj.beta == pytest.approx(-s["leg_angle"], abs=1e-12)
+    assert traj.beta == pytest.approx(s["leg_angle"], abs=1e-12)
 
 
 def test_gamma_is_zero_for_planar_work(template) -> None:

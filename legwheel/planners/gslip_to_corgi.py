@@ -5,13 +5,39 @@ leg axis for every theta, so the mapping is two independent scalar inversions
 rather than a 2-D solve:
 
     leg length   l  ->  theta_c   by inverting the hip-to-arc-center distance
-    leg angle  phi  ->  beta_c    = -phi
+    leg angle  phi  ->  beta_c    = +phi
 
-The sign follows from the geometry: SLIP-RF puts the foot center at
-(l - r)*(sin phi, cos phi) from the mass, so the mass-to-center bearing is
-atan2(-cos phi, -sin phi), while the Corgi's is -90deg + beta_c. Equating
-gives beta_c = -phi, and `test_gslip_to_corgi.py` checks it by round-tripping
-through forward kinematics.
+THE SIGN -- and the mistake that was here until 2026-08-08.
+
+This previously read `beta_c = -phi`, derived by equating bearings between the
+SLIP-RF geometry and the Corgi's leg model. That derivation is self-consistent
+and it is *wrong*, because both sides of it live in the **leg/module frame** and
+neither side knows how the module is mounted in the body.
+
+The proto mounts the modules with a 120 deg rotation -- about (1,1,1)/sqrt(3)
+for A and B, about (1,-1,-1)/sqrt(3) for C and D -- and the net effect is that
+**the leg frame's fore-aft axis is anti-aligned with body forward**. Measured
+directly (hold theta = 100 deg, read each foot's body-frame position from the
+Webots Supervisor, `CORGI_FOOT_DEBUG=1`):
+
+    beta_c = +10 deg  ->  foot 0.039-0.043 m BEHIND its own hip, all four legs
+    beta_c = -10 deg  ->  foot 0.042-0.043 m AHEAD of its own hip
+
+Slope -0.0041 to -0.0043 m/deg, matching this module's own forward kinematics in
+magnitude to within 4% and differing only in sign. Intercepts are 0.4-2.5 mm, so
+it is a sign flip and not a constant offset. It is uniform across all four legs,
+which is why a single global sign fixes it and no per-leg handling is needed.
+
+Consequence of the old sign: the robot ran BACKWARDS. Every forward gait landed
+its feet retracted and dragged them, which also forced 2-3x theta over-excursion
+and pegged the motors at 35 N.m -- much of what was attributed to the standing
+start. The in-place hop was unaffected because it commands beta_c == 0, which is
+exactly why it was the one gait that always worked.
+
+`test_gslip_to_corgi.py` round-trips this through forward kinematics, but note
+what that can and cannot prove: it is a LEG-FRAME check, so it verifies internal
+consistency only. A within-codebase round-trip structurally cannot catch a
+between-frame sign error, which is how the old sign survived 126 green tests.
 
 CONTACT RADIUS -- unresolved between the two codebases:
   * this package's `LegModel.rim_point` models the tyre envelope as three arcs
@@ -149,7 +175,10 @@ def map_template(
     for i, length in enumerate(s["leg_length"]):
         theta[i] = leg_map.theta_for(float(length) - r)
 
-    beta = -s["leg_angle"]
+    # +phi, not -phi: the leg frame's fore-aft axis is anti-aligned with body
+    # forward. See the module docstring -- the old -phi drove the robot
+    # backwards. Measured, not derived.
+    beta = s["leg_angle"]
 
     # Rolling angle on the foot arc. The contact point is directly below the
     # arc center, so its offset from the leg axis is exactly the leg's swing.
