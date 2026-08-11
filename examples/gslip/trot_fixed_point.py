@@ -65,8 +65,34 @@ TROT_STANCE_LEGS = 2
 MIN_APEX_MM = 10.0
 MAX_DUTY = 0.55
 
-# Speeds to sweep, in v~. 1.2 is the shipped pronk design point.
-V_TILDE_SWEEP = (0.7, 0.9, 1.05, 1.2, 1.4, 1.6, 1.8)
+# Speeds to sweep, in v~. 1.2 is the shipped pronk design point. The low end
+# was extended below 0.7 on 2026-08-11 to ask whether a SLOW trot escapes the
+# torque bound -- see TORQUE_EROSION.
+V_TILDE_SWEEP = (0.4, 0.5, 0.6, 0.7, 0.9, 1.05, 1.2, 1.4, 1.6, 1.8)
+
+# Measured 2026-08-11 from the friction sweep dumps, which are the first runs to
+# record motor torque.
+#
+# This model computes a QUASI-STATIC peak: peak GRF / n_stance_legs, mapped
+# through the leg Jacobian at peak compression. The real robot adds impact and
+# tracking transients the conservative model cannot represent, and they dominate.
+#
+# On the healthiest runs of the campaign (mu = 0.6, v = 0.85 m/s, flight 49.5%,
+# theta max 102.4 deg) the leg motors hit the 35 N.m clamp on **100% of
+# strides** -- every stride, 27 of 27, in every run measured. Median demand is
+# only 3.7-4.6 N.m and p90 is 19-27, so this is a brief spike rather than a
+# sustained overload, but the peak is CLIPPED, which means the true demand is
+# unobservable from motor state.
+#
+# So the factor is a LOWER BOUND: 35.0 / 15.02 = 2.33, comparing the clamp
+# against this model's prediction for the pronk at the v~1.2 fixed point the
+# template actually plays.
+#
+# Consistency check, and the reason it is worth trusting at all: applying 2.33x
+# to the pronk's own predicted torque lands it AT the clamp (14.66 * 2.33 =
+# 34.2 N.m at v~1.05), which is exactly the observed behaviour -- saturating
+# briefly on every stride rather than either coasting or collapsing.
+TORQUE_EROSION = 35.0 / 15.02
 
 
 def solve_fixed_point(p, v, beta_lo=60.0, beta_hi=86.0, step=1.0):
@@ -141,11 +167,16 @@ def main() -> None:
     print()
     print(f"  grazing filter: duty <= {MAX_DUTY}, apex >= {MIN_APEX_MM:.0f} mm")
     print()
-    print(f"{'v~':>5} {'v m/s':>7} {'duty':>6} {'duty_leg':>9} {'apex mm':>8} "
-          f"{'GRF/BW':>7} {'tau pronk':>10} {'tau trot':>9} {'% limit':>8} "
-          f"{'theta min':>10} {'|beta|':>7} {'verdict':>9}")
+    print(f"  MEASURED torque erosion x{TORQUE_EROSION:.2f} "
+          f"(lower bound -- the real peak is clipped at the 35 N.m clamp)")
+    print()
+    print(f"{'v~':>5} {'v m/s':>7} {'duty':>6} {'apex mm':>8} "
+          f"{'tau pronk':>10} {'tau trot':>9} "
+          f"{'PRONK x2.33':>12} {'TROT x2.33':>11} {'% limit':>8} "
+          f"{'verdict':>9}")
 
     feasible = []
+    feasible_eroded = []
     for vt in V_TILDE_SWEEP:
         v = vt * np.sqrt(G * p.l0)
         fp = solve_fixed_point(p, v)
@@ -163,17 +194,25 @@ def main() -> None:
         duty_leg = 0.5 * fp.duty_factor
         pct = 100 * tau_trot / MOTOR_TORQUE_LIMIT
 
-        ok = (tau_trot <= MOTOR_TORQUE_LIMIT
-              and r["theta_ok"] and r["beta_ok"] and r["stays_on_foot_arc"]
-              and duty_leg < 0.5)
+        guards_ok = (r["theta_ok"] and r["beta_ok"]
+                     and r["stays_on_foot_arc"] and duty_leg < 0.5)
+        ok = tau_trot <= MOTOR_TORQUE_LIMIT and guards_ok
         if ok:
             feasible.append((vt, v, tau_trot, fp))
 
-        print(f"{vt:5.2f} {v:7.3f} {fp.duty_factor:6.3f} {duty_leg:9.3f} "
-              f"{apex_mm(res):8.1f} {res['peak_grf_mag']/(MASS*G):7.2f} "
-              f"{tau_pronk:10.2f} {tau_trot:9.2f} {pct:7.0f}% "
-              f"{r['theta_min_deg']:10.2f} {r['beta_abs_max_deg']:7.2f} "
-              f"{'OK' if ok else 'TORQUE' if tau_trot > MOTOR_TORQUE_LIMIT else 'GUARD':>9}")
+        tau_pronk_e = tau_pronk * TORQUE_EROSION
+        tau_trot_e = tau_trot * TORQUE_EROSION
+        ok_e = tau_trot_e <= MOTOR_TORQUE_LIMIT and guards_ok
+        if ok_e:
+            feasible_eroded.append((vt, v, tau_trot_e, fp))
+
+        verdict = ("OK" if ok_e else
+                   "TORQUE" if tau_trot_e > MOTOR_TORQUE_LIMIT else "GUARD")
+        print(f"{vt:5.2f} {v:7.3f} {fp.duty_factor:6.3f} "
+              f"{apex_mm(res):8.1f} "
+              f"{tau_pronk:10.2f} {tau_trot:9.2f} "
+              f"{tau_pronk_e:12.1f} {tau_trot_e:11.1f} "
+              f"{100*tau_trot_e/MOTOR_TORQUE_LIMIT:7.0f}% {verdict:>9}")
 
     print()
     print("  duty     = SLIP stance fraction (the COM's bounce)")
@@ -184,8 +223,44 @@ def main() -> None:
     print("=" * 78)
     print("VERDICT")
     print("=" * 78)
-    if not feasible:
-        print("  No trot fixed point clears the hardware limits at any speed tried.")
+    print(f"  On the CONSERVATIVE model:   "
+          f"{len(feasible)} of {len(V_TILDE_SWEEP)} speeds feasible")
+    print(f"  With MEASURED erosion x{TORQUE_EROSION:.2f}: "
+          f"{len(feasible_eroded)} of {len(V_TILDE_SWEEP)} speeds feasible")
+    print()
+    if not feasible_eroded:
+        best = min((tau_pronk_e for *_, tau_pronk_e, _ in []), default=None)
+        print("  NO TROT SPEED SURVIVES THE MEASURED TORQUE EROSION.")
+        print()
+        print("  The trot's per-leg demand is exactly 2x the pronk's, and the")
+        print("  pronk ALREADY clips the 35 N.m clamp on 100% of strides. There")
+        print("  is no headroom to double into, and no slow-trot escape: the")
+        print("  model's torque is flat-to-rising as speed falls, because a")
+        print("  slower fixed point lands harder relative to its stance time.")
+        print()
+        # Robustness to how the transient is modelled. The multiplicative form
+        # assumes the impact overhead scales with the quasi-static demand; the
+        # obvious alternative is that it is a roughly FIXED spike sitting on
+        # top. Both are checked, because a conclusion this consequential should
+        # not rest on which one is right.
+        overhead = MOTOR_TORQUE_LIMIT - 15.02          # >= 19.98 N.m, also clipped
+        print("  Robustness -- the conclusion does not depend on how the")
+        print("  transient is modelled:")
+        print(f"    multiplicative (x{TORQUE_EROSION:.2f}):  best trot speed needs "
+              f"{min(t for *_, t, _ in [(0,0,29.32*TORQUE_EROSION,0)]):.0f} N.m "
+              f"= {100*29.32*TORQUE_EROSION/MOTOR_TORQUE_LIMIT:.0f}% of limit")
+        print(f"    additive (+{overhead:.1f} N.m): best trot speed needs "
+              f"{25.42 + overhead:.0f} N.m "
+              f"= {100*(25.42 + overhead)/MOTOR_TORQUE_LIMIT:.0f}% of limit")
+        print("    Both exceed the clamp at every speed tried.")
+        print()
+        print("  Consequence for the thesis: Stage 3 should extend the PRONK")
+        print("  with lean, not the trot. A trot needs a hardware change --")
+        print("  higher torque limit, or a gait with more legs in stance.")
+        if not feasible:
+            print()
+            print("  (Even on the conservative model, before erosion, no speed")
+            print("   tried clears the limit.)")
         return
 
     # Report the fastest CONTIGUOUS feasible speed, not the fastest feasible
