@@ -12,6 +12,8 @@ Run:
     uv run python examples/gslip/export_pronk_csv.py
 """
 
+import argparse
+
 import numpy as np
 
 from legwheel.config import OUTPUT_CSV_DIR, RobotParams
@@ -37,7 +39,31 @@ N_LEGS = 4
 NOMINAL_THETA_DEG = 100.0
 
 
+def parse_args():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--v-tilde", type=float, default=V_TILDE,
+                    help="dimensionless target speed (default 1.2, the shipped "
+                         "design point)")
+    ap.add_argument("--beta-range", type=float, nargs=2, default=(70.0, 80.0),
+                    metavar=("LO", "HI"),
+                    help="landing-angle search window in degrees. Default "
+                         "70-80 reproduces the shipped template exactly. IT "
+                         "DOES NOT COVER LOW SPEEDS: the fixed point at "
+                         "v~0.42-0.50 sits at beta* = 83-84 deg, outside this "
+                         "window, so exporting a slow template with the default "
+                         "silently finds either nothing or a badly conditioned "
+                         "point on the boundary.")
+    ap.add_argument("--suffix", default="",
+                    help="appended to the output filenames, so a new speed does "
+                         "not clobber the shipped template")
+    return ap.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    v_tilde = args.v_tilde
+    beta_lo, beta_hi = args.beta_range
+
     # Derive the stance geometry from the real linkage at the nominal pose,
     # rather than carrying hardcoded lengths that can drift out of step.
     leg_map = g2c.LegLengthMap()
@@ -48,7 +74,7 @@ def main() -> None:
         m=MASS, l0=hip_to_arc + foot_radius,
         k=K_REL * MASS * G / hip_to_arc, r=foot_radius,
     )
-    v = V_TILDE * np.sqrt(G * p.l0)
+    v = v_tilde * np.sqrt(G * p.l0)
 
     print()
     print("=" * 72)
@@ -61,7 +87,7 @@ def main() -> None:
 
     # Best-conditioned fixed point near the stability-sweep optimum.
     best = None
-    for beta_deg in np.arange(70.0, 80.01, 0.25):
+    for beta_deg in np.arange(beta_lo, beta_hi + 0.01, 0.25):
         for fp in find_fixed_points(
             p, v, np.deg2rad(beta_deg),
             alpha_range=(np.deg2rad(1.0), np.deg2rad(45.0)),
@@ -70,11 +96,25 @@ def main() -> None:
             if best is None or abs(fp.slope) < abs(best.slope):
                 best = fp
     if best is None:
-        raise SystemExit("no fixed point found at the target speed")
+        raise SystemExit(
+            f"no fixed point found at v~ = {v_tilde} in beta "
+            f"{beta_lo}-{beta_hi} deg. The window is speed-dependent: beta* "
+            f"rises as speed falls (71.75 deg at v~1.20, 83-84 deg at "
+            f"v~0.42-0.50). Try --beta-range 78 88.")
+
+    # A best fixed point sitting ON the search boundary means the true optimum
+    # is outside it, and the exported template is not the best-conditioned one
+    # at this speed. Silent when it happens, so it is checked.
+    edge = min(abs(np.rad2deg(best.beta) - beta_lo),
+               abs(np.rad2deg(best.beta) - beta_hi))
+    if edge < 0.5:
+        print(f"\n  WARNING: beta* = {np.rad2deg(best.beta):.2f} deg is on the "
+              f"edge of the {beta_lo}-{beta_hi} search window.\n"
+              f"  The real optimum is probably outside it. Widen --beta-range.")
 
     print()
     print("=" * 72)
-    print(f"FIXED POINT   v = {v:.3f} m/s (v~ = {V_TILDE}), k_rel = {K_REL}")
+    print(f"FIXED POINT   v = {v:.3f} m/s (v~ = {v_tilde}), k_rel = {K_REL}")
     print("=" * 72)
     print(f"  landing angle beta   = {np.rad2deg(best.beta):.2f} deg")
     print(f"  touchdown angle alpha= {np.rad2deg(best.alpha):.2f} deg")
@@ -122,10 +162,10 @@ def main() -> None:
     print(f"  peak motor torque {tau:.2f} N.m "
           f"({100*tau/MOTOR_TORQUE_LIMIT:.0f}% of {MOTOR_TORQUE_LIMIT} N.m)")
 
-    out = OUTPUT_CSV_DIR / "gslip_pronk.csv"
+    out = OUTPUT_CSV_DIR / f"gslip_pronk{args.suffix}.csv"
     cycles = 5
     g2c.to_csv(traj, out, cycles=cycles)
-    template_out = OUTPUT_CSV_DIR / "gslip_pronk_template.csv"
+    template_out = OUTPUT_CSV_DIR / f"gslip_pronk_template{args.suffix}.csv"
     g2c.to_template_csv(traj, template_out)
     dt_ms = 1000 * traj.period / (len(traj.t) - 1)
     print()
