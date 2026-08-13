@@ -39,22 +39,75 @@ def test_toroidal_contact_selector_returns_sampled_lowest_width_point():
     assert abs(w_contact) < RobotParams.WHEEL_THICKNESS / 2.0 - 1e-3
 
 
+def _planner_v_y_limit(height: float, period: float, gait: str = "Trot") -> float:
+    """The planner's own one-sided lateral limit, from GaitGenerator3D.
+
+    Mirrors gait_generator_3d.py: D_y_max = H_hip * sin(GAMMA_GUARD), because the
+    contact rolls from the touchdown extreme down to a floor near zero rather
+    than sweeping symmetrically about upright.
+
+    Deliberately recomputed here rather than imported: the point of the tests
+    below is that the CLI and the planner agree, and a shared helper would make
+    them agree by construction whatever either one did.
+    """
+    from legwheel.planners.gait_generator_3d import GAIT_LIBRARY
+
+    stance_duty = GAIT_LIBRARY[gait]["stance_duty"]
+    H_hip = height + RobotParams.ABAD_AXIS_OFFSET
+    d_y_max = H_hip * np.sin(np.deg2rad(RobotParams.GAMMA_GUARD_DEG))
+    return d_y_max / (period * stance_duty)
+
+
+def test_lateral_velocity_guard_is_not_looser_than_the_geometric_limit():
+    """The velocity guard may not permit more lateral tilt than the leg has.
+
+    GAMMA_GUARD_DEG is meant to be a *conservative* guard on GAMMA_MAX_DEG, the
+    ABAD sweep the hardware actually has, so exceeding it would let the planner
+    command poses the leg cannot reach.
+
+    Note the two are currently EQUAL (both 70.0), so the guard is not
+    conservative -- it binds exactly when the geometry does, never before. This
+    asserts only the invariant that must hold regardless; whether the guard
+    should sit below the geometric limit, and what that limit really is, is a
+    hardware question. See the note on GAMMA_MAX_DEG in the config.
+    """
+    assert RobotParams.GAMMA_GUARD_DEG <= RobotParams.GAMMA_MAX_DEG
+
+
 def test_cli_lateral_guard_matches_one_sided_planner_limit():
-    """CLI check must warn above the one-sided lateral guard used by GaitGenerator3D."""
+    """CLI check must warn above the one-sided lateral guard used by GaitGenerator3D.
+
+    The command is derived from GAMMA_GUARD_DEG rather than hard-coded. The
+    previous version asked for vy = 0.45 and asserted "downscaled to 66.",
+    numbers that were correct only while GAMMA_GUARD_DEG was 30.27 -- sized, per
+    a since-deleted comment, so that vy = 0.6 at h = 0.30 / T = 1.0 sat exactly
+    on the boundary. When the constant moved to 70.0 the guard stopped binding at
+    0.45 and both checker tests failed, which looked like a message mismatch and
+    was really a changed limit.
+    """
+    height, period, overshoot = 0.30, 1.0, 1.5
+    v_y_limit = _planner_v_y_limit(height, period)
+    vy = v_y_limit * overshoot
+
     args = argparse.Namespace(
-        gait="Trot", height=0.30, vx=0.0, vy=0.45, wz=0.0, period=1.0, step=0.04
+        gait="Trot", height=height, vx=0.0, vy=vy, wz=0.0, period=period, step=0.04
     )
     buf = io.StringIO()
     with redirect_stdout(buf):
         cmd_check(args)
     output = buf.getvalue()
 
-    assert "Velocity Guard (Y)" in output
-    assert "Twist downscaled to 66." in output
+    assert "Velocity Guard (Y)" in output, output
+    # Commanding 1.5x the limit must scale back to 1/1.5 = 66.7%, and the CLI's
+    # own limit must therefore equal the planner's.
+    assert f"downscaled to {100 / overshoot:.1f}%" in output, output
 
 
 def test_legacy_checker_lateral_guard_matches_one_sided_planner_limit():
     """Legacy example checker should report the same one-sided lateral guard warning."""
+    height, period, overshoot = 0.30, 1.0, 1.5
+    vy = _planner_v_y_limit(height, period) * overshoot
+
     result = subprocess.run(
         [
             sys.executable,
@@ -62,13 +115,13 @@ def test_legacy_checker_lateral_guard_matches_one_sided_planner_limit():
             "--gait",
             "Trot",
             "--height",
-            "0.30",
+            f"{height}",
             "--vx",
             "0.0",
             "--vy",
-            "0.45",
+            f"{vy:.6f}",
             "--period",
-            "1.0",
+            f"{period}",
             "--step",
             "0.04",
         ],
@@ -79,5 +132,5 @@ def test_legacy_checker_lateral_guard_matches_one_sided_planner_limit():
     )
 
     assert result.returncode == 0, result.stderr
-    assert "Velocity Guard (Y)" in result.stdout
-    assert "Twist downscaled to 66." in result.stdout
+    assert "Velocity Guard (Y)" in result.stdout, result.stdout
+    assert f"downscaled to {100 / overshoot:.1f}%" in result.stdout, result.stdout
