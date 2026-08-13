@@ -250,6 +250,24 @@ def stride(p: SlipRfParams, v: float, alpha: float, beta: float) -> dict:
     vx, vz = jacobian(p, length, phi) @ np.array([dl, dphi])
     x_lo, z_lo = position(p, length, phi)
 
+    # position() is measured from the TOUCHDOWN CONTACT POINT, not from the
+    # mass's own touchdown position, so the mass already sits at x_td != 0 when
+    # stance begins. The stance displacement is therefore x_lo - x_td, and
+    # reporting x_lo alone halves it at a symmetric fixed point (phi_td =
+    # -phi_lo makes x_td = -x_lo exactly).
+    #
+    # Measured before the fix at v~1.20: phi swept -0.3185 to +0.3185 rad,
+    # x_td = -0.0926 m, x_lo = +0.0926, true displacement 0.1851 -- against a
+    # reported stance_length of 0.0926, short by a factor of 2.000.
+    #
+    # This propagated into stride_length and therefore into every "design
+    # speed" derived from stride_length / period. It does NOT affect the fixed
+    # point itself: find_fixed_points iterates on (v, alpha), which come from
+    # the Jacobian, not from x.
+    l_td, phi_td = float(sol.y[0, 0]), float(sol.y[1, 0])
+    x_td, _ = position(p, l_td, phi_td)
+    stance_dx = x_lo - x_td
+
     z_td = p.touchdown_height(beta)
     disc = vz**2 + 2 * p.g * (z_lo - z_td)
     if disc < 0:
@@ -274,8 +292,13 @@ def stride(p: SlipRfParams, v: float, alpha: float, beta: float) -> dict:
         "stance_time": t_lo,
         "flight_time": float(t_flight),
         "period": t_lo + float(t_flight),
-        "stride_length": float(x_lo + vx * t_flight),
-        "stance_length": float(x_lo),
+        "stride_length": float(stance_dx + vx * t_flight),
+        "stance_length": float(stance_dx),
+        # Rolling distance along the foot arc, r*d_phi. Kept separate because
+        # the arc-budget guard wants THIS, not the body displacement, and the
+        # two happened to coincide numerically while the bug was present
+        # (r = 0.145 is within 2% of l - r = 0.148 at the nominal stance).
+        "arc_roll": float(p.r * (phi - phi_td)),
         "peak_grf_z": float(max(fz)),
         "peak_grf_mag": float(max(np.hypot(*np.array(grf).T))),
         "peak_compression": float(max(compression)),
