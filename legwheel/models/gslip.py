@@ -393,6 +393,18 @@ def stride(p: GSlipParams, v: float, alpha: float, beta: float) -> dict:
 
     t_flight, v_next, alpha_next = flight_to_touchdown(p, z_lo, vx, vz, beta)
 
+    # stance_position has its horizontal origin at the CONTACT POINT, so the
+    # mass starts a distance l0*cos(beta) BEHIND it -- x is not zero at
+    # touchdown. The stance displacement is therefore x_lo - x_td, and using
+    # x_lo alone understates the stride by exactly that offset.
+    #
+    # Same bug as slip_rf.stride carried (fixed 2026-08-12), where a symmetric
+    # fixed point made it a clean factor of two. Here the offset is
+    # l0*cos(beta) -- 0.0256 m of a 0.0749 m leg for the Table 1 SLIP-RF set at
+    # beta = 70 deg, so it is not small.
+    x_td, _ = stance_position(p, p.theta0(beta), p.phi0, beta)
+    stance_dx = x_lo - x_td
+
     return {
         "v": v_next,
         "alpha": alpha_next,
@@ -403,7 +415,8 @@ def stride(p: GSlipParams, v: float, alpha: float, beta: float) -> dict:
         "z_liftoff": z_lo,
         "vx_liftoff": float(vx),
         "vz_liftoff": float(vz),
-        "stride_length": x_lo + vx * t_flight,
+        "stance_length": float(stance_dx),
+        "stride_length": float(stance_dx + vx * t_flight),
         "solution": sol,
     }
 
