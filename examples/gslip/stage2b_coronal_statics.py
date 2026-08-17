@@ -45,6 +45,7 @@ from scipy.optimize import fsolve
 W_HIP = 0.120           # hip lateral offset (m)
 A_OFF = 0.091675        # wheel plane outboard along the hip axis (m)
 R_TREAD, W_FLAT, R_CORNER = 0.130, 0.005, 0.015
+M_BODY, G = 30.0, 9.81  # for the optional compliance solve only
 
 MEASURED = {  # lambda_cmd_deg: (achieved_deg, roll_deg, drop_mm)
     10.0: (8.5, 4.58, 2.00),
@@ -71,7 +72,8 @@ def wheel_centres_body(lean: float):
     return left, right
 
 
-def solve_pose_asym(lean_left: float, lean_right: float):
+def solve_pose_asym(lean_left: float, lean_right: float,
+                    servo_k: float | None = None):
     """Body (z, rho) for PER-SIDE world-sense leans. 2x2, exact.
 
     This is the solve the symmetric version cannot do, and the reason the
@@ -80,21 +82,58 @@ def solve_pose_asym(lean_left: float, lean_right: float):
     lambda = 30, kp 90), so feeding one number to both sides mis-states the
     geometry. Leans are world-sense: for the lr pattern, left = +mean(gamma_A,
     gamma_D), right = -mean(gamma_B, gamma_C).
+
+    servo_k (N/m, per side): OPTIONAL series compliance for the ride-drop
+    question (section 47: roll validated at 0.99-1.01, drop at 0.02-0.77 --
+    the kp-90 position loops sag under load where the rigid solve cannot).
+    With it the solve grows to four unknowns (z, rho, F_left, F_right): the
+    two contact constraints gain a sag term F/servo_k, and vertical force and
+    roll-moment balance close the system. servo_k = None is the EXACT rigid
+    path, bit-for-bit -- the validated roll result must not move.
+
+    Physics note before believing any fit: a symmetric linear compliance
+    cannot produce a symmetric body drop from an ANTISYMMETRIC load shift (one
+    side sags, the other rises; the centre stays put to first order). If no
+    single servo_k closes the drop ratios while keeping roll at 1.0, that is
+    the model told us the sag mechanism is elsewhere -- section 39's own 'not
+    identified here, do not guess it' applies.
     """
     c_l, s_l = np.cos(lean_left), np.sin(lean_left)
     c_r, s_r = np.cos(lean_right), np.sin(lean_right)
     pl = (+W_HIP + A_OFF * c_l, +A_OFF * s_l)
     pr = (-W_HIP - A_OFF * c_r, -A_OFF * s_r)
 
-    def residual(x):
-        z, rho = x
+    if servo_k is None:
+        def residual(x):
+            z, rho = x
+            cr, sr = np.cos(rho), np.sin(rho)
+            return [
+                z + pl[0] * sr + pl[1] * cr - hub_clearance(lean_left + rho),
+                z + pr[0] * sr + pr[1] * cr - hub_clearance(lean_right + rho),
+            ]
+
+        z, rho = fsolve(residual, [hub_clearance(0.0), 0.0], full_output=False)
+        return float(z), float(rho)
+
+    def residual4(x):
+        z, rho, f_l, f_r = x
         cr, sr = np.cos(rho), np.sin(rho)
+        # World lateral positions of the two contacts (moment arms).
+        y_l = pl[0] * cr - pl[1] * sr
+        y_r = pr[0] * cr - pr[1] * sr
         return [
-            z + pl[0] * sr + pl[1] * cr - hub_clearance(lean_left + rho),
-            z + pr[0] * sr + pr[1] * cr - hub_clearance(lean_right + rho),
+            z + pl[0] * sr + pl[1] * cr
+            - (hub_clearance(lean_left + rho) - f_l / servo_k),
+            z + pr[0] * sr + pr[1] * cr
+            - (hub_clearance(lean_right + rho) - f_r / servo_k),
+            f_l + f_r - M_BODY * G,
+            f_l * y_l + f_r * y_r,
         ]
 
-    z, rho = fsolve(residual, [hub_clearance(0.0), 0.0], full_output=False)
+    z, rho, _f_l, _f_r = fsolve(
+        residual4,
+        [hub_clearance(0.0), 0.0, 0.5 * M_BODY * G, 0.5 * M_BODY * G],
+        full_output=False)
     return float(z), float(rho)
 
 
