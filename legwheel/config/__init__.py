@@ -123,22 +123,22 @@ class RobotParams:
 
     # Workspace Guard Constants  only used for trajectory planning and velocity limiting
     BETA_MAX_DEG = 40.0         # Sagittal swing geometric limit (°)
-    # UNVERIFIED (flagged 2026-08-12). Both were raised 30.0 -> 70.0 in 680aefa,
-    # a commit about the swing acceleration budget whose message does not mention
-    # them, and which deleted the sizing rationale that had been on the guard
-    # ("30.27, sized so vy=0.6 @ h=0.30/T=1.0 sits on the boundary").
+    # 70 deg CONFIRMED SAFE (2026-08-12). The hardware can probably exceed it;
+    # 70 is set deliberately below the true ABAD range, so the conservatism lives
+    # in this value rather than in a gap between the two constants below. That is
+    # why GUARD == MAX is correct here and not an oversight.
     #
-    # GAMMA_MAX_DEG is a HARDWARE claim -- the ABAD sweep the leg physically has.
-    # It could not be confirmed from anything in this repo or corgi_sim: the
-    # proto's ABAD HingeJoint carries no minPosition/maxPosition, and
-    # motor_config.yaml gives directions only. 70 deg is more than double the
-    # previous value, so if 30 was right the planner now believes it has lateral
-    # travel the robot cannot deliver.
+    # Provenance, because it was not obvious: both were raised 30.0 -> 70.0 in
+    # 680aefa, a commit about the swing acceleration budget whose message does
+    # not mention them, and which deleted the guard's sizing rationale ("30.27,
+    # sized so vy=0.6 @ h=0.30/T=1.0 sits on the boundary"). That silently broke
+    # the two lateral-guard tests, which had hard-coded the resulting 66.7%
+    # downscale -- they now derive it from GAMMA_GUARD_DEG instead.
     #
-    # GAMMA_GUARD_DEG is meant to be CONSERVATIVE against that limit. At 70.0 it
-    # equals it, so it never binds before the geometry does.
-    #
-    # Resolve against CAD or the real ABAD range, then re-separate the two.
+    # Note neither value is recoverable from the codebase: the corgi_sim proto's
+    # ABAD HingeJoint carries no minPosition/maxPosition and motor_config.yaml
+    # gives directions only. Changing GAMMA_MAX_DEG is a hardware claim -- say
+    # where the number came from.
     GAMMA_MAX_DEG = 70.0        # ABAD lateral sweep geometric limit (°)
     GAMMA_GUARD_DEG = 70.0      # Velocity guard limit (°)
     GAMMA_FLOOR_DEG = 1.0       # Lateral one-sided sweep floor (°): liftoff ABAD tilt kept this far

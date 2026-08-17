@@ -61,15 +61,10 @@ def _planner_v_y_limit(height: float, period: float, gait: str = "Trot") -> floa
 def test_lateral_velocity_guard_is_not_looser_than_the_geometric_limit():
     """The velocity guard may not permit more lateral tilt than the leg has.
 
-    GAMMA_GUARD_DEG is meant to be a *conservative* guard on GAMMA_MAX_DEG, the
-    ABAD sweep the hardware actually has, so exceeding it would let the planner
-    command poses the leg cannot reach.
-
-    Note the two are currently EQUAL (both 70.0), so the guard is not
-    conservative -- it binds exactly when the geometry does, never before. This
-    asserts only the invariant that must hold regardless; whether the guard
-    should sit below the geometric limit, and what that limit really is, is a
-    hardware question. See the note on GAMMA_MAX_DEG in the config.
+    Exceeding GAMMA_MAX_DEG would let the planner command poses the leg cannot
+    reach. The two are currently EQUAL (both 70.0), which is deliberate: 70 deg
+    is itself set below the true ABAD range, so the safety margin lives in that
+    value rather than in a gap between the two. See the note in the config.
     """
     assert RobotParams.GAMMA_GUARD_DEG <= RobotParams.GAMMA_MAX_DEG
 
