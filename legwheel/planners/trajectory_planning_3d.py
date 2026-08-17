@@ -208,7 +208,19 @@ class TrajectoryPlanner3D:
         nom = self.kin.forward_kinematics(self.theta0, -self.beta0, 0.0, alpha=alpha0, w=0.0)
         D_lat = np.abs(self.velocity[1]) * self.T * self.stance_duty
         lead_y = np.sign(self.velocity[1]) * D_lat
-        target = np.array([nom[0] + self.x_bias, nom[1] + lead_y + self.y_bias, nom[2]])
+        # Z is the COMMANDED stand height, not nom[2]. theta0 carries Step 2's
+        # lateral-tilt correction -- with gamma0 != 0 the wheel contacts at its
+        # edge, so theta0 is the extension that reaches the ground WHILE TILTED.
+        # Evaluating it here at gamma = 0, as nom does, therefore lands 5.05 mm
+        # low at vy = 0.05 (gamma0 = 3.50 deg) and exactly right at vy = 0. Since
+        # the whole point of this method is a level foot at the commanded height,
+        # ask for that directly and let the IK choose the extension.
+        #
+        # nom still supplies X and Y: those are the nominal in-plane stance
+        # position, which the tilt correction does not touch.
+        target = np.array([nom[0] + self.x_bias,
+                           nom[1] + lead_y + self.y_bias,
+                           -self.stand_height])
         return self.kin.inverse_kinematics(
             target,
             guess_q=np.array([self.theta0, -self.beta0, 0.0]),
