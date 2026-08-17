@@ -107,6 +107,40 @@ class RobotParams:
     COM_BIAS_X = 0.0                # x bias of center of mass
     COM_BIAS_Y = 0.0                # y bias of center of mass
     COM_BIAS_Z = ABAD_AXIS_OFFSET   # z bias of center of mass
+
+    # ------------------------------------------------------------------
+    # Whole-body inertia about the CoM, body axes (+x fwd, +y left, +z up).
+    #
+    # PROVENANCE (recorded deliberately -- this project has been bitten twice by
+    # physical constants with no source: the 35 N.m clamp and the absent joint
+    # limits). Derived 2026-08-17 by examples/gslip/body_inertia.py, which sums
+    # the 65 `physics Physics` blocks of corgi_sim/protos/CorgiRobotABAD.proto
+    # with parallel-axis transport. The workspace URDF carries no <inertial>
+    # blocks at all, so the proto is the only source.
+    #
+    # Corroboration: the same pass returns 31.04 kg against a 30.0 kg scale
+    # reading and a 30.84 kg previous sim count, a CoM 0.34 mm off the wheelbase
+    # centre, and lateral balance exact to 1e-9 m -- all matching the measured
+    # mass distribution. Ixx < Iyy < Izz and Izz ~= Ixx + Iyy (1.873 vs 1.970),
+    # as a flat-ish body requires.
+    #
+    # CAVEAT 1: the four *_LEG solids in the proto carry an inertiaMatrix that is
+    # physically impossible (0.05 kg with a 4.89 m radius of gyration). Their own
+    # inertia is DISCARDED here; their mass and position are kept. Uncorrected,
+    # the diagonal reads [1.7218, 6.1497, 5.7435]. See the implementation log.
+    #
+    # CAVEAT 2: composite inertia is configuration-dependent and the proto encodes
+    # the joints at their zero pose, not the theta ~ 100 deg nominal stance. The
+    # dominant roll term is m*dy^2 for the four 4.7 kg modules, whose lateral
+    # offsets do not move with theta, so I_ROLL is robust; treat the third
+    # significant figure as soft.
+    BODY_MASS_SIM = 31.0371         # kg, summed from the proto
+    I_ROLL = 0.611906               # kg m^2 about +x (fore-aft) -- Stage 2b / BIP
+    I_PITCH = 1.358494              # kg m^2 about +y
+    I_YAW = 1.872999                # kg m^2 about +z
+    # Chang 2022's dimensionless body inertia, on the CONTACT half-track
+    # (0.4234/2), not the 0.240 m hip spacing.
+    J_TILDE_ROLL = 0.4399
     
     # Linkage parameters (Standard ratios)
     ARC_HF_DEG = 130.0

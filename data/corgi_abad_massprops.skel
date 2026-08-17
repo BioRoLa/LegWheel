@@ -1,0 +1,1619 @@
+OPEN {
+OPEN Robot{
+T translation IS translation
+R rotation IS rotation
+OPEN Shape {
+OPEN appearance DEF base_link_material PBRAppearance {
+CLOSE
+OPEN geometry DEF base_link IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.255 0.12 0.057166
+R rotation 0.5773496025226483 0.5773516025212714 0.5773496025226483 2.0944
+OPEN Shape {
+OPEN appearance DEF A_Module_material PBRAppearance {
+CLOSE
+OPEN geometry DEF A_Module IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN Solid {
+T translation 0.091675 0 0
+R rotation 0.5773512691895147 0.5773492691885823 0.5773502691890485 -2.094395307179586
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF A_WHEEL_R Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF R_Motor_material PBRAppearance {
+CLOSE
+OPEN geometry DEF R_Motor IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.02339 0.076504 0
+R rotation 0 0 -1 1.8675020000000002
+OPEN Shape {
+OPEN appearance DEF A_R_material PBRAppearance {
+CLOSE
+OPEN geometry DEF A_R IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 0.010399 0
+R rotation 0 0 1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_R_material PBRAppearance {
+CLOSE
+OPEN geometry DEF D_R IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 -1 0
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_R_Ref_material PBRAppearance {
+CLOSE
+OPEN geometry DEF Empty_Link_Joint_C_R_Ref IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_001 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 -0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 5.790264e-24 1.245717e-25 2.364163e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_002 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.018154
+COM
+VAL 0.047302 0 -0.005387
+INE
+VAL 2.922646e-07 1.276394e-05 1.287857e-05
+VAL -7.461208e-12 1.608558e-22 -2.610859e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_003 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.034802
+COM
+VAL 0.061432 0.00918 0.005452
+INE
+VAL 2.19295e-06 6.385938e-05 6.566899e-05
+VAL -8.225963e-06 -1.083e-20 -1.264653e-21
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.029237 0.09563 0
+R rotation 0 0 -1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_R_material PBRAppearance {
+CLOSE
+OPEN geometry DEF H_R IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint DEF A_FOOT Solid {
+T translation 0.092055 -0.13907 0
+R rotation 0 0 1 2.74021
+OPEN Shape {
+OPEN appearance DEF F_R_material PBRAppearance {
+CLOSE
+OPEN geometry DEF F_R IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.035735 0.076598 0
+R rotation 0 0 -1 2.443504
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_G_Ref_material PBRAppearance {
+CLOSE
+OPEN geometry DEF Empty_Link_Joint_G_Ref IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_004 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.188686
+COM
+VAL -2.9e-05 -0.006931 0
+INE
+VAL 5.08501e-05 0.000455789 0.0004750436
+VAL 9.866021e-08 4.389111e-11 -1.480231e-19
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_005 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.04104
+COM
+VAL 0.017039 0.044066 -7e-06
+INE
+VAL 3.712715e-05 1.31948e-05 4.963763e-05
+VAL -1.697098e-05 1.495324e-07 2.945211e-07
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_006 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL 0.072487 -0.039716 0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL 0.0006639536 3.341527e-05 -1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_007 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.056634
+COM
+VAL 0.012274 0.040148 -0.009181
+INE
+VAL 5.183927e-05 9.198359e-06 5.738642e-05
+VAL -1.438083e-05 -1.544526e-06 -5.051918e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF A_WHEEL_L Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF L_Motor_material PBRAppearance {
+CLOSE
+OPEN geometry DEF L_Motor IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.02339 0.076504 0
+R rotation 0 0 -1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF A_L_material PBRAppearance {
+CLOSE
+OPEN geometry DEF A_L IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.129129 -0.01502 0
+R rotation 0 0 1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_E_Ref_material PBRAppearance {
+CLOSE
+OPEN geometry DEF Empty_Link_Joint_E_Ref IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_008 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.005119
+COM
+VAL 0 2e-06 3.7e-05
+INE
+VAL 6.432691e-08 6.435169e-08 8.562602e-08
+VAL -2.040086e-12 3.547403e-24 3.61747e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 -0.010399 0
+R rotation 0 0 -1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_L_material PBRAppearance {
+CLOSE
+OPEN geometry DEF D_L IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 1 3.141593
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_L_Ref_material PBRAppearance {
+CLOSE
+OPEN geometry DEF Empty_Link_Joint_C_L_Ref IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_009 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 8.271806e-25 2.873266e-24 2.459508e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_010 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.015765
+COM
+VAL 0.041089 0 0.005393
+INE
+VAL 2.693146e-07 1.274097e-05 1.28362e-05
+VAL -1.243972e-11 -1.512813e-21 -1.765366e-23
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_011 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.037191
+COM
+VAL 0.065781 -0.009555 -0.005447
+INE
+VAL 2.215912e-06 6.388234e-05 6.571137e-05
+VAL 8.22598e-06 -5.647962e-21 7.798398e-22
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.029237 0.09563 0
+R rotation 0 0 1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_L_material PBRAppearance {
+CLOSE
+OPEN geometry DEF H_L IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.092055 -0.13907 0
+R rotation 0 0 0.9999999999999999 0.4013819999999998
+OPEN Shape {
+OPEN appearance DEF F_L_material PBRAppearance {
+CLOSE
+OPEN geometry DEF F_L IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_012 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.01856
+COM
+VAL 0.016244 -0.044428 0
+INE
+VAL 1.692621e-05 6.378241e-06 2.307139e-05
+VAL 7.440547e-06 1.275689e-20 -1.118597e-20
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_013 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL -0.072487 -0.039716 -0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL -0.0006639536 3.341527e-05 1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN boundingObject DEF AUTO_BOUNDINGOBJECT_IndexedFaceSet_014 IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.057679
+COM
+VAL -0.011942 0.038939 0.00921
+INE
+VAL 5.47127e-05 9.320209e-06 6.029967e-05
+VAL 1.520472e-05 -1.537282e-06 5.090605e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.05
+COM
+VAL 0.25443 -4.9e-05 -0.21167
+INE
+VAL 2.89573e-05  0.000125  0.000100979
+VAL -1.638e-08  3.6327e-07  -4.32345e-10
+CLOSE
+CLOSE
+OPEN boundingObject IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 4.7
+COM
+VAL 0.011273 0.000129 -0.045045
+INE
+VAL 0.0034963 0.0027797 0.0016805
+VAL -2.448e-06 -7.7068e-06 -5.7828e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.255 -0.12 0.057166
+R rotation 0.5773496025226482 0.5773516025212713 0.5773496025226482 2.094399
+OPEN Shape {
+OPEN appearance DEF B_Module_material PBRAppearance {
+CLOSE
+OPEN geometry DEF B_Module IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN Solid {
+T translation -0.091675 0 0
+R rotation -0.5773539358487644 0.5773469358495422 0.5773499358492088 2.0944
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF B_WHEEL_L Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF L_Motor_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.02339 0.076504 0
+R rotation 0 0 -1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF A_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.129129 -0.01502 0
+R rotation 0 0 1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_E_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.005119
+COM
+VAL 0 2e-06 3.7e-05
+INE
+VAL 6.432691e-08 6.435169e-08 8.562602e-08
+VAL -2.040086e-12 3.547403e-24 3.61747e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 -0.010399 0
+R rotation 0 0 -1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 1 3.141593
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_L_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 8.271806e-25 2.873266e-24 2.459508e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.015765
+COM
+VAL 0.041089 0 0.005393
+INE
+VAL 2.693146e-07 1.274097e-05 1.28362e-05
+VAL -1.243972e-11 -1.512813e-21 -1.765366e-23
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.037191
+COM
+VAL 0.065781 -0.009555 -0.005447
+INE
+VAL 2.215912e-06 6.388234e-05 6.571137e-05
+VAL 8.22598e-06 -5.647962e-21 7.798398e-22
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.029237 0.09563 0
+R rotation 0 0 1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.092055 -0.13907 0
+R rotation 0 0 0.9999999999999999 0.4013819999999998
+OPEN Shape {
+OPEN appearance DEF F_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.01856
+COM
+VAL 0.016244 -0.044428 0
+INE
+VAL 1.692621e-05 6.378241e-06 2.307139e-05
+VAL 7.440547e-06 1.275689e-20 -1.118597e-20
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL -0.072487 -0.039716 -0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL -0.0006639536 3.341527e-05 1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.057679
+COM
+VAL -0.011942 0.038939 0.00921
+INE
+VAL 5.47127e-05 9.320209e-06 6.029967e-05
+VAL 1.520472e-05 -1.537282e-06 5.090605e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF B_WHEEL_R Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF R_Motor_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.02339 0.076504 0
+R rotation 0 0 -1 1.8675020000000002
+OPEN Shape {
+OPEN appearance DEF A_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 0.010399 0
+R rotation 0 0 1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 -1 0
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_R_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 -0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 5.790264e-24 1.245717e-25 2.364163e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.018154
+COM
+VAL 0.047302 0 -0.005387
+INE
+VAL 2.922646e-07 1.276394e-05 1.287857e-05
+VAL -7.461208e-12 1.608558e-22 -2.610859e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.034802
+COM
+VAL 0.061432 0.00918 0.005452
+INE
+VAL 2.19295e-06 6.385938e-05 6.566899e-05
+VAL -8.225963e-06 -1.083e-20 -1.264653e-21
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.029237 0.09563 0
+R rotation 0 0 -1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.092055 -0.13907 0
+R rotation 0 0 1 2.74021
+OPEN Shape {
+OPEN appearance DEF F_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF B_FOOT Solid {
+T translation 0.035735 0.076598 0
+R rotation 0 0 -1 2.443504
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_G_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.188686
+COM
+VAL -2.9e-05 -0.006931 0
+INE
+VAL 5.08501e-05 0.000455789 0.0004750436
+VAL 9.866021e-08 4.389111e-11 -1.480231e-19
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.04104
+COM
+VAL 0.017039 0.044066 -7e-06
+INE
+VAL 3.712715e-05 1.31948e-05 4.963763e-05
+VAL -1.697098e-05 1.495324e-07 2.945211e-07
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL 0.072487 -0.039716 0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL 0.0006639536 3.341527e-05 -1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.056634
+COM
+VAL 0.012274 0.040148 -0.009181
+INE
+VAL 5.183927e-05 9.198359e-06 5.738642e-05
+VAL -1.438083e-05 -1.544526e-06 -5.051918e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN Shape {
+OPEN appearance DEF B_LEG_material PBRAppearance {
+CLOSE
+OPEN geometry DEF B_LEG Mesh {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.05
+COM
+VAL -0.25443 -4.9e-05 -0.21168
+INE
+VAL 2.89573e-05  0.000125  0.000100979
+VAL 1.638e-08  3.6327e-07  4.32345e-10
+CLOSE
+CLOSE
+OPEN boundingObject IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 4.7
+COM
+VAL -0.010711 -0.000208 -0.045828
+INE
+VAL 0.00347 0.0026713 0.0015852
+VAL 2.2646e-06 1.0421e-05 -3.2279e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.255 -0.12 0.057166
+R rotation 0.5773496025226482 -0.5773516025212713 -0.5773496025226482 2.094399
+OPEN Shape {
+OPEN appearance DEF C_Module_material PBRAppearance {
+CLOSE
+OPEN geometry DEF C_Module IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+CLOSE
+OPEN Solid {
+T translation 0.091675 0 0
+R rotation 0.5773512691895147 0.5773492691885823 0.5773502691890485 -2.094395307179586
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF C_WHEEL_R Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF R_Motor_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.02339 0.076504 0
+R rotation 0 0 -1 1.8675020000000002
+OPEN Shape {
+OPEN appearance DEF A_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 0.010399 0
+R rotation 0 0 1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 -1 0
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_R_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 -0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 5.790264e-24 1.245717e-25 2.364163e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.018154
+COM
+VAL 0.047302 0 -0.005387
+INE
+VAL 2.922646e-07 1.276394e-05 1.287857e-05
+VAL -7.461208e-12 1.608558e-22 -2.610859e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.034802
+COM
+VAL 0.061432 0.00918 0.005452
+INE
+VAL 2.19295e-06 6.385938e-05 6.566899e-05
+VAL -8.225963e-06 -1.083e-20 -1.264653e-21
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.029237 0.09563 0
+R rotation 0 0 -1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.092055 -0.13907 0
+R rotation 0 0 1 2.74021
+OPEN Shape {
+OPEN appearance DEF F_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF C_FOOT Solid {
+T translation 0.035735 0.076598 0
+R rotation 0 0 -1 2.443504
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_G_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.188686
+COM
+VAL -2.9e-05 -0.006931 0
+INE
+VAL 5.08501e-05 0.000455789 0.0004750436
+VAL 9.866021e-08 4.389111e-11 -1.480231e-19
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.04104
+COM
+VAL 0.017039 0.044066 -7e-06
+INE
+VAL 3.712715e-05 1.31948e-05 4.963763e-05
+VAL -1.697098e-05 1.495324e-07 2.945211e-07
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL 0.072487 -0.039716 0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL 0.0006639536 3.341527e-05 -1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.056634
+COM
+VAL 0.012274 0.040148 -0.009181
+INE
+VAL 5.183927e-05 9.198359e-06 5.738642e-05
+VAL -1.438083e-05 -1.544526e-06 -5.051918e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF C_WHEEL_L Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF L_Motor_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.02339 0.076504 0
+R rotation 0 0 -1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF A_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.129129 -0.01502 0
+R rotation 0 0 1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_E_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.005119
+COM
+VAL 0 2e-06 3.7e-05
+INE
+VAL 6.432691e-08 6.435169e-08 8.562602e-08
+VAL -2.040086e-12 3.547403e-24 3.61747e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 -0.010399 0
+R rotation 0 0 -1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 1 3.141593
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_L_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 8.271806e-25 2.873266e-24 2.459508e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.015765
+COM
+VAL 0.041089 0 0.005393
+INE
+VAL 2.693146e-07 1.274097e-05 1.28362e-05
+VAL -1.243972e-11 -1.512813e-21 -1.765366e-23
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.037191
+COM
+VAL 0.065781 -0.009555 -0.005447
+INE
+VAL 2.215912e-06 6.388234e-05 6.571137e-05
+VAL 8.22598e-06 -5.647962e-21 7.798398e-22
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.029237 0.09563 0
+R rotation 0 0 1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.092055 -0.13907 0
+R rotation 0 0 0.9999999999999999 0.4013819999999998
+OPEN Shape {
+OPEN appearance DEF F_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.01856
+COM
+VAL 0.016244 -0.044428 0
+INE
+VAL 1.692621e-05 6.378241e-06 2.307139e-05
+VAL 7.440547e-06 1.275689e-20 -1.118597e-20
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL -0.072487 -0.039716 -0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL -0.0006639536 3.341527e-05 1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.057679
+COM
+VAL -0.011942 0.038939 0.00921
+INE
+VAL 5.47127e-05 9.320209e-06 6.029967e-05
+VAL 1.520472e-05 -1.537282e-06 5.090605e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN Shape {
+OPEN appearance DEF C_LEG_material PBRAppearance {
+CLOSE
+OPEN geometry DEF C_LEG Mesh {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.05
+COM
+VAL 0.25557 -4.9e-05 -0.21168
+INE
+VAL 2.89573e-05  0.000125  0.000100979
+VAL 1.638e-08  3.6327e-07  4.32345e-10
+CLOSE
+CLOSE
+OPEN boundingObject IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 4.7
+COM
+VAL 0.011273 0.000129 -0.045045
+INE
+VAL 0.0034963 0.0027797 0.0016805
+VAL -2.448e-06 -7.7068e-06 -5.7828e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.255 0.12 0.057166
+R rotation 0.5773496025226482 -0.5773516025212713 -0.5773496025226482 2.094399
+OPEN Shape {
+OPEN appearance DEF D_Module_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN Solid {
+T translation -0.091675 0 0
+R rotation -0.5773539358487644 0.5773469358495422 0.5773499358492088 2.0944
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF D_WHEEL_L Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF L_Motor_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.02339 0.076504 0
+R rotation 0 0 -1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF A_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.129129 -0.01502 0
+R rotation 0 0 1 1.2740899999999997
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_E_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.005119
+COM
+VAL 0 2e-06 3.7e-05
+INE
+VAL 6.432691e-08 6.435169e-08 8.562602e-08
+VAL -2.040086e-12 3.547403e-24 3.61747e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 -0.010399 0
+R rotation 0 0 -1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 1 3.141593
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_L_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 8.271806e-25 2.873266e-24 2.459508e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.015765
+COM
+VAL 0.041089 0 0.005393
+INE
+VAL 2.693146e-07 1.274097e-05 1.28362e-05
+VAL -1.243972e-11 -1.512813e-21 -1.765366e-23
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.037191
+COM
+VAL 0.065781 -0.009555 -0.005447
+INE
+VAL 2.215912e-06 6.388234e-05 6.571137e-05
+VAL 8.22598e-06 -5.647962e-21 7.798398e-22
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.029237 0.09563 0
+R rotation 0 0 1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation -0.092055 -0.13907 0
+R rotation 0 0 0.9999999999999999 0.4013819999999998
+OPEN Shape {
+OPEN appearance DEF F_L_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.01856
+COM
+VAL 0.016244 -0.044428 0
+INE
+VAL 1.692621e-05 6.378241e-06 2.307139e-05
+VAL 7.440547e-06 1.275689e-20 -1.118597e-20
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL -0.072487 -0.039716 -0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL -0.0006639536 3.341527e-05 1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.057679
+COM
+VAL -0.011942 0.038939 0.00921
+INE
+VAL 5.47127e-05 9.320209e-06 6.029967e-05
+VAL 1.520472e-05 -1.537282e-06 5.090605e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF D_WHEEL_R Solid {
+R rotation 0 0.7071067811865476 0.7071067811865476 3.141593
+OPEN Shape {
+OPEN appearance DEF R_Motor_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.02339 0.076504 0
+R rotation 0 0 -1 1.8675020000000002
+OPEN Shape {
+OPEN appearance DEF A_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.089397 0.010399 0
+R rotation 0 0 1 1.460943
+OPEN Shape {
+OPEN appearance DEF D_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.0883 0 0
+R rotation 0 0 -1 0
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_C_R_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.002389
+COM
+VAL 0 0 -0.0055
+INE
+VAL 2.296183e-08 2.296183e-08 4.237757e-08
+VAL 5.790264e-24 1.245717e-25 2.364163e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.018154
+COM
+VAL 0.047302 0 -0.005387
+INE
+VAL 2.922646e-07 1.276394e-05 1.287857e-05
+VAL -7.461208e-12 1.608558e-22 -2.610859e-24
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.034802
+COM
+VAL 0.061432 0.00918 0.005452
+INE
+VAL 2.19295e-06 6.385938e-05 6.566899e-05
+VAL -8.225963e-06 -1.083e-20 -1.264653e-21
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.029237 0.09563 0
+R rotation 0 0 -1 0.29670599999999936
+OPEN Shape {
+OPEN appearance DEF H_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint Solid {
+T translation 0.092055 -0.13907 0
+R rotation 0 0 1 2.74021
+OPEN Shape {
+OPEN appearance DEF F_R_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN RotationalMotor {
+CLOSE
+OPEN PositionSensor {
+CLOSE
+OPEN endPoint DEF D_FOOT Solid {
+T translation 0.035735 0.076598 0
+R rotation 0 0 -1 2.443504
+OPEN Shape {
+OPEN appearance DEF Empty_Link_Joint_G_Ref_material PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.188686
+COM
+VAL -2.9e-05 -0.006931 0
+INE
+VAL 5.08501e-05 0.000455789 0.0004750436
+VAL 9.866021e-08 4.389111e-11 -1.480231e-19
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.04104
+COM
+VAL 0.017039 0.044066 -7e-06
+INE
+VAL 3.712715e-05 1.31948e-05 4.963763e-05
+VAL -1.697098e-05 1.495324e-07 2.945211e-07
+CLOSE
+CLOSE
+CLOSE
+OPEN HingeJoint {
+OPEN jointParameters HingeJointParameters {
+CLOSE
+OPEN endPoint SolidReference {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.329017
+COM
+VAL 0.072487 -0.039716 0.001056
+INE
+VAL 0.0009733417 0.0008295035 0.001701343
+VAL 0.0006639536 3.341527e-05 -1.853992e-05
+CLOSE
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.056634
+COM
+VAL 0.012274 0.040148 -0.009181
+INE
+VAL 5.183927e-05 9.198359e-06 5.738642e-05
+VAL -1.438083e-05 -1.544526e-06 -5.051918e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN Shape {
+OPEN appearance DEF D_LEG_material PBRAppearance {
+CLOSE
+OPEN geometry DEF D_LEG Mesh {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 0.05
+COM
+VAL -0.25557 -4.9e-05 -0.21167
+INE
+VAL 2.89573e-05  0.000125  0.000100979
+VAL -1.638e-08  3.6327e-07  -4.32345e-10
+CLOSE
+CLOSE
+OPEN boundingObject IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 4.7
+COM
+VAL -0.010711 -0.000208 -0.045828
+INE
+VAL 0.00347 0.0026713 0.0015852
+VAL 2.2646e-06 1.0421e-05 -3.2279e-06
+CLOSE
+CLOSE
+CLOSE
+OPEN Accelerometer {
+T translation 0 0 0
+R rotation 1 0 0 0
+OPEN DEF BOX Shape {
+OPEN appearance PBRAppearance {
+CLOSE
+OPEN geometry DEF BOX Box {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 1e-06
+CLOSE
+CLOSE
+OPEN InertialUnit {
+T translation 0 0 0
+R rotation 1 0 0 0
+OPEN DEF BOX Shape {
+OPEN appearance PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 1e-06
+CLOSE
+CLOSE
+OPEN Gyro {
+T translation 0 0 0
+R rotation 1 0 0 0
+OPEN DEF BOX Shape {
+OPEN appearance PBRAppearance {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 1e-06
+CLOSE
+CLOSE
+OPEN boundingObject IndexedFaceSet {
+OPEN coord Coordinate {
+CLOSE
+CLOSE
+OPEN physics Physics {
+M mass 7.4913
+COM
+VAL 0.00142 3e-06 0.057137
+INE
+VAL 0.034394 0.10977 0.1268
+VAL -5.7022e-07 -4.8215e-07 -4.6912e-06
+CLOSE
+CLOSE
+CLOSE
