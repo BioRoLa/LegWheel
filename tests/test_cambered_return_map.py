@@ -11,12 +11,30 @@ from legwheel.models.cambered_return_map import PairParams, RollPD
 V_OP = 1.19          # ~ the v~0.70 operating point, m/s forward at apex
 BETA0 = np.deg2rad(71.75)
 
+# The budget-sweep winner (stage2b_budget_gain_sweep, 2026-08-18), valid at
+# the CANONICAL orbit below -- on this file's other fixture orbit the same
+# gains survive only 12.5% of the NEAR grid. Gains are per-orbit facts.
+SWEEP_KP, SWEEP_KD, SWEEP_TAU = 100.0, 12.5, 40.0
+U_LIMITS = (np.array([np.deg2rad(40.0), -np.deg2rad(30.0), -np.deg2rad(30.0)]),
+            np.array([np.deg2rad(89.0), +np.deg2rad(30.0), +np.deg2rad(30.0)]))
+
 
 @pytest.fixture(scope="module")
 def fixed_point():
     p = PairParams()
     x_star, u_star = crm.solve_periodic(
         p, [V_OP, 0.0, 0.31, 0.0, 0.0], [BETA0, 0.0, 0.0])
+    return p, x_star, u_star
+
+
+@pytest.fixture(scope="module")
+def fixed_point_canonical():
+    """The section 45 gate orbit (stage2b_clocked_torque's seed) -- the one
+    every recorded Stage 2b number lives on."""
+    p = PairParams()
+    x_star, u_star = crm.solve_periodic(
+        p, [V_OP * np.cos(np.deg2rad(40.74)), 0.0, 0.32, 0.0, 0.0],
+        [np.deg2rad(80.75), 0.0, 0.0])
     return p, x_star, u_star
 
 
@@ -80,6 +98,65 @@ def test_roll_pd_extends_steps_to_fail(fixed_point) -> None:
     n_pd = crm.steps_to_fail(p, x_star, u_star, x0, ctrl=ctrl, max_steps=12)
     assert n_pd > n_passive
     assert ctrl.peak_used > 0.0
+
+
+def test_basin_scan_uses_a_fresh_controller_so_per_cell_peaks_are_independent(
+        fixed_point) -> None:
+    """The section 45 gate shared one RollPD across a whole grid, so its
+    printed peak was a grid-wide max. basin_scan clones the prototype per
+    cell: a mild perturbation must report a smaller peak than a harsh one,
+    and the prototype itself must come back untouched."""
+    p, x_star, u_star = fixed_point
+    proto = RollPD()
+    res = crm.basin_scan(p, x_star, u_star,
+                         rho_vals=np.deg2rad([0.5, 8.0]), drho_vals=[0.0],
+                         ctrl_proto=proto, max_steps=3)
+    assert res.peak[0, 0] < res.peak[1, 0]
+    assert proto.peak_used == 0.0
+
+
+def test_basin_radius_shrinks_when_the_torque_clamp_tightens(
+        fixed_point) -> None:
+    """The clamp is the budget: starving the PD cannot enlarge the connected
+    basin. r(theta) under a 15 N.m clamp must not exceed r(theta) at 40."""
+    p, x_star, u_star = fixed_point
+    jx, ju = crm.jacobians(p, x_star, u_star)
+    k = crm.deadbeat_gain(jx, ju)
+    angles = np.linspace(0.0, 2 * np.pi, 4, endpoint=False)
+    kwargs = dict(rho_scale=np.deg2rad(6.0), drho_scale=0.3, gain=k,
+                  max_steps=4, r_max=2.0, tol=0.25)
+    r_full = crm.basin_radius(p, x_star, u_star, angles,
+                              ctrl_proto=RollPD(tau_max=40.0), **kwargs)
+    r_starved = crm.basin_radius(p, x_star, u_star, angles,
+                                 ctrl_proto=RollPD(tau_max=15.0), **kwargs)
+    assert np.all(r_starved <= r_full + 1e-9)
+
+
+def test_sweep_gains_hold_the_near_grid_inside_the_abad_budget(
+        fixed_point_canonical) -> None:
+    """The claim section 45 could only print, now asserted: at the canonical
+    orbit the budget-sweep gains (kp 100, kd 12.5, clamp 40) plus the clamped
+    deadbeat survive the entire NEAR grid with UNCLIPPED peak demand inside
+    the 40 N.m ABAD budget (measured 31.2). If this fails after a model
+    change, the budget conversation with the hardware changed too."""
+    p, x_star, u_star = fixed_point_canonical
+    jx, ju = crm.jacobians(p, x_star, u_star)
+    k = crm.deadbeat_gain(jx, ju)
+    res = crm.basin_scan(
+        p, x_star, u_star, np.deg2rad([-3.0, -1.5, 1.5, 3.0]),
+        [-0.15, -0.08, 0.08, 0.15],
+        ctrl_proto=RollPD(kp=SWEEP_KP, kd=SWEEP_KD, tau_max=SWEEP_TAU),
+        gain=k, max_steps=12, u_limits=U_LIMITS)
+    assert res.survival_fraction == 1.0
+    assert res.peak_max <= SWEEP_TAU
+
+
+def test_roll_pd_reset_zeroes_the_peak_recorder() -> None:
+    ctrl = RollPD()
+    ctrl.torque(0.1, 0.0)
+    assert ctrl.peak_used > 0.0
+    ctrl.reset()
+    assert ctrl.peak_used == 0.0
 
 
 def test_ackermann_pair_helper() -> None:

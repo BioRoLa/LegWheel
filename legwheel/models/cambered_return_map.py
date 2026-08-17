@@ -49,7 +49,7 @@ Chang's own headline (0.59% -> 100% surviving 7 steps) is a survival statistic.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 from scipy.integrate import solve_ivp
@@ -95,6 +95,15 @@ class RollPD:
         raw = -(self.kp * rho + self.kd * drho)
         self.peak_used = max(self.peak_used, abs(raw))
         return float(np.clip(raw, -self.tau_max, self.tau_max))
+
+    def reset(self) -> None:
+        """Zero the peak recorder. `peak_used` accumulates across every call,
+        including solve_ivp's REJECTED trial stages, so it is (a) a slight
+        overestimate of the torque any accepted trajectory demanded and (b)
+        meaningless across runs unless reset between them. `perturbation_grid`
+        shares one controller across all cells for backward compatibility with
+        the section 45 gate numbers; per-cell peaks come from `basin_scan`."""
+        self.peak_used = 0.0
 
 
 def ackermann_pair(lam_in: float, ride_height: float,
@@ -437,4 +446,169 @@ def perturbation_grid(p: PairParams, x_star, u_star, rho_vals, drho_vals,
             x0[3] += r
             x0[4] += dr
             out[i, j] = steps_to_fail(p, x_star, u_star, x0, **kwargs)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Basin machinery -- the budget-constrained gain question (section 45's open end)
+# ---------------------------------------------------------------------------
+
+
+def _run_from(p: PairParams, x_star, u_star, x0,
+              ctrl: RollPD | None = None,
+              gain: np.ndarray | None = None,
+              max_steps: int = 12,
+              u_limits: tuple | None = None) -> tuple[int, float, float]:
+    """steps_to_fail plus the two budget numbers for a single start.
+
+    Returns (steps, peak_torque, dlam_max): the strides survived, the largest
+    UNCLIPPED torque the PD demanded (0.0 when passive -- what the clamp is
+    hiding, per section 45 the clamp can starve the controller into worse-than-
+    passive), and the largest single-stride change in either camber command
+    from the deadbeat (0.0 when no gain). dlam_max is the flight-phase
+    reorientation the ABAD must execute; divide by the flight time to compare
+    against the joint's speed limit (motor_rate_budget: 220 rpm at 9:1 is
+    ~2.56 rad/s at the joint).
+
+    u_limits = (u_lo, u_hi) clips the deadbeat's command to a physical range.
+    Without it the linear gain, fed a far-from-orbit state, commands hundreds
+    of DEGREES of camber -- which wraps harmlessly through side_geometry's
+    trig and "survives" on inputs no joint can make. The first sweep measured
+    dlam up to 1524 deg/stride before this existed; any basin claim from an
+    unclamped deadbeat outside the NEAR regime is riding on those commands.
+    """
+    x = np.asarray(x0, float).copy()
+    x_star, u_star = np.asarray(x_star, float), np.asarray(u_star, float)
+    if ctrl is not None:
+        ctrl.reset()
+    u_prev = u_star.copy()
+    dlam_max = 0.0
+    n_done = max_steps
+    for n in range(max_steps):
+        u = u_star.copy()
+        if gain is not None:
+            u = u_star + gain @ (x - x_star)
+            if u_limits is not None:
+                u = np.clip(u, u_limits[0], u_limits[1])
+        dlam_max = max(dlam_max, float(np.max(np.abs(u[1:] - u_prev[1:]))))
+        u_prev = u
+        try:
+            x = apex_map(p, x, u, ctrl=ctrl)
+        except GSlipFailure:
+            n_done = n
+            break
+    peak = ctrl.peak_used if ctrl is not None else 0.0
+    return n_done, peak, dlam_max
+
+
+@dataclass
+class BasinResult:
+    """Per-cell survival AND per-cell budget numbers for one controller config.
+
+    `steps[i, j]` is steps_to_fail from (rho_vals[i], drho_vals[j]);
+    `peak[i, j]` the unclipped PD demand for that cell alone (a fresh
+    controller per cell -- unlike `perturbation_grid`, whose shared controller
+    reports one grid-wide max); `dlam[i, j]` the largest single-stride deadbeat
+    camber adjustment. A config "wins inside the budget" when survival is high
+    AND the surviving cells' peaks sit under the clamp -- a cell that survives
+    while demanding 3x its clamp is being rescued by the deadbeat despite the
+    PD, not by it.
+    """
+
+    steps: np.ndarray
+    peak: np.ndarray
+    dlam: np.ndarray
+    max_steps: int
+
+    @property
+    def survival_fraction(self) -> float:
+        return float(np.count_nonzero(self.steps >= self.max_steps)
+                     / self.steps.size)
+
+    @property
+    def peak_max(self) -> float:
+        return float(self.peak.max())
+
+    @property
+    def peak_max_surviving(self) -> float:
+        """Peak demand among cells that survived (0.0 if none did)."""
+        mask = self.steps >= self.max_steps
+        return float(self.peak[mask].max()) if mask.any() else 0.0
+
+
+def basin_scan(p: PairParams, x_star, u_star, rho_vals, drho_vals,
+               ctrl_proto: RollPD | None = None,
+               gain: np.ndarray | None = None,
+               max_steps: int = 12,
+               u_limits: tuple | None = None) -> BasinResult:
+    """`perturbation_grid` with per-cell budget accounting.
+
+    `ctrl_proto` is a prototype: each cell runs a FRESH copy (same kp, kd,
+    tau_max, zeroed peak), so `BasinResult.peak` is per-cell truth rather than
+    a grid-wide max. The prototype itself is never mutated.
+    """
+    n_r, n_d = len(rho_vals), len(drho_vals)
+    steps = np.zeros((n_r, n_d), dtype=int)
+    peak = np.zeros((n_r, n_d))
+    dlam = np.zeros((n_r, n_d))
+    for i, r in enumerate(rho_vals):
+        for j, dr in enumerate(drho_vals):
+            x0 = np.asarray(x_star, float).copy()
+            x0[3] += r
+            x0[4] += dr
+            ctrl = replace(ctrl_proto, peak_used=0.0) if ctrl_proto else None
+            steps[i, j], peak[i, j], dlam[i, j] = _run_from(
+                p, x_star, u_star, x0, ctrl=ctrl, gain=gain,
+                max_steps=max_steps, u_limits=u_limits)
+    return BasinResult(steps=steps, peak=peak, dlam=dlam, max_steps=max_steps)
+
+
+def basin_radius(p: PairParams, x_star, u_star, angles,
+                 rho_scale: float, drho_scale: float,
+                 ctrl_proto: RollPD | None = None,
+                 gain: np.ndarray | None = None,
+                 max_steps: int = 12, r_max: float = 3.0,
+                 tol: float = 0.05,
+                 u_limits: tuple | None = None) -> np.ndarray:
+    """Largest surviving perturbation amplitude along rays from the fixed point.
+
+    For each angle theta the apex perturbation is
+    (rho, drho) = r * (rho_scale*cos(theta), drho_scale*sin(theta)) and r is
+    bisected for the boundary between survives-max_steps and fails. Returns
+    r(theta) in SCALE UNITS -- the number only means anything alongside the
+    scales chosen, so record them wherever the result is quoted. r_max is
+    returned where the whole ray survives.
+
+    Assumes survival is monotone in r along a ray. Section 45's FAR grid
+    showed clipped-PD cells that did worse than passive, so islands beyond a
+    failing shell are conceivable; the bisection would miss them. This
+    measures the CONNECTED basin around the fixed point, which is the quantity
+    a disturbance rejection claim actually needs.
+    """
+    out = np.zeros(len(angles))
+    x_star = np.asarray(x_star, float)
+    for k, th in enumerate(angles):
+        d_rho = rho_scale * np.cos(th)
+        d_drho = drho_scale * np.sin(th)
+
+        def survives(r: float) -> bool:
+            x0 = x_star.copy()
+            x0[3] += r * d_rho
+            x0[4] += r * d_drho
+            ctrl = replace(ctrl_proto, peak_used=0.0) if ctrl_proto else None
+            n, _, _ = _run_from(p, x_star, u_star, x0, ctrl=ctrl, gain=gain,
+                                max_steps=max_steps, u_limits=u_limits)
+            return n >= max_steps
+
+        if survives(r_max):
+            out[k] = r_max
+            continue
+        lo, hi = 0.0, r_max
+        while hi - lo > tol:
+            mid = 0.5 * (lo + hi)
+            if survives(mid):
+                lo = mid
+            else:
+                hi = mid
+        out[k] = lo
     return out
