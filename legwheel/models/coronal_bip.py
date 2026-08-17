@@ -1,0 +1,251 @@
+"""Coronal roll subsystem -- BIP after Chang 2022, with cambered contacts.
+
+Stage 2b Module 2. The lateral state exists to carry the ROLL INSTABILITY that
+clocked torque must fix (Chang 2022 Fig. 13; Sovukluk 2024 agrees by a different
+mechanism), not to model a second spring-mass system. Chang's BIP is the
+precedent: a rigid bar with a spring leg per side, a handful of states, no
+lateral SLIP anywhere.
+
+WHERE THIS DEPARTS FROM CHANG, AND WHY THAT IS THE POINT
+
+Chang's BIP applies VERTICAL spring forces at contacts pinned laterally at +/-w;
+roll enters only through the 2*w*sin(rho) height difference (their eq 20/24).
+That is exactly the assumption this thesis's gap lives in. Here:
+
+  1. Contacts sit OUTBOARD of the hips (the wheel planes are at +/-0.2117 m on
+     the contact track, hips at +/-0.12 m), so each leg is tilted and the spring
+     force acts ALONG the leg, hip-to-contact. A tilted leg force has a lateral
+     component and a roll moment that vertical springs cannot represent.
+  2. The contact offset and the effective rolling radius are functions of the
+     wheel's lean, supplied through one seam (`side_geometry`) so the Stage 1
+     validation lands in a single function.
+
+States: (y, z, rho, vy, vz, vrho) -- lateral position, height, roll, and rates.
+y is free (Chang constrains the CoM to z; the plan keeps v_y because a turn is
+lateral translation). Legs are unilateral springs: force engages when the
+hip-to-contact distance is below the side's rest length, which makes the four
+Chang phases (double / left / right / flight) emerge from the same RHS without
+event bookkeeping.
+
+CONTACT MODEL CAVEAT (v1, deliberate)
+
+The contact point is placed quasi-statically at the current hip position plus
+the outboard offset -- it slides with the hip rather than pinning at touchdown.
+This under-constrains lateral motion (a real wheel resists lateral scrub) and
+makes the tilted-leg force non-conservative under lateral CoM motion; for the
+symmetric vertical bounce it is exactly conservative, which is what the energy
+test exercises. Pinned-at-touchdown contact is a later refinement and belongs
+with the Stage 1 geometry validation.
+
+Parameters come from measured sources: m and the coronal half-track from Stage 0,
+I_roll = 0.6119 kg m^2 from the proto walk (implementation log section 41,
+J~ = 0.44), k per side = 2 legs * 8941 N/m.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+
+import numpy as np
+from scipy.integrate import solve_ivp
+from scipy.optimize import brentq
+
+from legwheel.models.slip_rf_cambered import rolling_radius
+
+G_DEFAULT = 9.81
+
+# Measured geometry (Stage 0 / config). Module constants, same convention as
+# slip_rf_cambered: self-contained, overridable per instance.
+HALF_TRACK_HIP = 0.120        # hip lateral offset from centreline (m)
+WHEEL_AXIAL_OFFSET = 0.091675  # wheel plane outboard of the hip (m)
+LEG_LENGTH_NOMINAL = 0.293    # hip-to-contact at the theta = 100 deg stance (m)
+K_SIDE_DEFAULT = 2 * 8941.0   # two sagittal legs per coronal side (N/m)
+I_ROLL_DEFAULT = 0.611906     # kg m^2, from the proto (section 41)
+MASS_DEFAULT = 30.0           # kg, scale reading
+
+
+@dataclass
+class SideGeometry:
+    """Contact geometry for one side, as a function of that side's wheel lean.
+
+    THE SEAM. Stage 1 validates (or corrects) the contact model; the correction
+    lands here and nowhere else.
+
+    Args:
+        d_out: lateral offset, hip to contact, positive outboard (m)
+        l0: leg rest length, hip to contact (m)
+    """
+
+    d_out: float
+    l0: float
+
+
+def side_geometry(lean: float,
+                  d_out0: float = WHEEL_AXIAL_OFFSET,
+                  l0_sagittal: float = LEG_LENGTH_NOMINAL) -> SideGeometry:
+    """Default cambered side geometry at wheel lean `lean` (rad, signed;
+    positive leans the wheel top outboard for this side).
+
+    The offset follows the wheel-plane swing -- the plane sits d_out0 along the
+    hip axis, and leaning rotates that axis, so the lateral component goes as
+    cos(lean) while the crown migration adds ~r_c*sin(lean). The rest length
+    tracks the Stage 0 rolling radius. First-order geometry; Stage 1 is the
+    arbiter.
+    """
+    r0 = rolling_radius(0.0)
+    dr = r0 - rolling_radius(lean)
+    return SideGeometry(
+        d_out=d_out0 * np.cos(lean) + 0.015 * np.sin(lean),
+        l0=l0_sagittal - dr,
+    )
+
+
+@dataclass
+class CoronalParams:
+    """Coronal BIP parameters. Sides may differ (Chang's gamma ratio; our
+    Ackermann pair and inner/outer asymmetry both need k_L != k_R support)."""
+
+    m: float = MASS_DEFAULT
+    j_roll: float = I_ROLL_DEFAULT
+    w_hip: float = HALF_TRACK_HIP
+    k_left: float = K_SIDE_DEFAULT
+    k_right: float = K_SIDE_DEFAULT
+    left: SideGeometry = None
+    right: SideGeometry = None
+    b: float = 0.0            # damping along the leg, N s/m
+    g: float = G_DEFAULT
+
+    def __post_init__(self) -> None:
+        if self.left is None:
+            self.left = side_geometry(0.0)
+        if self.right is None:
+            self.right = side_geometry(0.0)
+
+    def cambered(self, lean_left: float, lean_right: float) -> "CoronalParams":
+        """Both sides leaned; signs are each side's own outboard convention."""
+        return replace(self, left=side_geometry(lean_left),
+                       right=side_geometry(lean_right))
+
+
+def _leg_force(p: CoronalParams, s: int, y: float, z: float, rho: float,
+               vy: float, vz: float, vrho: float):
+    """Force on the body from side s (+1 left, -1 right), applied at the hip.
+
+    Returns (F_y, F_z, tau_x) about the CoM. Zero when the leg is unloaded.
+    """
+    geom = p.left if s > 0 else p.right
+    k = p.k_left if s > 0 else p.k_right
+
+    # Hip in world coronal coordinates.
+    yh = y + s * p.w_hip * np.cos(rho)
+    zh = z + s * p.w_hip * np.sin(rho)
+    if zh <= 0.0:
+        return 0.0, 0.0, 0.0  # hip through the floor; the fall event handles it
+
+    # Contact outboard of the hip on the ground plane (quasi-static; see
+    # module docstring).
+    dy = -s * geom.d_out          # contact -> hip lateral component
+    length = float(np.hypot(geom.d_out, zh))
+    if length >= geom.l0:
+        return 0.0, 0.0, 0.0
+
+    ux, uz = dy / length, zh / length   # unit vector contact -> hip
+    # Rate of leg-length change, for damping: only zh varies the length here.
+    dzh = vz + s * p.w_hip * np.cos(rho) * vrho
+    dlength = (zh / length) * dzh
+
+    f = k * (geom.l0 - length) - p.b * dlength
+    if f <= 0.0:
+        return 0.0, 0.0, 0.0
+    fy, fz = f * ux, f * uz
+
+    # Torque about the CoM; the force acts at the hip (massless leg).
+    ry = s * p.w_hip * np.cos(rho)
+    rz = s * p.w_hip * np.sin(rho)
+    tau = ry * fz - rz * fy
+    return fy, fz, tau
+
+
+def rhs(t, state, p: CoronalParams):
+    y, z, rho, vy, vz, vrho = state
+    fy = fz = tau = 0.0
+    for s in (+1, -1):
+        a, b_, c = _leg_force(p, s, y, z, rho, vy, vz, vrho)
+        fy += a
+        fz += b_
+        tau += c
+    return [vy, vz, vrho, fy / p.m, fz / p.m - p.g, tau / p.j_roll]
+
+
+def stance_state(p: CoronalParams, state) -> tuple[bool, bool]:
+    """(left_loaded, right_loaded) for a state -- the Chang phase labels."""
+    y, z, rho, vy, vz, vrho = state
+    out = []
+    for s in (+1, -1):
+        f = _leg_force(p, s, y, z, rho, vy, vz, vrho)
+        out.append(abs(f[1]) > 0.0)
+    return tuple(out)
+
+
+def energy(p: CoronalParams, state) -> float:
+    """Total mechanical energy. Exact bookkeeping for the symmetric bounce;
+    see the contact-model caveat for why lateral motion can leak."""
+    y, z, rho, vy, vz, vrho = state
+    e = 0.5 * p.m * (vy**2 + vz**2) + 0.5 * p.j_roll * vrho**2 + p.m * p.g * z
+    for s in (+1, -1):
+        geom = p.left if s > 0 else p.right
+        k = p.k_left if s > 0 else p.k_right
+        zh = z + s * p.w_hip * np.sin(rho)
+        length = float(np.hypot(geom.d_out, zh))
+        if length < geom.l0:
+            e += 0.5 * k * (geom.l0 - length) ** 2
+    return float(e)
+
+
+def equilibrium_height(p: CoronalParams) -> float:
+    """Static CoM height at rho = 0 (symmetric sides required)."""
+
+    def net_fz(z):
+        return rhs(0.0, [0.0, z, 0.0, 0.0, 0.0, 0.0], p)[4]
+
+    z_top = float(np.sqrt(max(p.left.l0**2 - p.left.d_out**2, 1e-9)))
+    return float(brentq(net_fz, 0.3 * z_top, z_top - 1e-9))
+
+
+def simulate(p: CoronalParams, state0, t_final: float, rtol: float = 1e-10,
+             atol: float = 1e-12, dense: bool = False):
+    """Integrate the coronal dynamics; terminates if the CoM nears the floor."""
+
+    def fell(t, s, _p):
+        return s[1] - 0.02
+
+    fell.terminal = True
+    fell.direction = -1.0
+    return solve_ivp(rhs, (0.0, t_final), state0, args=(p,),
+                     events=[fell], rtol=rtol, atol=atol,
+                     dense_output=dense, max_step=1e-3)
+
+
+def roll_growth_per_bounce(p: CoronalParams, drop: float = 0.02,
+                           n_bounce: int = 6, rho0: float = 1e-6) -> float:
+    """Geometric growth factor of |rho| per bounce for a small seed roll.
+
+    The Chang/Seipel expectation is growth (> 1) for a passive bounce; this is
+    the number clocked torque has to beat. Returned as the mean factor over the
+    bounces that completed before a fall.
+    """
+    z0 = equilibrium_height(p)
+    sol = simulate(p, [0.0, z0 + drop, rho0, 0.0, 0.0, 0.0],
+                   t_final=n_bounce * 2.0, dense=True)
+    t = np.linspace(0.0, sol.t[-1], 4000)
+    zz = sol.sol(t)
+    # Apexes: local maxima of z in flight-ish regions.
+    z = zz[1]
+    apex_idx = [i for i in range(1, len(t) - 1)
+                if z[i] > z[i - 1] and z[i] >= z[i + 1]]
+    rho_at_apex = np.abs(zz[2][apex_idx])
+    rho_at_apex = rho_at_apex[rho_at_apex > 0]
+    if len(rho_at_apex) < 3:
+        return float("nan")
+    factors = rho_at_apex[1:] / rho_at_apex[:-1]
+    return float(np.exp(np.mean(np.log(factors))))
