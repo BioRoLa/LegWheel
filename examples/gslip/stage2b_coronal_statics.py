@@ -71,21 +71,36 @@ def wheel_centres_body(lean: float):
     return left, right
 
 
-def solve_pose(lean: float):
-    """Body (z, rho) putting both wheel contacts on the ground. 2x2, exact."""
-    pl, pr = wheel_centres_body(lean)
+def solve_pose_asym(lean_left: float, lean_right: float):
+    """Body (z, rho) for PER-SIDE world-sense leans. 2x2, exact.
+
+    This is the solve the symmetric version cannot do, and the reason the
+    0.80-0.94 validation bracket exists: section 39 showed the achieved lean is
+    a LEFT/RIGHT SPLIT (left pair outboard ~3.8 deg, right pair inboard ~1.9 at
+    lambda = 30, kp 90), so feeding one number to both sides mis-states the
+    geometry. Leans are world-sense: for the lr pattern, left = +mean(gamma_A,
+    gamma_D), right = -mean(gamma_B, gamma_C).
+    """
+    c_l, s_l = np.cos(lean_left), np.sin(lean_left)
+    c_r, s_r = np.cos(lean_right), np.sin(lean_right)
+    pl = (+W_HIP + A_OFF * c_l, +A_OFF * s_l)
+    pr = (-W_HIP - A_OFF * c_r, -A_OFF * s_r)
 
     def residual(x):
         z, rho = x
         cr, sr = np.cos(rho), np.sin(rho)
-        out = []
-        for (py, pz) in (pl, pr):
-            centre_z = z + py * sr + pz * cr
-            out.append(centre_z - hub_clearance(lean + rho))
-        return out
+        return [
+            z + pl[0] * sr + pl[1] * cr - hub_clearance(lean_left + rho),
+            z + pr[0] * sr + pr[1] * cr - hub_clearance(lean_right + rho),
+        ]
 
     z, rho = fsolve(residual, [hub_clearance(0.0), 0.0], full_output=False)
     return float(z), float(rho)
+
+
+def solve_pose(lean: float):
+    """Body (z, rho) at a uniform world-sense lean -- both sides equal."""
+    return solve_pose_asym(lean, lean)
 
 
 def main() -> None:
