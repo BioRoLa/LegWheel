@@ -56,19 +56,31 @@ def _roll_from_quat(q: np.ndarray) -> np.ndarray:
     return np.arctan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx**2 + qy**2))
 
 
-def analyse(path: str, lam_cmd_deg: float) -> dict:
+def analyse(path: str, lam_cmd_deg: float, fold_settle: float = 0.0) -> dict:
+    """fold_settle: the run's --fold-settle dwell (s). Shifts both windows so
+    they track the schedule; with fold_settle > 0 the pre window sits in the
+    SETTLED folded-unleaned dwell rather than the fold transient the original
+    schedule left it in (log section 62/63)."""
     d = np.load(path)
     mt, motor = d["motor_t"], d["motor_deg"]        # (n, 4, 3): theta beta gamma
     ot, odom = d["odom_t"], d["odom"]               # (n, 10): xyz ... quat
 
-    gam_pre = _window_mean(mt, motor[:, :, 2], *PRE_WINDOW)
-    gam_hold = _window_mean(mt, motor[:, :, 2], *HOLD_WINDOW)
+    if fold_settle > 0.0:
+        # Settled dwell is [t_fold + ~1.5, t_fold + fold_settle]; hold shifts
+        # rigidly with the schedule.
+        pre = (4.0 + max(fold_settle - 1.5, 0.4), 4.0 + fold_settle - 0.1)
+        hold = (HOLD_WINDOW[0] + fold_settle, HOLD_WINDOW[1] + fold_settle)
+    else:
+        pre, hold = PRE_WINDOW, HOLD_WINDOW
 
-    z_pre = _window_mean(ot, odom[:, 2], *PRE_WINDOW)
-    z_hold = _window_mean(ot, odom[:, 2], *HOLD_WINDOW)
+    gam_pre = _window_mean(mt, motor[:, :, 2], *pre)
+    gam_hold = _window_mean(mt, motor[:, :, 2], *hold)
+
+    z_pre = _window_mean(ot, odom[:, 2], *pre)
+    z_hold = _window_mean(ot, odom[:, 2], *hold)
     roll = _roll_from_quat(odom[:, 6:10])
-    roll_pre = _window_mean(ot, roll, *PRE_WINDOW)
-    roll_hold = _window_mean(ot, roll, *HOLD_WINDOW)
+    roll_pre = _window_mean(ot, roll, *pre)
+    roll_hold = _window_mean(ot, roll, *hold)
 
     # World-sense per-side achieved leans (deg).
     world = gam_hold * LR_SIGNS
@@ -96,8 +108,13 @@ def main(argv) -> None:
           f"{'roll pred':>9} {'roll meas':>9} {'ratio':>6} | "
           f"{'drop pred':>9} {'drop meas':>9} {'ratio':>6}")
     for arg in argv:
-        path, lam = arg.rsplit(":", 1)
-        r = analyse(path, float(lam))
+        parts = arg.split(":")
+        if len(parts) >= 3 and parts[-2].replace(".", "").isdigit():
+            path, lam, fs = ":".join(parts[:-2]), parts[-2], parts[-1]
+        else:
+            path, lam = arg.rsplit(":", 1)
+            fs = "0"
+        r = analyse(path, float(lam), fold_settle=float(fs))
         rr = r["roll_pred"] / r["roll_meas"] if r["roll_meas"] else float("nan")
         dr = r["drop_pred"] / r["drop_meas"] if r["drop_meas"] else float("nan")
         print(f"{r['lam_cmd']:4.0f}d {r['left']:8.2f}d {r['right']:8.2f}d "

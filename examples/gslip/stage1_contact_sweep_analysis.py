@@ -44,24 +44,33 @@ from legwheel.models.slip_rf_cambered import rolling_radius
 # lr pattern signs (A, B, C, D); left pair {A, D}, right pair {B, C}.
 LR_SIGNS = np.array([+1.0, -1.0, -1.0, +1.0])
 # Zero-command diagonal residual (deg), reported and subtracted, never
-# silently. THE RESIDUAL IS kp-DEPENDENT (section 62): it is the elastic
-# deflection of a ~2.8 N.m static moment on the {A,C} diagonal (90 x 1.77 deg
-# ~= 500 x 0.33 deg ~= 2.8 N.m), not a driver zero -- so the reference below
-# is only valid at the kp it was measured at. Re-baseline from the sweep's
-# own zero-command window at Stage 1's kp; the drift monitor flags a stale
-# reference rather than silently mis-subtracting.
+# silently. THE RESIDUAL IS kp-DEPENDENT (section 62) -- but its magnitude
+# is also WINDOW-dependent (section 63): pre-fold_settle schedules read
+# gamma MID-FOLD, and the settled kp-500 value is less than half the
+# mid-fold one (-0.15/+0.09 vs -0.33/+0.01). Section 62's constant-torque
+# estimate (~2.8 N.m) was built from two mid-fold numbers and is UNCONFIRMED
+# until a settled kp-90 run exists (elastic story predicts ~-0.83 deg;
+# blocked on sim contention 2026-08-18). Re-baseline from the sweep's own
+# zero-command fold_settle window at Stage 1's kp; the drift monitor flags a
+# stale reference rather than silently mis-subtracting.
 KP_RESIDUAL_REFS = {
-    90.0: np.array([-1.77, -1.04, -1.76, -1.04]),    # section 47
-    500.0: np.array([-0.33, +0.01, -0.32, +0.01]),   # section 62
+    90.0: np.array([-1.77, -1.04, -1.76, -1.04]),    # section 47, MID-FOLD
+    500.0: np.array([-0.15, +0.09, -0.15, +0.09]),   # section 63, settled
 }
 DIAG_RESIDUAL_REF = KP_RESIDUAL_REFS[90.0]
 
 MAX_DUP_FRACTION = 0.01
 MAX_BACKWARD_STEPS = 0
 
-# Windows inherited from the lean rig schedule; override per sweep schedule.
-PRE_WINDOW = (3.4, 3.9)
-HOLD_WINDOW = (6.3, 7.4)
+# Windows for the STAGE 1 RUNNER's schedule (stage1_lambda_alpha_sweep.sh,
+# FOLD_SETTLE = 3): settle 1 | fold 1-4 | fold_settle 4-7 | lean 7-9 |
+# lean_settle 9-10.5 | roll 10.5+. The pre window sits in the SETTLED
+# folded-unleaned dwell -- the section 62/63 forensics showed the old
+# schedule's [3.4, 3.9] window sat inside the fold transient (z moving
+# ~18 mm/s), contaminating every absolute drop number. Old-schedule dumps
+# (no fold_settle) need PRE (3.4, 3.9) / HOLD (6.3, 7.4) instead.
+PRE_WINDOW = (5.5, 6.9)
+HOLD_WINDOW = (9.3, 10.4)
 
 
 @dataclass
