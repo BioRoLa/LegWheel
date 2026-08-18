@@ -101,6 +101,30 @@ class RobotParams:
     TIRE_TREAD_RADIUS  = 0.130      # Torus major radius: tread arc center = R + TIRE_RIM_OFFSET + 0.020
     TIRE_CORNER_RADIUS = 0.015      # Torus minor radius (corner fillet); max contact = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS
     WHEEL_RADIUS_OUTER = TIRE_TREAD_RADIUS + TIRE_CORNER_RADIUS  # = 0.145, physical outer radius (collision)
+    # CAVEAT (log section 72, 2026-08-18): this toroidal cross-section and
+    # slip_rf_cambered's flat-band one (flat 5 mm + corner 15 mm) are two
+    # SEMANTICALLY DIFFERENT models of the same tread, and neither matches
+    # the simulator, whose contact runs on a knobby (real tread texture,
+    # +-4 mm relief) auto-decimated (~5 mm facet) mesh. Measured contact
+    # behaviour in the sim, wheel mode, kp 500 (n = 3, sections 65/70/72):
+    # ride drop follows A*(1 - cos(lean)) with A_ROLL ~= 0.0247 m (6.9% rms)
+    # and A_HOLD ~= 0.0351 m (14.4% rms) -- an EFFECTIVE transverse crown of
+    # 25-35 mm, state-dependent, against the 130 mm either model implies.
+    # Use the empirical law for sim-facing predictions; keep the geometric
+    # models for design reasoning.
+    DROP_CROWN_ROLL_SIM = 0.0247    # m, empirical A in drop = A*(1-cos(lean)), rolling
+    DROP_CROWN_HOLD_SIM = 0.0351    # m, empirical A, static hold
+
+    # Wheel-mode closure calibration (log sections 66-71, 2026-08-18).
+    # The linkage closes the wheel concentric at THETA 17.00 deg BY DESIGN
+    # (closed_wheel_eccentricity(17 deg) = 0), but closure error costs
+    # ~0.9 mm/deg of k=1 eccentricity (envelope model; ~0.5 measured), the
+    # sim's theta loop sags ~0.85 deg below command while rolling, and the
+    # sim's proto closes ~1.0 deg from design. Closure angle is therefore a
+    # PER-ROBOT CALIBRATION (V-curve procedure, section 71), not a constant.
+    WHEEL_CLOSURE_THETA_SIM_DEG = 18.04   # achieved theta minimizing k=1, this sim
+    WHEEL_CLOSURE_CMD_SIM_DEG = 18.85     # command that lands it at kp 500
+    WHEEL_ECC_FLOOR_SIM = 0.00036         # m, residual e at the calibrated closure
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass

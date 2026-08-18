@@ -3,6 +3,41 @@ import time
 from legwheel.config import RobotParams
 
 
+def closed_wheel_eccentricity(theta, n_dirs=720):
+    """k = 1 eccentricity (m) of the closed wheel's outer contact envelope.
+
+    The wheel-mode boundary is modelled as the envelope of the five rim arcs
+    (centers from LegKinematics at `theta`, all at WHEEL_RADIUS_OUTER): for
+    each polar direction the boundary radius is the max over arcs; the k = 1
+    Fourier amplitude of that profile is the contact-effective eccentricity.
+
+    Calibration status (implementation log sections 66-72, 2026-08-18): the
+    design closes concentric at theta = 17.00 deg exactly (e < 1e-9 here);
+    off closure this envelope grows at ~0.89 mm/deg, versus ~0.5 mm/deg
+    measured on the simulator's 7-point V-curve -- the remaining factor
+    ~1.8 lives in contact-patch smoothing by the real (knobby, decimated)
+    tread mesh, so treat this as an upper bound on eccentricity per degree
+    of closure error, not a prediction of the sim's exact number. The sim's
+    own closure calibrates to achieved theta ~= 18.04 deg (command 18.85 at
+    kp 500), i.e. its proto closes ~1 deg from the design.
+    """
+    kin = LegKinematics()
+    kin.forward(np.asarray(theta, float), 0.0, vector=False)
+    centers = [complex(kin.U_l), complex(kin.L_l), complex(kin.O_r)]
+    for name in ("U_r", "L_r"):
+        if hasattr(kin, name):
+            centers.append(complex(getattr(kin, name)))
+    rho = RobotParams.WHEEL_RADIUS_OUTER
+    u = np.exp(1j * np.linspace(0.0, 2 * np.pi, n_dirs, endpoint=False))
+    r = np.full(n_dirs, -np.inf)
+    for c in centers:
+        along = (np.conj(u) * c).real
+        perp2 = abs(c) ** 2 - along**2
+        r = np.maximum(r, along + np.sqrt(np.maximum(rho**2 - perp2, 0.0)))
+    prof = r - r.mean()
+    return float(np.abs(np.fft.rfft(prof)[1] / n_dirs * 2.0))
+
+
 #### LegKinematics ####
 # Forward kinematics getting approximate coefficient used in class LegWheel.
 # 4-th linkage length needs to be determined for the first time.

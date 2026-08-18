@@ -59,6 +59,21 @@ def hub_clearance(phi: float) -> float:
     return R_TREAD * np.cos(phi) - W_FLAT * np.sin(abs(phi)) + R_CORNER
 
 
+# Empirical sim-calibrated alternative (log section 72): the sim's measured
+# ride drop follows A*(1 - cos(lean)) with a state-dependent effective crown
+# (A_ROLL 24.7 mm at 6.9% rms, A_HOLD 35.1 mm at 14.4%, n = 3) -- an
+# order 5x smaller lever than the geometric model's, because the contact
+# runs on a knobby auto-decimated mesh no smooth cross-section describes.
+# Use for sim-facing drop predictions; the geometric model above remains the
+# design-intent reference. h0 anchors both at lean = 0.
+A_DROP_ROLL_SIM = 0.0247
+A_DROP_HOLD_SIM = 0.0351
+
+
+def hub_clearance_empirical(phi: float, a_drop: float = A_DROP_HOLD_SIM) -> float:
+    return (R_TREAD + R_CORNER) - a_drop * (1.0 - np.cos(phi))
+
+
 def wheel_centres_body(lean: float):
     """(y, z) of each wheel centre in the body coronal frame at command `lean`.
 
