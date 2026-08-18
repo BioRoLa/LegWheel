@@ -44,17 +44,17 @@ from legwheel.models.slip_rf_cambered import rolling_radius
 # lr pattern signs (A, B, C, D); left pair {A, D}, right pair {B, C}.
 LR_SIGNS = np.array([+1.0, -1.0, -1.0, +1.0])
 # Zero-command diagonal residual (deg), reported and subtracted, never
-# silently. THE RESIDUAL IS kp-DEPENDENT (section 62) -- but its magnitude
-# is also WINDOW-dependent (section 63): pre-fold_settle schedules read
-# gamma MID-FOLD, and the settled kp-500 value is less than half the
-# mid-fold one (-0.15/+0.09 vs -0.33/+0.01). Section 62's constant-torque
-# estimate (~2.8 N.m) was built from two mid-fold numbers and is UNCONFIRMED
-# until a settled kp-90 run exists (elastic story predicts ~-0.83 deg;
-# blocked on sim contention 2026-08-18). Re-baseline from the sweep's own
-# zero-command fold_settle window at Stage 1's kp; the drift monitor flags a
-# stale reference rather than silently mis-subtracting.
+# silently. THE RESIDUAL IS kp-DEPENDENT BUT NOT A CONSTANT TORQUE
+# (section 63, settled fold_settle-3 windows): 90 x 1.47 deg ~= 2.3 N.m vs
+# 500 x 0.15 deg ~= 1.3 N.m -- section 62's constant-moment estimate was an
+# artifact of the mid-fold measurement window (the {B,D} diagonal even flips
+# sign at kp 500). There is NO cross-kp scaling law: re-baseline from the
+# sweep's OWN zero-command fold_settle window at the sweep's kp -- the
+# runner's lambda=0 run exists for exactly this. The drift monitor flags a
+# stale reference rather than silently mis-subtracting. (Historical mid-fold
+# values, old-schedule dumps only: kp90 -1.77/-1.04, kp500 -0.33/+0.01.)
 KP_RESIDUAL_REFS = {
-    90.0: np.array([-1.77, -1.04, -1.76, -1.04]),    # section 47, MID-FOLD
+    90.0: np.array([-1.47, -0.97, -1.47, -0.97]),    # section 63, settled
     500.0: np.array([-0.15, +0.09, -0.15, +0.09]),   # section 63, settled
 }
 DIAG_RESIDUAL_REF = KP_RESIDUAL_REFS[90.0]
