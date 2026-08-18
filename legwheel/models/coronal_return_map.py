@@ -61,13 +61,49 @@ E_MIRROR = np.diag([-1.0, 1.0, -1.0, -1.0])
 
 
 def with_stiffness_ratio(p: CoronalParams, k_ratio: float) -> CoronalParams:
-    """Chang's stiffness asymmetry, one-sided: k_left = k_ratio * k_right.
+    """STATIC one-sided stiffness asymmetry: k_left = k_ratio * k_right.
 
-    One helper so a change of convention (mean-preserving, or right-side)
-    lands in one place. k_ratio = 1 returns an equivalent symmetric p.
+    NOT Chang's gamma (read the PDF before assuming otherwise -- we did, the
+    other way round, and section 59's first framing paid for it). Chang 2022
+    Eq. 1-3: each side ALTERNATES between k0 and k1 through a "gamma phase"
+    that exchanges the constants at every apex (the tripod's two leg sets:
+    two legs vs one, so gamma = k0/k1 = 2 is the natural RHex value), with
+    k_sum = k0 + k1 fixed. That convention lives in `with_gamma_phase` and
+    `apex_map_two_step`. This helper models a PERMANENTLY stiffer side --
+    the Ackermann inner/outer and inner/outer asymmetry cases -- which is a
+    different physical object. k_ratio = 1 returns an equivalent symmetric p.
     """
     from dataclasses import replace
     return replace(p, k_left=k_ratio * p.k_right)
+
+
+def with_gamma_phase(p: CoronalParams, gamma_ratio: float,
+                     phase: int = 0) -> CoronalParams:
+    """Chang 2022's stiffness convention (Eq. 1-3), mean-preserving.
+
+    k0 = gamma/(1+gamma) * k_sum on one side, k1 = 1/(1+gamma) * k_sum on
+    the other, k_sum = p.k_left + p.k_right held fixed; `phase` 0 puts k0 on
+    the left, 1 exchanges them (the gamma-phase transition that happens at
+    each apex). gamma_ratio = 1 returns a symmetric p with the same k_sum.
+    """
+    from dataclasses import replace
+    k_sum = p.k_left + p.k_right
+    k0 = gamma_ratio / (1.0 + gamma_ratio) * k_sum
+    k1 = k_sum - k0
+    if phase == 0:
+        return replace(p, k_left=k0, k_right=k1)
+    return replace(p, k_left=k1, k_right=k0)
+
+
+def apex_map_two_step(p: CoronalParams, apex, gamma_ratio: float) -> np.ndarray:
+    """Chang's Poincare map: two apex-to-apex steps with the gamma-phase
+    exchange between them (his mapping is [rho_n, drho_n] ->
+    [rho_n+2, drho_n+2] precisely because one step swaps the leg sets and
+    two steps restore them). Our apex state keeps [vy, h, rho, drho]; note
+    Chang's BIP pins the CoM laterally (z-only), so vy is a departure --
+    report it, don't hide it."""
+    x = apex_map(with_gamma_phase(p, gamma_ratio, phase=0), apex)
+    return apex_map(with_gamma_phase(p, gamma_ratio, phase=1), x)
 
 
 def _geom(p: CoronalParams, s: int) -> SideGeometry:
@@ -361,6 +397,53 @@ def solve_periodic(p: CoronalParams, x0, e_matrix=E_BOUNCE,
     for i, idx in enumerate(free):
         x[idx] = res.x[i]
     return x
+
+
+def solve_periodic_gamma(p: CoronalParams, x0, gamma_ratio: float,
+                         free=(0, 1, 2, 3),
+                         max_nfev: int | None = None) -> np.ndarray:
+    """Fixed point of Chang's two-step gamma-phase map, x = F(x).
+
+    All four apex components free by default: for gamma != 1 the paper's
+    fixed points carry nonzero rolling velocity (his Fig. 6 -- "the pronking
+    orbit could not exist as gamma != 1"), so pinning rho or drho at zero
+    would search for an orbit the paper says is not there."""
+    x0 = np.asarray(x0, float).copy()
+
+    def residual(q):
+        x = x0.copy()
+        for i, idx in enumerate(free):
+            x[idx] = q[i]
+        try:
+            return x - apex_map_two_step(p, x, gamma_ratio)
+        except GSlipFailure:
+            return np.full(4, 10.0)
+
+    res = least_squares(residual, [x0[i] for i in free],
+                        xtol=1e-12, ftol=1e-12, diff_step=1e-6,
+                        max_nfev=max_nfev)
+    if not res.success or np.linalg.norm(res.fun) > 1e-6:
+        raise GSlipFailure(
+            f"no two-step orbit (residual {np.linalg.norm(res.fun):.2e})")
+    x = x0.copy()
+    for i, idx in enumerate(free):
+        x[idx] = res.x[i]
+    return x
+
+
+def jacobian_gamma(p: CoronalParams, x_star, gamma_ratio: float,
+                   h_step: float = 1e-6) -> np.ndarray:
+    """dF/dx of the two-step gamma-phase map at x_star, central difference --
+    Chang Eq. 9's finite-difference Jacobian, on the full 4-state."""
+    x_star = np.asarray(x_star, float)
+    j = np.zeros((4, 4))
+    for i in range(4):
+        d = np.zeros(4)
+        d[i] = h_step
+        j[:, i] = (apex_map_two_step(p, x_star + d, gamma_ratio)
+                   - apex_map_two_step(p, x_star - d, gamma_ratio)) \
+            / (2 * h_step)
+    return j
 
 
 def jacobian(p: CoronalParams, x_star, e_matrix=E_BOUNCE,

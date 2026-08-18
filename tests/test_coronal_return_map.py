@@ -119,3 +119,38 @@ def test_with_stiffness_ratio_only_touches_the_left_side() -> None:
     assert p2.k_left == pytest.approx(1.25 * p.k_right)
     assert p2.k_right == p.k_right
     assert p2.left is p.left and p2.right is p.right
+
+
+def test_gamma_phase_preserves_total_stiffness_and_exchanges_sides() -> None:
+    """Chang 2022 Eq. 1-3: gamma redistributes a FIXED k_sum between the leg
+    sets, and the phase transition swaps which side carries which."""
+    p = CoronalParams()
+    a = v2.with_gamma_phase(p, 2.0, phase=0)
+    b = v2.with_gamma_phase(p, 2.0, phase=1)
+    assert a.k_left + a.k_right == pytest.approx(p.k_left + p.k_right)
+    assert a.k_left == pytest.approx(2.0 * a.k_right)
+    assert (a.k_left, a.k_right) == (b.k_right, b.k_left)
+    sym = v2.with_gamma_phase(p, 1.0)
+    assert sym.k_left == pytest.approx(sym.k_right)
+
+
+def test_two_step_map_at_gamma_one_is_the_plain_map_composed_twice(
+        params_and_equilibrium) -> None:
+    p, z_eq = params_and_equilibrium
+    x = np.array([0.0, z_eq + 0.02, 0.0, 0.0])
+    twice = v2.apex_map(p, v2.apex_map(p, x))
+    assert np.allclose(v2.apex_map_two_step(p, x, 1.0), twice, atol=1e-9)
+
+
+def test_gamma_exchange_breaks_the_pronk_closure_only_off_ratio(
+        params_and_equilibrium) -> None:
+    """Chang section 2.2's existence half, in miniature: the symmetric bounce
+    closes under the two-step exchange map at gamma = 1 (measured 7e-11) and
+    does not at gamma = 1.25 (measured 0.63) -- the paper's 'the pronking
+    orbit could not exist as gamma != 1'. The rolling fixed points that
+    replace it (drho* rising 0.13 -> 0.59 rad/s over gamma 1.1 -> 2.0) are
+    the validation script's job; too slow for a test."""
+    p, z_eq = params_and_equilibrium
+    x = np.array([0.0, z_eq + 0.02, 0.0, 0.0])
+    assert np.linalg.norm(v2.apex_map_two_step(p, x, 1.0) - x) < 1e-8
+    assert np.linalg.norm(v2.apex_map_two_step(p, x, 1.25) - x) > 1e-2
