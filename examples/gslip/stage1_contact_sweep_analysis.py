@@ -44,7 +44,7 @@ from legwheel.models.slip_rf_cambered import rolling_radius
 # lr pattern signs (A, B, C, D); left pair {A, D}, right pair {B, C}.
 LR_SIGNS = np.array([+1.0, -1.0, -1.0, +1.0])
 # Zero-command diagonal residual (deg), reported and subtracted, never
-# silently. THE RESIDUAL IS kp-DEPENDENT (section 57): it is the elastic
+# silently. THE RESIDUAL IS kp-DEPENDENT (section 62): it is the elastic
 # deflection of a ~2.8 N.m static moment on the {A,C} diagonal (90 x 1.77 deg
 # ~= 500 x 0.33 deg ~= 2.8 N.m), not a driver zero -- so the reference below
 # is only valid at the kp it was measured at. Re-baseline from the sweep's
@@ -52,7 +52,7 @@ LR_SIGNS = np.array([+1.0, -1.0, -1.0, +1.0])
 # reference rather than silently mis-subtracting.
 KP_RESIDUAL_REFS = {
     90.0: np.array([-1.77, -1.04, -1.76, -1.04]),    # section 47
-    500.0: np.array([-0.33, +0.01, -0.32, +0.01]),   # section 57
+    500.0: np.array([-0.33, +0.01, -0.32, +0.01]),   # section 62
 }
 DIAG_RESIDUAL_REF = KP_RESIDUAL_REFS[90.0]
 
