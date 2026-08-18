@@ -97,12 +97,14 @@ def timestamp_health(t: np.ndarray) -> HealthReport:
 
 
 def per_side_achieved(gam_deg: np.ndarray,
-                      subtract_residual: bool = True):
+                      residual: np.ndarray | None = None):
     """(left, right) achieved lean in world sense from per-leg gamma (A B C D,
-    deg), lr pattern. Optionally subtracts the section 47 diagonal residual."""
+    deg), lr pattern. `residual` is the zero-command baseline to subtract --
+    pass the BATCH'S OWN lambda = 0 measurement (sections 62/63: the residual
+    is kp- and schedule-dependent with no scaling law); None falls back to
+    the stored kp-90 reference for old single-run use."""
     g = np.asarray(gam_deg, float)
-    if subtract_residual:
-        g = g - DIAG_RESIDUAL_REF
+    g = g - (DIAG_RESIDUAL_REF if residual is None else residual)
     world = g * LR_SIGNS
     left = 0.5 * (world[0] + world[3])
     right = 0.5 * (world[1] + world[2])
@@ -140,7 +142,8 @@ def _roll_from_quat(q: np.ndarray) -> np.ndarray:
 
 
 def analyse(path: str, lam_cmd_deg: float, alpha_cmd_deg: float,
-            pre=PRE_WINDOW, hold=HOLD_WINDOW) -> dict:
+            pre=PRE_WINDOW, hold=HOLD_WINDOW,
+            residual: np.ndarray | None = None) -> dict:
     d = np.load(path)
     mt, motor = d["motor_t"], d["motor_deg"]        # (n, 4, 3): theta beta gamma
     ot, odom = d["odom_t"], d["odom"]               # (n, 10): xyz ... quat
@@ -155,7 +158,7 @@ def analyse(path: str, lam_cmd_deg: float, alpha_cmd_deg: float,
 
     gam_pre = _window_mean(mt, motor[:, :, 2], *pre)
     gam_hold = _window_mean(mt, motor[:, :, 2], *hold)
-    left, right = per_side_achieved(gam_hold)
+    left, right = per_side_achieved(gam_hold, residual=residual)
     resid = diagonal_residual(gam_pre)
 
     z_pre = _window_mean(ot, odom[:, 2], *pre)
@@ -203,12 +206,31 @@ def main(argv) -> None:
         print("selftest: PASS. Expected npz schema (same as the lean rig): "
               "motor_t (n,), motor_deg (n, 4, 3), odom_t (n,), odom (n, 10).")
         return
+    # Auto-re-baseline: the batch's lambda = 0 run IS the residual reference
+    # at this kp and schedule (the sanctioned subtraction, sections 62/63).
+    parsed = []
+    for arg in argv:
+        path, lam, alpha = arg.rsplit(":", 2)
+        parsed.append((path, float(lam), float(alpha)))
+    batch_residual = None
+    for path, lam, _alpha in parsed:
+        if lam == 0.0:
+            d = np.load(path)
+            batch_residual = _window_mean(
+                d["motor_t"], d["motor_deg"][:, :, 2], *PRE_WINDOW)
+            print(f"batch residual from the lambda=0 run (A B C D): "
+                  + " ".join(f"{v:+.2f}" for v in batch_residual))
+            break
+    if batch_residual is None:
+        print("WARNING: no lambda=0 run in this batch -- falling back to the "
+              "stored kp-90 reference; the subtraction may be wrong in sign "
+              "per side (sections 62/63).")
+
     print(f"{'lam':>5} {'alp':>5} {'left':>7} {'right':>7} {'split':>6} | "
           f"{'h_gate L':>8} {'h_gate R':>8} | {'drop':>7} {'roll':>7} | "
           f"residual {{A,C}}/{{B,D}} (drift)")
-    for arg in argv:
-        path, lam, alpha = arg.rsplit(":", 2)
-        r = analyse(path, float(lam), float(alpha))
+    for path, lam, alpha in parsed:
+        r = analyse(path, lam, alpha, residual=batch_residual)
         if "refused" in r:
             print(f"{r['lam_cmd']:4.0f}d {r['alpha_cmd']:4.0f}d  {r['refused']}")
             continue
