@@ -503,6 +503,124 @@ def fit_camber_thrust(results: list[dict]) -> dict:
     return out
 
 
+def fit_camber_thrust_2p(results: list[dict], verbose: bool = True) -> dict:
+    """Two-parameter (per-kp offset + slope) camber-thrust law with
+    saturation (log section 81; predictions U1-U5 registered before any
+    number was read). Three sequential estimates, deliberately NOT one
+    joint regression -- the same shape as the per-kp lambda=0 gamma
+    re-baseline, so offset and slope cannot leak into each other:
+      1. b0(kp) = mean calibrated y-residual over that kp group's
+         lambda=0 runs. A kp group with no lambda=0 run is refused
+         (excluded and reported), never silently fitted.
+      2. c2 = lstsq slope of (mean res_y - b0(kp)) on achieved lean over
+         0 < lambda <= 30 deg (pre-saturation band; the linear form won
+         the section-79 one-parameter contest).
+      3. v_sat2 = mean of (mean res_y - b0(kp)) over lambda >= 35 deg.
+    Law: v_slip = b0(kp) + min(c2*lean, v_sat2); the smooth form
+    b0 + v_sat2*tanh(c2*lean/v_sat2) is scored alongside (both-forms
+    house style). Rescores per-run y-RMS with the piecewise law."""
+    runs = [r for r in results if not r.get("refused")
+            and "calibrated" in r["rms"]]
+    if len(runs) < 4:
+        return {"refused": "need >= 4 scored runs with --r0 for the fit"}
+    say = print if verbose else (lambda *a, **k: None)
+    rows = []
+    for r in runs:
+        res_y = np.concatenate(
+            [r["_internals"]["models"]["calibrated"][leg][:, 1]
+             for leg in range(4)])
+        rows.append({"lam": r["lam_cmd"], "kp": r["kp"],
+                     "lean": r["lean_ach_rad"],
+                     "mres": float(res_y.mean()), "res_y": res_y})
+    b0, b0_sigma, dropped = {}, {}, []
+    for kp in sorted({row["kp"] for row in rows}):
+        zero = [row["mres"] for row in rows
+                if row["kp"] == kp and row["lam"] == 0.0]
+        if not zero:
+            dropped.append(kp)
+            continue
+        b0[kp] = float(np.mean(zero))
+        b0_sigma[kp] = (float(np.std(zero, ddof=1)) if len(zero) > 1
+                        else float("nan"))
+    for kp in dropped:
+        say(f"  kp {kp:g}: REFUSED for the 2-parameter fit -- no lambda=0 "
+            f"run anchors its b0; its rows are excluded")
+    rows = [row for row in rows if row["kp"] in b0]
+    if not rows:
+        return {"refused": "no kp group carries a lambda=0 run"}
+    for kp in sorted(b0):
+        sig = b0_sigma[kp]
+        nsig = (abs(b0[kp]) / sig if np.isfinite(sig) and sig > 0
+                else float("nan"))
+        say(f"  b0(kp {kp:g}) = {b0[kp] * 1e3:+.3f} mm/s (run-scatter "
+            f"sigma {sig * 1e3:.3f} mm/s, |b0|/sigma {nsig:.1f}) "
+            f"(U1 bars: kp500 +0.4..+0.7 and >= 3 sigma; kp90 +1.2..+1.8)")
+    band = [row for row in rows if 0.0 < row["lam"] <= 30.0]
+    if len(band) < 2:
+        return {"refused": "need >= 2 runs in 0 < lambda <= 30 for c2"}
+    lean_b = np.array([row["lean"] for row in band])
+    y_b = np.array([row["mres"] - b0[row["kp"]] for row in band])
+    c2 = float(lean_b @ y_b / (lean_b @ lean_b))
+    tail = [row["mres"] - b0[row["kp"]] for row in rows if row["lam"] >= 35.0]
+    v_sat2 = float(np.mean(tail)) if tail else None
+
+    def law(lean_r, kp, smooth=False):
+        lin = c2 * lean_r
+        if v_sat2 is None:
+            return b0[kp] + lin
+        if smooth:
+            return b0[kp] + v_sat2 * float(np.tanh(lin / v_sat2))
+        return b0[kp] + min(lin, v_sat2)
+
+    resid = np.array([row["mres"] - law(row["lean"], row["kp"])
+                      for row in rows])
+    resid_s = np.array([row["mres"] - law(row["lean"], row["kp"], True)
+                        for row in rows])
+    rms_2p = float(np.sqrt(np.mean(resid ** 2)))
+    rms_tanh = float(np.sqrt(np.mean(resid_s ** 2)))
+    lam40 = [abs(row["mres"] - b0[row["kp"]]) for row in rows
+             if row["lam"] == 40.0]
+    pct_lam40 = (rms_2p / float(np.mean(lam40)) if lam40 and
+                 float(np.mean(lam40)) > 0 else float("nan"))
+    say(f"  law: v_slip = b0(kp) + min({c2 * 1e3:+.2f} mm/s/rad * lean, "
+        f"{(v_sat2 if v_sat2 is not None else float('nan')) * 1e3:+.2f} "
+        f"mm/s)   fit rms {rms_2p * 1e3:.3f} mm/s (tanh form "
+        f"{rms_tanh * 1e3:.3f}); rms / lambda40 value {pct_lam40:.1%} "
+        f"(U3 bar: 10%); c2 vs section-79 slope 0.0038 (U2)")
+    # U5: off-main-kp lambda~20 points against the fitted line
+    kp_main = max(b0, key=lambda kp: sum(row["kp"] == kp for row in rows))
+    u5 = {}
+    for row in rows:
+        if row["kp"] != kp_main and abs(row["lam"] - 20.0) < 1e-9:
+            pred = law(row["lean"], row["kp"]) - b0[row["kp"]]
+            meas = row["mres"] - b0[row["kp"]]
+            ratio = meas / pred if pred else float("nan")
+            u5.setdefault(row["kp"], []).append(ratio)
+            say(f"  U5 kp {row['kp']:g} lam20: measured/line = {ratio:.2f} "
+                f"(bar 0.85..1.15)")
+    say(f"  {'lam':>5} {'kp':>5} {'y-RMS cal':>10} {'y-RMS 2p':>9}")
+    agg_cal, agg_thr = [], []
+    for row in rows:
+        pred = law(row["lean"], row["kp"])
+        rms_c = float(np.sqrt(np.mean(row["res_y"] ** 2)))
+        rms_t = float(np.sqrt(np.mean((row["res_y"] - pred) ** 2)))
+        say(f"  {row['lam']:4.0f}d {row['kp']:5.0f} "
+            f"{rms_c * 1e3:9.2f} {rms_t * 1e3:8.2f}")
+        if row["lam"] >= 20:
+            agg_cal.append(rms_c), agg_thr.append(rms_t)
+    out = {"b0": b0, "b0_sigma": b0_sigma, "dropped_kp": dropped,
+           "c2": c2, "v_sat2": v_sat2, "rms_2p": rms_2p,
+           "rms_tanh": rms_tanh, "pct_of_lam40": pct_lam40,
+           "u5_ratio": {kp: float(np.mean(v)) for kp, v in u5.items()},
+           "n_runs": len(rows), "state": "roll"}
+    if agg_cal:
+        cut = 1.0 - float(np.mean(agg_thr)) / float(np.mean(agg_cal))
+        out["lam_ge20_rms_cut"] = cut
+        say(f"  lambda >= 20 aggregate y-RMS cut (2p law): {cut:.1%} "
+            f"(registered expectation: marginal over section 79's 6.6%)")
+    return out
+
+
 def fit_lateral_phase(results: list[dict], c_thrust: float) -> dict:
     """Wheel-phase-locked lateral oscillation (section 80, O1-O4): per leg
     per run, lstsq of the calibrated y-residual on spin-scaled harmonics
@@ -650,6 +768,39 @@ def _selftest() -> None:
     d_ok, _, _ = _synth()
     assert "refused" in analyse(d_ok, 0, 500, residual_deg=None)
 
+    # two-parameter thrust fit (section 81): synthetic result rows built
+    # from a known (b0 per kp, c2, sat) law -- recovery must be exact to
+    # tolerance, and a kp group with no lambda=0 run must be refused
+    # (excluded), never silently fitted.
+    def _fake(lam, kp, y_mean, n=64):
+        arr = np.zeros((n, 3))
+        arr[:, 1] = y_mean
+        return {"lam_cmd": lam, "kp": kp,
+                "lean_ach_rad": float(np.deg2rad(lam)), "yaw_mean": 0.0,
+                "rms": {"calibrated": np.zeros(3)},
+                "_internals": {"models": {"calibrated":
+                                          {leg: arr for leg in range(4)}}}}
+    b0_true = {500.0: 0.5e-3, 90.0: 1.5e-3}
+    c_true, sat_true = 3.0e-3, 1.6e-3
+    fake = [_fake(lam, kp,
+                  b0_true[kp] + min(c_true * np.deg2rad(lam), sat_true))
+            for kp in (500.0, 90.0)
+            for lam in (0.0, 10.0, 20.0, 30.0, 35.0, 40.0)]
+    fake.append(_fake(20.0, 250.0, 9.9e-3))     # no lambda=0 at kp 250
+    fit2 = fit_camber_thrust_2p(fake, verbose=False)
+    assert "refused" not in fit2, fit2
+    assert fit2["dropped_kp"] == [250.0], fit2["dropped_kp"]
+    assert abs(fit2["b0"][500.0] - b0_true[500.0]) < 1e-9
+    assert abs(fit2["b0"][90.0] - b0_true[90.0]) < 1e-9
+    assert abs(fit2["c2"] - c_true) < 1e-6
+    assert abs(fit2["v_sat2"] - sat_true) < 1e-6
+    assert fit2["rms_2p"] < 1e-9
+    # too few runs / no anchored kp group: refuse, don't guess
+    assert "refused" in fit_camber_thrust_2p(fake[:3], verbose=False)
+    assert "refused" in fit_camber_thrust_2p(
+        [_fake(lam, 250.0, 1e-3) for lam in (10.0, 20.0, 30.0, 40.0)],
+        verbose=False)
+
 
 # --------------------------------------------------------------------- main
 
@@ -727,6 +878,9 @@ def main(argv) -> None:
             print("\n--- camber-thrust fit (ROLL state; section 78) ---")
             thrust = fit_camber_thrust(results)
             print(f"thrust: {thrust}")
+            print("\n--- two-parameter thrust fit (section 81) ---")
+            thrust2 = fit_camber_thrust_2p(results)
+            print(f"thrust-2p: {thrust2}")
             if "c_tan" in thrust:
                 print("\n--- lateral phase-locked fit (section 80) ---")
                 print(f"lat-phase: "

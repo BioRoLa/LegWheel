@@ -135,16 +135,22 @@ class RobotParams:
     # the default theta command (uncalibrated closure, achieved ~16.2 deg).
     WHEEL_ROLL_RADIUS_SIM = 0.14482       # m, lambda- and kp-independent
 
-    # Camber-thrust lateral slip, sim wheel mode (stage15 --thrust-fit,
-    # section 78/79 verdicts): body-level crab slip toward the lean,
-    # v_slip ~ CAMBER_THRUST_SLOPE_SIM * lean for lean <~ 25 deg,
-    # SATURATING at ~CAMBER_THRUST_SAT_SIM above ~30 deg (classic tire
-    # camber-thrust saturation). Roll state; kp 90-1000 within +-20%
-    # (weak inverse-kp trend); yaw ~ 0 so this is slip, not turning.
-    # Caveat: a ~+0.55 mm/s lateral bias exists at lean = 0 (kp >= 250)
-    # -- a two-parameter (offset + slope) fit is the next refinement.
-    CAMBER_THRUST_SLOPE_SIM = 0.0038      # m/s per rad of lean (small-angle)
-    CAMBER_THRUST_SAT_SIM = 0.0022        # m/s, saturation above ~30 deg
+    # Camber-thrust lateral slip, sim wheel mode (stage15 --thrust-fit;
+    # two-parameter law of section 81, superseding section 78/79's
+    # origin-forced fit whose constants were SLOPE 0.0038 / SAT 0.0022):
+    # v_slip = OFFSET + min(SLOPE * lean, SAT), toward the lean, ROLL
+    # state. The offset is the lean-independent lateral bias the
+    # origin-forced slope had partially absorbed (U1: +0.549 mm/s at
+    # kp 500, 43 sigma over run scatter; +1.54 mm/s at kp 90). Constants
+    # are kp-TAGGED per U5's registered failure clause: with per-kp
+    # offsets separated, the lambda-20 kp-ladder points sit at
+    # 0.46x/1.02x/1.32x of the kp-500 line (kp 90/250/1000, n = 1 each)
+    # -- there is no kp-independent slope. Fit rms 0.13 mm/s = 8.5% of
+    # the lambda-40 value (U3 bar 10%); the hard-knee min() form beats
+    # tanh (0.23 mm/s). yaw ~ 0 so this is slip, not turning.
+    CAMBER_THRUST_OFFSET_KP500_SIM = 0.00055   # m/s, lean-independent bias
+    CAMBER_THRUST_SLOPE_KP500_SIM = 0.0030     # m/s per rad of lean
+    CAMBER_THRUST_SAT_KP500_SIM = 0.0016       # m/s, saturation above ~30 deg
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass
