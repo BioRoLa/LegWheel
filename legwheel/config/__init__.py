@@ -134,6 +134,17 @@ class RobotParams:
     # design formula would be 23% low at 40 deg). ROLL state; measured at
     # the default theta command (uncalibrated closure, achieved ~16.2 deg).
     WHEEL_ROLL_RADIUS_SIM = 0.14482       # m, lambda- and kp-independent
+
+    # Camber-thrust lateral slip, sim wheel mode (stage15 --thrust-fit,
+    # section 78/79 verdicts): body-level crab slip toward the lean,
+    # v_slip ~ CAMBER_THRUST_SLOPE_SIM * lean for lean <~ 25 deg,
+    # SATURATING at ~CAMBER_THRUST_SAT_SIM above ~30 deg (classic tire
+    # camber-thrust saturation). Roll state; kp 90-1000 within +-20%
+    # (weak inverse-kp trend); yaw ~ 0 so this is slip, not turning.
+    # Caveat: a ~+0.55 mm/s lateral bias exists at lean = 0 (kp >= 250)
+    # -- a two-parameter (offset + slope) fit is the next refinement.
+    CAMBER_THRUST_SLOPE_SIM = 0.0038      # m/s per rad of lean (small-angle)
+    CAMBER_THRUST_SAT_SIM = 0.0022        # m/s, saturation above ~30 deg
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass

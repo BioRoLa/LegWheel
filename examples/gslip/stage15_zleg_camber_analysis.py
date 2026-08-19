@@ -89,7 +89,9 @@ THETA_CLOSURE_DEG = 18.04    # calibrated concentric closure (roll, kp 500)
 # eccentricity is what the k=1 fit measures. Radius fits must pool only
 # same-theta runs (r0 depends on closure error); achieved theta is reported
 # per run for exactly that grouping decision.
-THETA_WHEEL_BAND_DEG = (15.0, 20.0)
+THETA_WHEEL_BAND_DEG = (14.0, 20.0)   # floor 14: the lean transient sags
+                                      # theta to ~14.7 under load; still a
+                                      # (slightly over-folded) closed wheel
 
 ROLL_WINDOW = (13.0, 28.0)   # stage1 runner schedule, steady rolling
 MAX_DUP_FRACTION = 0.01
@@ -361,6 +363,11 @@ def analyse(d, lam_cmd: float, kp: float,
         # GT lateral drift in the window: if this tracks the y-residual, the
         # lateral error is true side-slip (camber thrust), not geometry.
         "gt_vy_rms": float(np.sqrt(np.mean(v_body[m, 1] ** 2))),
+        # camber-thrust fit inputs (log section 78): mean achieved lean,
+        # yaw rate (T5 turning caveat), and the calibrated-model mean
+        # y-residual = -v_slip by construction (lever terms already paid).
+        "lean_ach_rad": float(np.deg2rad(0.5 * (left + right))),
+        "yaw_mean": float(omega[m, 2].mean()),
         "rms": {name: rms(name) for name in models},
         "per_leg_y_rms": {
             name: np.array([np.sqrt(np.mean(models[name][leg][:, 1]**2))
@@ -446,6 +453,55 @@ def fit_eccentricity(results: list[dict], r0: float) -> dict:
 
 
 # ----------------------------------------------------------------- selftest
+
+def fit_camber_thrust(results: list[dict]) -> dict:
+    """Body-level lateral slip law from per-run mean calibrated y-residuals
+    (log section 78, predictions T1-T5 registered first). Fits BOTH forms
+    res_y = c*tan(lean) and res_y = c*lean; reports both rms, then rescores
+    the y-channel with the winning tan-form coefficient subtracted."""
+    runs = [r for r in results if not r.get("refused")
+            and "calibrated" in r["rms"]]
+    if len(runs) < 4:
+        return {"refused": "need >= 4 scored runs with --r0 for the fit"}
+    rows = []
+    for r in runs:
+        res_y = np.concatenate([r["_internals"]["models"]["calibrated"][leg][:, 1]
+                                for leg in range(4)])
+        rows.append((r["lam_cmd"], r["kp"], r["lean_ach_rad"],
+                     float(res_y.mean()), r["yaw_mean"], res_y))
+    print(f"{'lam':>5} {'kp':>5} {'lean_ach':>8} {'mean res_y':>11} "
+          f"{'yaw':>9}")
+    for lam, kp, lean, mres, yaw, _ in rows:
+        print(f"{lam:4.0f}d {kp:5.0f} {np.rad2deg(lean):7.2f}d "
+              f"{mres * 1e3:+9.2f}mm/s {yaw * 1e3:+7.2f}mrad/s")
+    lean = np.array([x[2] for x in rows])
+    mres = np.array([x[3] for x in rows])
+    c_tan = float(np.tan(lean) @ mres / (np.tan(lean) @ np.tan(lean)))
+    c_lin = float(lean @ mres / (lean @ lean))
+    rms_tan = float(np.sqrt(np.mean((mres - c_tan * np.tan(lean)) ** 2)))
+    rms_lin = float(np.sqrt(np.mean((mres - c_lin * lean) ** 2)))
+    out = {"c_tan": c_tan, "rms_tan": rms_tan,
+           "c_lin": c_lin, "rms_lin": rms_lin,
+           "n_runs": len(runs), "state": "roll"}
+    # T3 rescore: subtract the tan-form prediction, per-sample, per run
+    print(f"\n  v_slip = c*tan(lean): c = {c_tan * 1e3:+.2f} mm/s "
+          f"(fit rms {rms_tan * 1e3:.2f})   |   c*lean: "
+          f"c = {c_lin * 1e3:+.2f} (rms {rms_lin * 1e3:.2f})")
+    print(f"  {'lam':>5} {'kp':>5} {'y-RMS cal':>10} {'y-RMS thrust':>12}")
+    agg_cal, agg_thr = [], []
+    for lam, kp, lean_r, _, _, res_y in rows:
+        pred = c_tan * np.tan(lean_r)
+        rms_c = float(np.sqrt(np.mean(res_y ** 2)))
+        rms_t = float(np.sqrt(np.mean((res_y - pred) ** 2)))
+        print(f"  {lam:4.0f}d {kp:5.0f} {rms_c * 1e3:9.2f} {rms_t * 1e3:11.2f}")
+        if lam >= 20:
+            agg_cal.append(rms_c), agg_thr.append(rms_t)
+    if agg_cal:
+        cut = 1.0 - float(np.mean(agg_thr)) / float(np.mean(agg_cal))
+        out["lam_ge20_rms_cut"] = cut
+        print(f"  lambda >= 20 aggregate y-RMS cut: {cut:.1%} (T3 bar: 40%)")
+    return out
+
 
 def _synth(n=2001, t1=20.0, gamma_deg=0.0, gamma_dot=0.0, vx=0.4,
            r_true=0.13, omega_body=(0.0, 0.0, 0.0), model="cambered"):
@@ -561,6 +617,8 @@ def main(argv) -> None:
     r0 = None
     do_fit = False
     do_ecc = False
+    do_thrust = False
+    window = ROLL_WINDOW
     runs = []
     it = iter(argv)
     for arg in it:
@@ -571,6 +629,11 @@ def main(argv) -> None:
         elif arg == "--ecc-apply":
             do_fit = True
             do_ecc = True
+        elif arg == "--thrust-fit":
+            do_thrust = True
+        elif arg == "--window":
+            lo, hi = next(it).split(":")
+            window = (float(lo), float(hi))
         else:
             path, lam, kp = arg.rsplit(":", 2)
             runs.append((path, float(lam), float(kp)))
@@ -593,7 +656,7 @@ def main(argv) -> None:
     results = []
     for path, lam, kp in runs:
         res = analyse(np.load(path), lam, kp,
-                      residual_deg=residuals.get(kp), r0=r0)
+                      residual_deg=residuals.get(kp), r0=r0, window=window)
         results.append(res)
         if "refused" in res:
             print(f"{lam:4.0f}d {kp:5.0f}  {res['refused']}")
@@ -604,6 +667,13 @@ def main(argv) -> None:
               f"{_fmt_rms(res['rms']['design'])} | {cal} | "
               f"v {res['mean_speed']:.3f} vyRMS {res['gt_vy_rms'] * 1e3:5.1f} | "
               + " ".join(f"{c:+.2f}" for c in res["spin_gt_corr"]))
+
+    if do_thrust:
+        if r0 is None:
+            print("\n--thrust-fit needs --r0 (fits the calibrated residual)")
+        else:
+            print("\n--- camber-thrust fit (ROLL state; section 78) ---")
+            print(f"thrust: {fit_camber_thrust(results)}")
 
     if do_fit:
         print("\n--- fits (ROLL state, per-kp corpus) ---")
