@@ -125,6 +125,15 @@ class RobotParams:
     WHEEL_CLOSURE_THETA_SIM_DEG = 18.04   # achieved theta minimizing k=1, this sim
     WHEEL_CLOSURE_CMD_SIM_DEG = 18.85     # command that lands it at kp 500
     WHEEL_ECC_FLOOR_SIM = 0.00036         # m, residual e at the calibrated closure
+
+    # Effective FORWARD rolling radius, sim wheel mode (stage15 z_leg fit on
+    # the Stage 1 corpus, 180k contact samples): the wheel advances as if
+    # r = 0.14482 at EVERY lean (0-40 deg) and every kp (90-1000) -- the
+    # geometric rolling_radius(lambda) does NOT describe the sim's forward
+    # channel under lean (knobby decimated tread again, section 73/75; the
+    # design formula would be 23% low at 40 deg). ROLL state; measured at
+    # the default theta command (uncalibrated closure, achieved ~16.2 deg).
+    WHEEL_ROLL_RADIUS_SIM = 0.14482       # m, lambda- and kp-independent
     
     # Center of Mass (COM) Biases
     COM_BIAS = 0.0                  # x bias of center of mass
