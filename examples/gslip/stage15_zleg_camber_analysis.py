@@ -503,6 +503,58 @@ def fit_camber_thrust(results: list[dict]) -> dict:
     return out
 
 
+def fit_lateral_phase(results: list[dict], c_thrust: float) -> dict:
+    """Wheel-phase-locked lateral oscillation (section 80, O1-O4): per leg
+    per run, lstsq of the calibrated y-residual on spin-scaled harmonics
+    [spin*cos(k*beta), spin*sin(k*beta)], k in {1,2}, after removing the
+    mean-thrust prediction. Reports per-lambda k1/k2 amplitudes (leg mean)
+    and the y-RMS cut when harmonics + mean thrust are subtracted."""
+    runs = [r for r in results if not r.get("refused")
+            and "calibrated" in r["rms"]]
+    if not runs:
+        return {"refused": "no scored runs"}
+    print(f"  {'lam':>5} {'kp':>5} {'k1 amp':>8} {'k2 amp':>8} "
+          f"{'sigma':>7} {'y-RMS cal':>10} {'y-RMS -osc':>10}")
+    agg_cal, agg_sub = [], []
+    per_lam = {}
+    for r in runs:
+        st = r["_internals"]["store"]
+        cal = r["_internals"]["models"]["calibrated"]
+        pred_thrust = c_thrust * np.tan(r["lean_ach_rad"])
+        k1a, k2a, sig, rc, rs = [], [], [], [], []
+        for leg in range(4):
+            mask = st[leg]["mask"]
+            sp, be = st[leg]["spin"][mask], st[leg]["beta"][mask]
+            y = cal[leg][:, 1] - pred_thrust
+            X = np.stack([sp * np.cos(be), sp * np.sin(be),
+                          sp * np.cos(2 * be), sp * np.sin(2 * be)], -1)
+            coef, res_ss, *_ = np.linalg.lstsq(X, y, rcond=None)
+            s2 = float(res_ss[0] / max(1, len(y) - 4)) if len(res_ss) else \
+                float(np.mean((y - X @ coef) ** 2))
+            cov = s2 * np.linalg.inv(X.T @ X)
+            k1a.append(np.hypot(coef[0], coef[1]))
+            k2a.append(np.hypot(coef[2], coef[3]))
+            sig.append(np.sqrt(np.trace(cov[:2, :2])))
+            rc.append(np.sqrt(np.mean(cal[leg][:, 1] ** 2)))
+            rs.append(np.sqrt(np.mean((y - X @ coef) ** 2)))
+        # amplitudes are in radius units (m): v = spin * a; report as mm
+        row = (float(np.mean(k1a)), float(np.mean(k2a)), float(np.mean(sig)),
+               float(np.sqrt(np.mean(np.array(rc) ** 2))),
+               float(np.sqrt(np.mean(np.array(rs) ** 2))))
+        per_lam.setdefault((r["lam_cmd"], r["kp"]), []).append(row)
+        print(f"  {r['lam_cmd']:4.0f}d {r['kp']:5.0f} "
+              f"{row[0] * 1e3:7.2f}mm {row[1] * 1e3:7.2f}mm "
+              f"{row[2] * 1e3:6.2f} {row[3] * 1e3:9.2f} {row[4] * 1e3:9.2f}")
+        if r["lam_cmd"] >= 20:
+            agg_cal.append(row[3]), agg_sub.append(row[4])
+    out = {"n_runs": len(runs)}
+    if agg_cal:
+        out["lam_ge20_cut"] = 1.0 - float(np.mean(agg_sub)) / float(np.mean(agg_cal))
+        print(f"  lambda >= 20 aggregate y-RMS cut (harmonics + thrust): "
+              f"{out['lam_ge20_cut']:.1%} (O3 bar: 25%)")
+    return out
+
+
 def _synth(n=2001, t1=20.0, gamma_deg=0.0, gamma_dot=0.0, vx=0.4,
            r_true=0.13, omega_body=(0.0, 0.0, 0.0), model="cambered"):
     """Synthetic dump built from hand physics, NOT from the models under
@@ -673,7 +725,12 @@ def main(argv) -> None:
             print("\n--thrust-fit needs --r0 (fits the calibrated residual)")
         else:
             print("\n--- camber-thrust fit (ROLL state; section 78) ---")
-            print(f"thrust: {fit_camber_thrust(results)}")
+            thrust = fit_camber_thrust(results)
+            print(f"thrust: {thrust}")
+            if "c_tan" in thrust:
+                print("\n--- lateral phase-locked fit (section 80) ---")
+                print(f"lat-phase: "
+                      f"{fit_lateral_phase(results, thrust['c_tan'])}")
 
     if do_fit:
         print("\n--- fits (ROLL state, per-kp corpus) ---")
