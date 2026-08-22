@@ -19,13 +19,72 @@ from scipy.optimize import brentq
 
 from legwheel.models import slip_rf
 from legwheel.models.gslip import GSlipFailure
+from legwheel.planners import gslip_to_corgi as g2c
 
 MASS, G = 30.0, 9.81
-FOOT_RADIUS, HIP_TO_ARC = 0.145, 0.0850
 V_TILDE = 1.2  # chosen target: ~1.8 m/s
 N_LEGS = 4
 MOTOR_TORQUE_LIMIT = 35.0
-DL_DTHETA = 0.10324  # m/rad at the nominal pose (see corgi_speed_study.py)
+
+# THE POSE. This sweep used to hardcode HIP_TO_ARC = 0.0850, which is the
+# theta ~ 65.89 deg crouch that hits the paper's r~ = 0.6303 optimum -- and
+# which stance_height_tradeoff.py REJECTED, because on this leg that optimum is
+# a 0.230 m crouch, too low to clear the support block and needlessly harsh on
+# the hardware. Every other script (export_pronk_csv, pronk_operating_point,
+# stage2a_turning_envelope) derives the pose from the real linkage at
+# theta = 100 deg. So this file's conclusions were drawn at a pose the project
+# does not run, which the log flagged and nobody fixed.
+#
+# The default is now theta = 100 deg, the pose of record. `--pose old`
+# reproduces the historical numbers for comparison; it is not the robot.
+NOMINAL_THETA_DEG = 100.0
+LEGACY_HIP_TO_ARC = 0.0850   # theta ~ 65.89 deg; the rejected crouch
+
+_LEG_MAP = g2c.LegLengthMap()
+FOOT_RADIUS = float(_LEG_MAP.leg.foot_radius)
+HIP_TO_ARC = float(_LEG_MAP.length(np.deg2rad(NOMINAL_THETA_DEG)))
+POSE_LABEL = f"theta={NOMINAL_THETA_DEG:.0f}deg (pose of record)"
+
+# dl/dtheta at the pose, for the torque proxy. This was a hardcoded 0.10324,
+# which is a POSE-DEPENDENT quantity -- carrying it across a pose change would
+# have silently mispriced every torque in the table, so it is measured here.
+def _dl_dtheta(theta_deg: float, h: float = 1e-4) -> float:
+    t = np.deg2rad(theta_deg)
+    return float((_LEG_MAP.length(t + h) - _LEG_MAP.length(t - h)) / (2 * h))
+
+DL_DTHETA = _dl_dtheta(NOMINAL_THETA_DEG)
+
+
+def set_pose(theta_deg: float | None = None, hip_to_arc: float | None = None) -> None:
+    """Select the stance pose. Give a theta, or a raw hip-to-arc length."""
+    global HIP_TO_ARC, DL_DTHETA, POSE_LABEL
+    if (theta_deg is None) == (hip_to_arc is None):
+        raise ValueError("give exactly one of theta_deg, hip_to_arc")
+    if theta_deg is not None:
+        HIP_TO_ARC = float(_LEG_MAP.length(np.deg2rad(theta_deg)))
+        DL_DTHETA = _dl_dtheta(theta_deg)
+        POSE_LABEL = f"theta={theta_deg:.2f}deg"
+    else:
+        HIP_TO_ARC = float(hip_to_arc)
+        # Invert the length map to price the torque at the matching theta.
+        lo, hi = 20.0, 160.0
+        for _ in range(60):
+            mid = 0.5 * (lo + hi)
+            if _LEG_MAP.length(np.deg2rad(mid)) < HIP_TO_ARC:
+                lo = mid
+            else:
+                hi = mid
+        DL_DTHETA = _dl_dtheta(0.5 * (lo + hi))
+        POSE_LABEL = (f"hip_to_arc={HIP_TO_ARC:.4f}m (theta~{0.5*(lo+hi):.2f}deg)"
+                      + (" -- LEGACY, the rejected crouch"
+                         if abs(HIP_TO_ARC - LEGACY_HIP_TO_ARC) < 1e-9 else ""))
+
+
+def pose_banner() -> str:
+    p = params(18.0)
+    return (f"POSE {POSE_LABEL}   hip_to_arc {HIP_TO_ARC:.4f} m   l0 {p.l0:.4f} m   "
+            f"r~ {FOOT_RADIUS / p.l0:.4f}   v_scale {np.sqrt(G * p.l0):.4f} m/s   "
+            f"dl/dtheta {DL_DTHETA:.5f} m/rad")
 
 
 def set_speed(v_tilde: float) -> None:
@@ -153,6 +212,7 @@ def main(k_rel_values=(7.0, 10.0, 12.0, 15.0, 18.0, 22.0, 27.0),
          beta_step: float = 0.25) -> None:
     beta_values = np.arange(35.0, 89.01, beta_step)
     print()
+    print(pose_banner())
     print(f"Corgi SLIP-RF self-stability at v~ = {V_TILDE} "
           f"({V_TILDE * np.sqrt(G * (HIP_TO_ARC + FOOT_RADIUS)):.3f} m/s)")
     print(f"beta swept {beta_values[0]}-{beta_values[-1]} deg in "
@@ -200,7 +260,11 @@ def speed_scan(v_tildes, k_rels, beta_step: float = 0.5) -> None:
     """min|dP/dalpha| over the (speed, stiffness) plane -- is it ever stable?"""
     beta_values = np.arange(35.0, 89.01, beta_step)
     print()
+    print(pose_banner())
     print("min |dP/dalpha| over (speed, stiffness); values < 1 are self-stable")
+    print(f"  speeds scanned: v~ {min(v_tildes)}-{max(v_tildes)}. 'No stable point'"
+          f" means none AT THESE SPEEDS -- the default used to stop at 1.8 and the")
+    print("  first self-stable gait sits above it, so state the ceiling with the result.")
     header = f"{'v~':>6} " + "".join(f"{f'k_rel={k:g}':>12}" for k in k_rels)
     print(header)
     print("-" * len(header))
@@ -223,10 +287,22 @@ if __name__ == "__main__":
     import sys
 
     args = sys.argv[1:]
+    # --pose old  reproduces the historical (rejected-crouch) numbers;
+    # --pose <deg> picks any stance theta. Default is the pose of record.
+    if len(args) >= 2 and args[0] == "--pose":
+        if args[1] == "old":
+            set_pose(hip_to_arc=LEGACY_HIP_TO_ARC)
+        else:
+            set_pose(theta_deg=float(args[1]))
+        args = args[2:]
+
     if args and args[0] == "--scan":
         speed_scan(
             v_tildes=[float(a) for a in args[1:]]
-            or (0.7, 0.9, 1.1, 1.2, 1.4, 1.6, 1.8),
+            # Reaches past the torque envelope on purpose: the question is
+            # whether a stable window exists at all, and where it sits
+            # relative to the fence, not whether it is affordable.
+            or (0.5, 0.7, 0.9, 1.1, 1.2, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5),
             k_rels=(7.0, 15.0, 27.0, 45.0),
         )
     elif args and args[0] == "--v":

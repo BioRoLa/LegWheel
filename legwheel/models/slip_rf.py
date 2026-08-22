@@ -104,11 +104,18 @@ def hessians(p: SlipRfParams, length: float, phi: float) -> tuple[np.ndarray, np
     return h_x, h_z
 
 
-def accel(p: SlipRfParams, length: float, phi: float, dl: float, dphi: float) -> np.ndarray:
+def accel(p: SlipRfParams, length: float, phi: float, dl: float, dphi: float,
+          tau: np.ndarray | None = None) -> np.ndarray:
     """Generalized acceleration during stance.
 
     Same point-mass reduction as the G-SLIP model: the Christoffel terms
-    cancel, leaving m*(J_x^T*xddot + J_z^T*zddot) + dV/dq = 0.
+    cancel, leaving m*(J_x^T*xddot + J_z^T*zddot) + dV/dq = tau.
+
+    Args:
+        tau: optional generalized torque [tau_l, tau_phi]. None is the
+            conservative model and is bit-identical to every result recorded
+            before this argument existed. The clocked-torque model of Lu & Lin
+            eq 11 drives the LEG ANGLE, so it passes tau_phi and tau_l = 0.
     """
     jac = jacobian(p, length, phi)
     h_x, h_z = hessians(p, length, phi)
@@ -123,7 +130,10 @@ def accel(p: SlipRfParams, length: float, phi: float, dl: float, dphi: float) ->
             p.m * p.g * jac[1, 1],
         ]
     )
-    return np.linalg.solve(mass, -vel - dv)
+    rhs_ = -vel - dv
+    if tau is not None:
+        rhs_ = rhs_ + np.asarray(tau, dtype=float)
+    return np.linalg.solve(mass, rhs_)
 
 
 def cartesian_accel(
@@ -172,15 +182,23 @@ def simulate_stance(
     rtol: float = 1e-10,
     atol: float = 1e-12,
     dense: bool = False,
+    tau_fn=None,
+    max_step: float | None = None,
 ):
-    """Integrate stance from touchdown to liftoff (eq 34: l = l0)."""
+    """Integrate stance from touchdown to liftoff (eq 34: l = l0).
+
+    `tau_fn(t, length, phi, dl, dphi) -> (tau_l, tau_phi)` adds a generalized
+    torque during stance. None -- the default -- is the conservative model and
+    is bit-identical to every result recorded before this argument existed.
+    """
     phi_td = p.phi_touchdown(beta)
     dl0, dphi0 = touchdown_rates(p, v, alpha, beta)
     if dl0 >= 0:
         raise GSlipFailure("leg is not compressing at touchdown")
 
     def rhs(_t, y):
-        return [y[2], y[3], *accel(p, y[0], y[1], y[2], y[3])]
+        tau = None if tau_fn is None else tau_fn(_t, y[0], y[1], y[2], y[3])
+        return [y[2], y[3], *accel(p, y[0], y[1], y[2], y[3], tau)]
 
     def liftoff(_t, y):
         return y[0] - p.l0
@@ -208,7 +226,7 @@ def simulate_stance(
         rtol=rtol,
         atol=atol,
         dense_output=dense,
-        max_step=max_time / 300.0,
+        max_step=(max_time / 300.0) if max_step is None else max_step,
     )
     if len(sol.t_events[2]) > 0:
         raise GSlipFailure("singular configuration during stance")
@@ -219,14 +237,15 @@ def simulate_stance(
     return sol
 
 
-def next_touchdown(p: SlipRfParams, v: float, alpha: float, beta: float) -> tuple[float, float]:
+def next_touchdown(p: SlipRfParams, v: float, alpha: float, beta: float,
+                   tau_fn=None) -> tuple[float, float]:
     """Next touchdown states (v, alpha) only -- the Poincare map, cheaply.
 
     Skips the dense output and the peak-force pass that `stride` does, which
     together cost about 1.6x. Fixed-point root-finding calls this thousands of
     times, so the saving is worth the separate entry point.
     """
-    sol = simulate_stance(p, v, alpha, beta, rtol=1e-8, atol=1e-10)
+    sol = simulate_stance(p, v, alpha, beta, rtol=1e-8, atol=1e-10, tau_fn=tau_fn)
     length, phi, dl, dphi = sol.y_events[0][0]
     vx, vz = jacobian(p, length, phi) @ np.array([dl, dphi])
     _, z_lo = position(p, length, phi)
@@ -241,9 +260,24 @@ def next_touchdown(p: SlipRfParams, v: float, alpha: float, beta: float) -> tupl
     return float(np.hypot(vx, vz_td)), float(np.arctan2(-vz_td, vx))
 
 
-def stride(p: SlipRfParams, v: float, alpha: float, beta: float) -> dict:
-    """One stride: stance then ballistic flight, returning next touchdown states."""
-    sol = simulate_stance(p, v, alpha, beta, dense=True)
+def stride(p: SlipRfParams, v: float, alpha: float, beta: float, tau_fn=None,
+           rtol: float = 1e-10, atol: float = 1e-12,
+           max_step: float | None = None) -> dict:
+    """One stride: stance then ballistic flight, returning next touchdown states.
+
+    `rtol`/`atol`/`max_step` are exposed so a caller can measure the map's own
+    numerical conditioning, and so a caller that injects a `tau_fn` with a fast
+    transition can force the integrator to resolve it. The defaults are exactly
+    the values simulate_stance used before they were parameters, so omitting
+    them is bit-identical to every result recorded earlier.
+
+    S149: this matters. An adaptive RK45 loses order across a discontinuity in
+    the RHS, and its error estimate stops meaning what rtol says it means -- a
+    hard gain switch inside stance produced 0.14-0.48 of slope noise against a
+    0.02 bar, while the same law with constant gains was clean to 8e-4.
+    """
+    sol = simulate_stance(p, v, alpha, beta, dense=True, tau_fn=tau_fn,
+                          rtol=rtol, atol=atol, max_step=max_step)
     t_lo = float(sol.t_events[0][0])
     length, phi, dl, dphi = sol.y_events[0][0]
 
