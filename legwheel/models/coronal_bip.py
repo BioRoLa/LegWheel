@@ -64,18 +64,32 @@ K_SIDE_DEFAULT = 2 * 8941.0   # two sagittal legs per coronal side (N/m)
 I_ROLL_DEFAULT = 0.611906     # kg m^2, from the proto (section 41)
 MASS_DEFAULT = 30.0           # kg, scale reading
 
-# Which rolling-radius law side_geometry uses. "torus" is the Stage 0 design
-# geometry (radius shrinks as cos-ish under lean); "measured" is what Stage 1.5
-# / S75 found in sim (radius flat at 0.14482 m over 0-40 deg, because the sim's
-# tread is not a smooth torus). Left at "torus" so this module's behaviour does
-# not change silently -- S183 records the argument for flipping it, and Stage
-# 2a's E3 already registers the choice as a sensitivity check rather than an
-# assumption. Change deliberately, and re-run the Stage 2b grids when you do.
+# WHICH ROLLING-RADIUS LAW side_geometry USES. This is a plant choice, not a
+# tuning constant -- changing it moves every cambered Stage 2b number.
 #
-# Overridable by env var so the SAME code can be run under both laws without an
-# edit between runs -- a sensitivity check whose two arms differ by a source
-# edit is not a sensitivity check.
-RADIUS_LAW_DEFAULT = os.environ.get("LEGWHEEL_RADIUS_LAW", "torus")
+#   "measured"  radius is lambda-INDEPENDENT at r0 = 0.14482 m. THE DEFAULT
+#               since 2026-08-23 (S185). Stage 1.5 / S75 measured it flat over
+#               0-40 deg in sim; the sim's tread is not a smooth torus.
+#   "torus"     radius shrinks as rolling_radius(lean). Correct for a smooth
+#               torus, which is the Stage 0 DESIGN geometry and may be the
+#               right law for hardware -- kept for exactly that reason.
+#
+# WHY "measured" IS THE DEFAULT. It is the law the simulator actually exhibits,
+# and sim is what Stage 3 validates against; this project's record is that
+# measurement beats derivation every time the two have disagreed (erosion, the
+# flight gate, the alpha spread). NOT because it makes a test pass -- it does,
+# and that is a consequence, not the argument.
+#
+# WHAT IT COSTS, so nobody rediscovers it: under "measured" the Ackermann
+# family closes at lam_in 5 and 10 deg and NOT at 15 (residual 1.1e-02). That
+# is a model-space lean ceiling and it wants checking against Stage 4's
+# lambda in {0,5,10,15,20} matrix before it is believed. S184, S185.
+#
+# BOTH ARE KEPT. Stage 2a registers the choice as sensitivity check E3, so the
+# thesis reports the band rather than a point. Overridable by env var so the
+# SAME code runs under both -- a sensitivity check whose two arms differ by a
+# source edit is not a sensitivity check.
+RADIUS_LAW_DEFAULT = os.environ.get("LEGWHEEL_RADIUS_LAW", "measured")
 if RADIUS_LAW_DEFAULT not in ("torus", "measured"):
     raise ValueError(f"LEGWHEEL_RADIUS_LAW must be 'torus' or 'measured', "
                      f"got {RADIUS_LAW_DEFAULT!r}")
