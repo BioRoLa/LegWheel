@@ -64,13 +64,63 @@ def test_static_roll_is_restoring() -> None:
 
 
 def test_side_geometry_identity_and_lean_trends() -> None:
-    g0 = bip.side_geometry(0.0)
-    assert g0.d_out == pytest.approx(bip.WHEEL_AXIAL_OFFSET, abs=1e-15)
-    assert g0.l0 == pytest.approx(bip.LEG_LENGTH_NOMINAL, abs=1e-15)
-    g = bip.side_geometry(np.deg2rad(20.0))
-    assert g.l0 < g0.l0            # rolling radius shrinks under lean
-    p0, p1 = params(), params().cambered(np.deg2rad(10), np.deg2rad(10))
+    for law in ("torus", "measured"):
+        g0 = bip.side_geometry(0.0, radius_law=law)
+        assert g0.d_out == pytest.approx(bip.WHEEL_AXIAL_OFFSET, abs=1e-15)
+        assert g0.l0 == pytest.approx(bip.LEG_LENGTH_NOMINAL, abs=1e-15)
+    # The rest length shrinks only under the smooth-torus law. Stage 1.5 / S75
+    # measured the effective radius FLAT over 0-40 deg in sim, so "measured"
+    # must NOT shrink -- that is the whole difference between the two laws and
+    # it is asserted, not assumed.
+    g_t = bip.side_geometry(np.deg2rad(20.0), radius_law="torus")
+    g_m = bip.side_geometry(np.deg2rad(20.0), radius_law="measured")
+    assert g_t.l0 < bip.LEG_LENGTH_NOMINAL
+    assert g_m.l0 == pytest.approx(bip.LEG_LENGTH_NOMINAL, abs=1e-15)
+    p0 = params()
+    p1 = params().cambered(np.deg2rad(10), np.deg2rad(10), radius_law="torus")
     assert p1.left.l0 < p0.left.l0
+    p2 = params().cambered(np.deg2rad(10), np.deg2rad(10),
+                           radius_law="measured")
+    assert p2.left.l0 == pytest.approx(p0.left.l0, abs=1e-15)
+    with pytest.raises(ValueError):
+        bip.side_geometry(0.0, radius_law="whatever")
+
+
+def test_side_geometry_lateral_offset_uses_the_ROLLING_radius() -> None:
+    """S183: the crown term must be the rolling radius, not R_CORNER.
+
+    This is the coefficient the whole cambered coupling rides on and NOTHING
+    pinned it before -- the old test asserted only the lambda = 0 identity and
+    that l0 decreased, so a 9.7x error in the term that generates the roll
+    moment passed every check for six days.
+
+    d_out is hip-to-CONTACT. The wheel pivots about its axle, so the ground
+    point a rolling radius below the centre swings outboard by r*sin(lean).
+    R_CORNER (0.015, the shoulder fillet) governs migration ACROSS THE TREAD,
+    which is a different quantity and ~20x smaller.
+    """
+    from legwheel.models.slip_rf_cambered import rolling_radius
+
+    r0 = rolling_radius(0.0)
+    assert r0 == pytest.approx(0.145, abs=1e-9)
+
+    for deg in (5.0, 10.0, 15.0, 20.0, 30.0):
+        lam = np.deg2rad(deg)
+        g = bip.side_geometry(lam, radius_law="measured")
+        expect = bip.WHEEL_AXIAL_OFFSET * np.cos(lam) + r0 * np.sin(lam)
+        assert g.d_out == pytest.approx(expect, abs=1e-12)
+
+    # The migration must be MONOTONE and OUTBOARD across the working band.
+    # The R_CORNER form failed both: it peaked near 10 deg and went negative
+    # by 20, i.e. the coupling channel reversed sign inside the band the
+    # thesis operates in.
+    migr = [bip.side_geometry(np.deg2rad(d), radius_law="measured").d_out
+            - bip.WHEEL_AXIAL_OFFSET for d in (5, 10, 15, 20, 30)]
+    assert all(m > 0 for m in migr), migr
+    assert all(b > a for a, b in zip(migr, migr[1:])), migr
+    # Scale check against the term S40 quotes as the contribution: at 10 deg
+    # the migration is ~24 mm, not the ~1.2 mm the old coefficient gave.
+    assert migr[1] == pytest.approx(0.0240, abs=0.0015)
 
 
 def test_asymmetric_stiffness_rolls_the_bounce() -> None:

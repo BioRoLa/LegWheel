@@ -44,6 +44,7 @@ J~ = 0.44), k per side = 2 legs * 8941 N/m.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, replace
 
 import numpy as np
@@ -62,6 +63,22 @@ LEG_LENGTH_NOMINAL = 0.293    # hip-to-contact at the theta = 100 deg stance (m)
 K_SIDE_DEFAULT = 2 * 8941.0   # two sagittal legs per coronal side (N/m)
 I_ROLL_DEFAULT = 0.611906     # kg m^2, from the proto (section 41)
 MASS_DEFAULT = 30.0           # kg, scale reading
+
+# Which rolling-radius law side_geometry uses. "torus" is the Stage 0 design
+# geometry (radius shrinks as cos-ish under lean); "measured" is what Stage 1.5
+# / S75 found in sim (radius flat at 0.14482 m over 0-40 deg, because the sim's
+# tread is not a smooth torus). Left at "torus" so this module's behaviour does
+# not change silently -- S183 records the argument for flipping it, and Stage
+# 2a's E3 already registers the choice as a sensitivity check rather than an
+# assumption. Change deliberately, and re-run the Stage 2b grids when you do.
+#
+# Overridable by env var so the SAME code can be run under both laws without an
+# edit between runs -- a sensitivity check whose two arms differ by a source
+# edit is not a sensitivity check.
+RADIUS_LAW_DEFAULT = os.environ.get("LEGWHEEL_RADIUS_LAW", "torus")
+if RADIUS_LAW_DEFAULT not in ("torus", "measured"):
+    raise ValueError(f"LEGWHEEL_RADIUS_LAW must be 'torus' or 'measured', "
+                     f"got {RADIUS_LAW_DEFAULT!r}")
 
 
 @dataclass
@@ -82,21 +99,61 @@ class SideGeometry:
 
 def side_geometry(lean: float,
                   d_out0: float = WHEEL_AXIAL_OFFSET,
-                  l0_sagittal: float = LEG_LENGTH_NOMINAL) -> SideGeometry:
+                  l0_sagittal: float = LEG_LENGTH_NOMINAL,
+                  radius_law: str = RADIUS_LAW_DEFAULT) -> SideGeometry:
     """Default cambered side geometry at wheel lean `lean` (rad, signed;
     positive leans the wheel top outboard for this side).
 
-    The offset follows the wheel-plane swing -- the plane sits d_out0 along the
-    hip axis, and leaning rotates that axis, so the lateral component goes as
-    cos(lean) while the crown migration adds ~r_c*sin(lean). The rest length
-    tracks the Stage 0 rolling radius. First-order geometry; Stage 1 is the
-    arbiter.
+    d_out is the lateral offset HIP TO CONTACT, and it has two parts:
+
+      * the wheel plane sits d_out0 along the hip axis, and leaning rotates
+        that axis, so its lateral component goes as d_out0*cos(lean);
+      * the contact sits a rolling radius BELOW the wheel centre, and the wheel
+        pivots about its axle, so that ground point swings outboard by
+        r*sin(lean).
+
+    ⚠ CORRECTED 2026-08-23 (log S183). This function previously used
+    `0.015 * sin(lean)` -- R_CORNER, the shoulder fillet -- where the rolling
+    radius belongs, and the docstring's "crown migration" is what named the
+    mistake: CROWN is the wheel's outer circumference (r = 0.145), CORNER is
+    the 15 mm shoulder fillet. They differ by 9.7x, and the two coefficients
+    answer different questions:
+
+      r_corner*sin(lean)  migration of the contact ACROSS THE TREAD, bounded
+                          by the tread half-width (~20 mm). Real, and small.
+      r*sin(lean)         displacement of the contact IN SPACE relative to the
+                          hip. NOT bounded by tread width -- 49.5 mm at 20 deg
+                          on a 20 mm tread is not a contradiction, because it
+                          is not measured across the tread.
+
+    `d_out` is documented as hip-to-contact, i.e. the second quantity, so the
+    second coefficient is the right one. The old form under-stated the lateral
+    coupling ~20x at lambda = 10 deg and turned NEGATIVE by 20 deg -- a
+    coupling channel that shrinks and reverses across the working band.
+
+    RADIUS LAW -- the open half, deliberately a switch and not a decision:
+
+      "torus"     effective rolling radius shrinks as rolling_radius(lean).
+                  Correct for a smooth torus; the Stage 0 design geometry.
+      "measured"  radius is lambda-INDEPENDENT. Stage 1.5 / S75 measured
+                  r0 = 0.14482 m flat over 0-40 deg in sim, because the sim's
+                  tread is not a smooth torus.
+
+    Stage 2a already carries this as a registered sensitivity check (E3), not
+    an assumption, so Stage 2b inherits it rather than silently picking one.
+    Run both and report the band. THE SEAM (see the class docstring): Stage 1
+    validates or corrects the contact model, and the correction lands here.
     """
+    if radius_law not in ("torus", "measured"):
+        raise ValueError(f"radius_law must be 'torus' or 'measured', "
+                         f"got {radius_law!r}")
     r0 = rolling_radius(0.0)
-    dr = r0 - rolling_radius(lean)
+    # One law drives both terms: the radius the contact sits at is the radius
+    # it swings on. Mixing them would be a third geometry nobody validated.
+    r_contact = rolling_radius(lean) if radius_law == "torus" else r0
     return SideGeometry(
-        d_out=d_out0 * np.cos(lean) + 0.015 * np.sin(lean),
-        l0=l0_sagittal - dr,
+        d_out=d_out0 * np.cos(lean) + r_contact * np.sin(lean),
+        l0=l0_sagittal - (r0 - r_contact),
     )
 
 
@@ -121,10 +178,17 @@ class CoronalParams:
         if self.right is None:
             self.right = side_geometry(0.0)
 
-    def cambered(self, lean_left: float, lean_right: float) -> "CoronalParams":
-        """Both sides leaned; signs are each side's own outboard convention."""
-        return replace(self, left=side_geometry(lean_left),
-                       right=side_geometry(lean_right))
+    def cambered(self, lean_left: float, lean_right: float,
+                 radius_law: str = RADIUS_LAW_DEFAULT) -> "CoronalParams":
+        """Both sides leaned; signs are each side's own outboard convention.
+
+        `radius_law` is threaded through to `side_geometry` so a caller can run
+        the Stage 2b grids under both laws without reaching into the module
+        default -- see S183 and Stage 2a's E3 sensitivity check.
+        """
+        return replace(self, left=side_geometry(lean_left,
+                                                radius_law=radius_law),
+                       right=side_geometry(lean_right, radius_law=radius_law))
 
 
 def _leg_force(p: CoronalParams, s: int, y: float, z: float, rho: float,

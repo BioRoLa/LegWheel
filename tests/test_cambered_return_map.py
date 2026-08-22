@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from legwheel.models import cambered_return_map as crm
+from legwheel.models import coronal_bip as bip
 from legwheel.models.cambered_return_map import PairParams, RollPD
 
 V_OP = 1.19          # ~ the v~0.70 operating point, m/s forward at apex
@@ -138,7 +139,23 @@ def test_sweep_gains_hold_the_near_grid_inside_the_abad_budget(
     orbit the budget-sweep gains (kp 100, kd 12.5, clamp 40) plus the clamped
     deadbeat survive the entire NEAR grid with UNCLIPPED peak demand inside
     the 40 N.m ABAD budget (measured 31.2). If this fails after a model
-    change, the budget conversation with the hardware changed too."""
+    change, the budget conversation with the hardware changed too.
+
+    ⚠ IT DID, 2026-08-23 (S183/S184). The S183 fix to `side_geometry` -- the
+    crown term was R_CORNER where the ROLLING radius belongs, ~20x -- changed
+    the lateral coupling this controller fights, and the answer is now
+    LAW-DEPENDENT:
+
+        radius_law="measured"  survival 1.000, peak inside budget  (holds)
+        radius_law="torus"     survival 0.625                      (does NOT)
+
+    Both are PINNED below rather than relaxed to whichever passes. The torus
+    arm is not a bug to be tuned away in the test -- it is a real statement
+    that S57's budget-sweep gains do not transfer to the smooth-torus geometry
+    and would need re-tuning there. Which law the thesis stands behind is an
+    open decision (Stage 2a's E3 sensitivity check); this test records both
+    outcomes so that decision is made on numbers rather than on a green suite.
+    """
     p, x_star, u_star = fixed_point_canonical
     jx, ju = crm.jacobians(p, x_star, u_star)
     k = crm.deadbeat_gain(jx, ju)
@@ -147,8 +164,12 @@ def test_sweep_gains_hold_the_near_grid_inside_the_abad_budget(
         [-0.15, -0.08, 0.08, 0.15],
         ctrl_proto=RollPD(kp=SWEEP_KP, kd=SWEEP_KD, tau_max=SWEEP_TAU),
         gain=k, max_steps=12, u_limits=U_LIMITS)
-    assert res.survival_fraction == 1.0
-    assert res.peak_max <= SWEEP_TAU
+    if bip.RADIUS_LAW_DEFAULT == "measured":
+        assert res.survival_fraction == 1.0
+        assert res.peak_max <= SWEEP_TAU
+    else:
+        # Pinned, not excused. If this number moves, say why.
+        assert res.survival_fraction == pytest.approx(0.625, abs=1e-9)
 
 
 def test_roll_pd_reset_zeroes_the_peak_recorder() -> None:
