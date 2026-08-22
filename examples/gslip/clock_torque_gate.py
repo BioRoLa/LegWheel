@@ -21,6 +21,26 @@ If yes, the plant's instability is a tuning problem and there is a gain to
 find. If no, then clock torque is not a stabiliser at this operating point and
 the controller work would be chasing something the model says is not there.
 
+-- THE PAPER, TRANSCRIBED 2026-08-22 (this used to be a paraphrase) --
+
+Bioinspir. Biomim. 19 (2024) 026017, eq 11, p5:
+
+    d/dt(dL/dtheta_dot) - dL/dtheta = k_P*(theta_fp - theta) + k_D*(theta_fp_dot - theta_dot)
+    d/dt(dL/dphi_dot)   - dL/dphi   = 0
+
+where the paper's theta is the LEG ANGLE and its phi is the SPRING (from eq 6,
+potential -0.5*k_t*(phi_0 - phi)^2). Two things this settles:
+
+  1. The damping reference IS the clock's rate, not zero. The deployed robot
+     controller damps to zero, which is an additive brake proportional to the
+     commanded sweep and opposing it -- log S164, and the reason for the
+     dbeta_ref field in corgi_msgs/ImpedanceCmd.msg.
+  2. "The clocked-torque G-SLIP model regulates leg motion in BOTH the stance
+     and aerial phases" (S2.3, p5). THIS SCRIPT IS STANCE-ONLY (see the
+     `t < t_st` gate in make_tau). That is a deliberate deviation, kept so
+     S141 stays reproducible -- but it means the affordability prices in S141
+     and S150 are for the stance-only variant, NOT for eq 11 as written.
+
 THE LAW
 
 During stance, on the leg angle phi:
@@ -104,6 +124,9 @@ def make_tau(p, fp, k_c, d_c, peak):
     def tau_fn(t, length, phi, dl, dphi):
         tt = min(t, t_st)
         phi_ref = phi_td + rate * tt
+        # STANCE-ONLY, and this deviates from eq 11 as written: the paper
+        # regulates the leg in both phases (p5, S2.3). Kept deliberately so
+        # S141's numbers stay reproducible; see the module docstring.
         dphi_ref = rate if t < t_st else 0.0
         tq = k_c * (phi_ref - phi) + d_c * (dphi_ref - dphi)
         peak[0] = max(peak[0], abs(tq))

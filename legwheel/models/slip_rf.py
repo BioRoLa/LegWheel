@@ -116,6 +116,12 @@ def accel(p: SlipRfParams, length: float, phi: float, dl: float, dphi: float,
             conservative model and is bit-identical to every result recorded
             before this argument existed. The clocked-torque model of Lu & Lin
             eq 11 drives the LEG ANGLE, so it passes tau_phi and tau_l = 0.
+
+            CONFIRMED against the paper 2026-08-22 (Bioinspir. Biomim. 19
+            026017, eq 11 p5): the torque goes on the leg angle, none on the
+            spring coordinate. See eq 6, whose potential is -0.5*k_t*(phi_0 -
+            phi)^2, so the paper's phi is the SPRING and its theta is the leg
+            angle -- the naming is transposed relative to this module.
     """
     jac = jacobian(p, length, phi)
     h_x, h_z = hessians(p, length, phi)
