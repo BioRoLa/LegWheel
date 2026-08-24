@@ -133,6 +133,37 @@ def test_basin_radius_shrinks_when_the_torque_clamp_tightens(
     assert np.all(r_starved <= r_full + 1e-9)
 
 
+def test_exec_bias_zero_is_bit_identical_to_no_bias(fixed_point) -> None:
+    """u_exec_bias is an execution-side offset the controller never sees;
+    at zero it must be the SAME computation as passing None -- bit-identical
+    survival, peak, and slew numbers, not merely close ones. Guards the
+    touchdown-bias campaign's baseline column against the plumbing itself."""
+    p, x_star, u_star = fixed_point
+    jx, ju = crm.jacobians(p, x_star, u_star)
+    k = crm.deadbeat_gain(jx, ju)
+    zero = np.zeros(3)
+
+    # steps_to_fail, deadbeat arm, off-orbit start.
+    x0 = x_star.copy()
+    x0[3] += np.deg2rad(2.0)
+    x0[4] += 0.10
+    n_ref = crm.steps_to_fail(p, x_star, u_star, x0, gain=k, max_steps=5)
+    assert crm.steps_to_fail(p, x_star, u_star, x0, gain=k, max_steps=5,
+                             u_exec_bias=None) == n_ref
+    assert crm.steps_to_fail(p, x_star, u_star, x0, gain=k, max_steps=5,
+                             u_exec_bias=zero) == n_ref
+
+    # basin_scan, PD + clamped deadbeat -- the campaign's scored path.
+    kwargs = dict(rho_vals=np.deg2rad([-2.0, 2.0]), drho_vals=[0.1],
+                  ctrl_proto=RollPD(), gain=k, max_steps=4,
+                  u_limits=U_LIMITS)
+    ref = crm.basin_scan(p, x_star, u_star, **kwargs)
+    biased = crm.basin_scan(p, x_star, u_star, u_exec_bias=zero, **kwargs)
+    assert np.array_equal(ref.steps, biased.steps)
+    assert np.array_equal(ref.peak, biased.peak)
+    assert np.array_equal(ref.dlam, biased.dlam)
+
+
 def test_sweep_gains_hold_the_near_grid_inside_the_abad_budget(
         fixed_point_canonical) -> None:
     """The claim section 45 could only print, now asserted: at the canonical

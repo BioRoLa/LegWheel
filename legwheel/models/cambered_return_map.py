@@ -421,16 +421,25 @@ def deadbeat_gain(jx: np.ndarray, ju: np.ndarray, rcond: float = 1e-2) -> np.nda
 def steps_to_fail(p: PairParams, x_star, u_star, x0,
                   ctrl: RollPD | None = None,
                   gain: np.ndarray | None = None,
-                  max_steps: int = 20) -> int:
-    """Strides survived from apex state x0. Chang's metric, not eigenvalues."""
+                  max_steps: int = 20,
+                  u_exec_bias: np.ndarray | None = None) -> int:
+    """Strides survived from apex state x0. Chang's metric, not eigenvalues.
+
+    u_exec_bias models an execution-side touchdown offset the controller does
+    not know about (issue #20's caudal landing bias): the controller computes
+    u about the UNBIASED orbit exactly as before -- gain and all -- and the
+    leg lands at u + u_exec_bias. None (the default) is bit-identical to the
+    unbiased path.
+    """
     x = np.asarray(x0, float).copy()
     x_star, u_star = np.asarray(x_star, float), np.asarray(u_star, float)
     for n in range(max_steps):
         u = u_star.copy()
         if gain is not None:
             u = u_star + gain @ (x - x_star)
+        u_exec = u if u_exec_bias is None else u + u_exec_bias
         try:
-            x = apex_map(p, x, u, ctrl=ctrl)
+            x = apex_map(p, x, u_exec, ctrl=ctrl)
         except GSlipFailure:
             return n
     return max_steps
@@ -438,7 +447,10 @@ def steps_to_fail(p: PairParams, x_star, u_star, x0,
 
 def perturbation_grid(p: PairParams, x_star, u_star, rho_vals, drho_vals,
                       **kwargs) -> np.ndarray:
-    """steps_to_fail over a (rho, drho) apex-perturbation grid."""
+    """steps_to_fail over a (rho, drho) apex-perturbation grid.
+
+    kwargs (ctrl, gain, max_steps, u_exec_bias) forward to `steps_to_fail`.
+    """
     out = np.zeros((len(rho_vals), len(drho_vals)), dtype=int)
     for i, r in enumerate(rho_vals):
         for j, dr in enumerate(drho_vals):
@@ -458,7 +470,8 @@ def _run_from(p: PairParams, x_star, u_star, x0,
               ctrl: RollPD | None = None,
               gain: np.ndarray | None = None,
               max_steps: int = 12,
-              u_limits: tuple | None = None) -> tuple[int, float, float]:
+              u_limits: tuple | None = None,
+              u_exec_bias: np.ndarray | None = None) -> tuple[int, float, float]:
     """steps_to_fail plus the two budget numbers for a single start.
 
     Returns (steps, peak_torque, dlam_max): the strides survived, the largest
@@ -476,6 +489,12 @@ def _run_from(p: PairParams, x_star, u_star, x0,
     trig and "survives" on inputs no joint can make. The first sweep measured
     dlam up to 1524 deg/stride before this existed; any basin claim from an
     unclamped deadbeat outside the NEAR regime is riding on those commands.
+
+    u_exec_bias is an execution-side offset added to the EXECUTED touchdown
+    input AFTER gain and AFTER the u_limits clamp -- the controller never sees
+    it (see `steps_to_fail`). dlam_max stays bookkept on the COMMANDED u: the
+    bias is a constant, so command-to-command deltas are what the joint slews.
+    None (the default) is bit-identical to the unbiased path.
     """
     x = np.asarray(x0, float).copy()
     x_star, u_star = np.asarray(x_star, float), np.asarray(u_star, float)
@@ -492,8 +511,9 @@ def _run_from(p: PairParams, x_star, u_star, x0,
                 u = np.clip(u, u_limits[0], u_limits[1])
         dlam_max = max(dlam_max, float(np.max(np.abs(u[1:] - u_prev[1:]))))
         u_prev = u
+        u_exec = u if u_exec_bias is None else u + u_exec_bias
         try:
-            x = apex_map(p, x, u, ctrl=ctrl)
+            x = apex_map(p, x, u_exec, ctrl=ctrl)
         except GSlipFailure:
             n_done = n
             break
@@ -540,12 +560,14 @@ def basin_scan(p: PairParams, x_star, u_star, rho_vals, drho_vals,
                ctrl_proto: RollPD | None = None,
                gain: np.ndarray | None = None,
                max_steps: int = 12,
-               u_limits: tuple | None = None) -> BasinResult:
+               u_limits: tuple | None = None,
+               u_exec_bias: np.ndarray | None = None) -> BasinResult:
     """`perturbation_grid` with per-cell budget accounting.
 
     `ctrl_proto` is a prototype: each cell runs a FRESH copy (same kp, kd,
     tau_max, zeroed peak), so `BasinResult.peak` is per-cell truth rather than
-    a grid-wide max. The prototype itself is never mutated.
+    a grid-wide max. The prototype itself is never mutated. `u_exec_bias`
+    forwards to `_run_from` (execution-side touchdown offset, post-clamp).
     """
     n_r, n_d = len(rho_vals), len(drho_vals)
     steps = np.zeros((n_r, n_d), dtype=int)
@@ -559,7 +581,8 @@ def basin_scan(p: PairParams, x_star, u_star, rho_vals, drho_vals,
             ctrl = replace(ctrl_proto, peak_used=0.0) if ctrl_proto else None
             steps[i, j], peak[i, j], dlam[i, j] = _run_from(
                 p, x_star, u_star, x0, ctrl=ctrl, gain=gain,
-                max_steps=max_steps, u_limits=u_limits)
+                max_steps=max_steps, u_limits=u_limits,
+                u_exec_bias=u_exec_bias)
     return BasinResult(steps=steps, peak=peak, dlam=dlam, max_steps=max_steps)
 
 
@@ -569,7 +592,8 @@ def basin_radius(p: PairParams, x_star, u_star, angles,
                  gain: np.ndarray | None = None,
                  max_steps: int = 12, r_max: float = 3.0,
                  tol: float = 0.05,
-                 u_limits: tuple | None = None) -> np.ndarray:
+                 u_limits: tuple | None = None,
+                 u_exec_bias: np.ndarray | None = None) -> np.ndarray:
     """Largest surviving perturbation amplitude along rays from the fixed point.
 
     For each angle theta the apex perturbation is
@@ -597,7 +621,8 @@ def basin_radius(p: PairParams, x_star, u_star, angles,
             x0[4] += r * d_drho
             ctrl = replace(ctrl_proto, peak_used=0.0) if ctrl_proto else None
             n, _, _ = _run_from(p, x_star, u_star, x0, ctrl=ctrl, gain=gain,
-                                max_steps=max_steps, u_limits=u_limits)
+                                max_steps=max_steps, u_limits=u_limits,
+                                u_exec_bias=u_exec_bias)
             return n >= max_steps
 
         if survives(r_max):
