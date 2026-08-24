@@ -588,9 +588,3 @@ class CorgiLegKinematics:
                     )
 
         return q_opt
-
-    def set_gamma(self, gamma):
-        """Updates the ABAD angle and recalculates the module position."""
-        self.gamma = gamma
-        # Recalculate the module position in Robot Frame based on new gamma
-        self.p_Mi_in_R = self._M_to_R(np.array([0, 0, self.d_abad]), gamma)
