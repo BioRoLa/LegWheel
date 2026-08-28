@@ -1,0 +1,23 @@
+{
+  "theta_rad": 1.0471975511965976,
+  "beta_rad": -1.2042771838760866,
+  "active_sample_index": 576,
+  "contact_point_world_xz_m": [
+    0.12049647643570269,
+    0.10000000000000003
+  ],
+  "hip_position_world_xz_m": [
+    0.13553128717799182,
+    0.26960872379927314
+  ],
+  "scene_kwargs": {
+    "gamma_rad": 0.0,
+    "ground_height_m": 0.0,
+    "obstacle_x_start_m": 0.1,
+    "obstacle_width_m": 0.6,
+    "obstacle_height_m": 0.1,
+    "obstacle_id": "day6_7_step4_5_obstacle",
+    "arc_samples": 241
+  },
+  "source_phase": "TOP_ROLL_COMPLETE"
+}
