@@ -4,8 +4,9 @@ The core function is ``compute_ground_contact_pose_3d(theta, beta, gamma)``.
 Angles are in radians, matching the model code. The command-line interface
 accepts degrees.
 
-This extends the 2D contact classifier by sampling every named rim outer arc at
-multiple lateral positions across the wheel width. Local points are interpreted
+This extends the 2D contact classifier by sampling the foot and two upper-tyre
+outer arcs at multiple lateral positions across the wheel width. Structural
+upper/lower rim arcs are excluded. Local points are interpreted
 as ``[x, y_2d, lateral]`` and converted to display/world-like coordinates
 ``[x, y_lateral, z_height]`` with the same ``to_display_xyz`` helper used by the
 3D plotting script.
@@ -76,7 +77,7 @@ def sample_contact_geometry_points_3d(
     lateral_samples: int = LATERAL_SAMPLES,
     include_reference_points: bool = False,
 ) -> list[dict]:
-    """Sample named 3D rim outer surfaces and optional non-contact references."""
+    """Sample the three contactable 3D tyre surfaces and optional references."""
     leg = PlotLeg()
     leg.forward(theta, beta, vector=False)
 
@@ -90,7 +91,7 @@ def sample_contact_geometry_points_3d(
         leg.leg_shape.get_shape(np.array([0.0, 0.0]), tyre_offset=tyre_offset)
 
         for surface_name, surface_info in RIM_SURFACES.items():
-            rim_obj = getattr(leg.leg_shape, surface_name, None)
+            rim_obj = getattr(leg.leg_shape, surface_info["model_attr"], None)
             if rim_obj is None or not hasattr(rim_obj, "arc"):
                 continue
 

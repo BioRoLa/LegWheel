@@ -3,10 +3,10 @@
 The core function is ``compute_ground_contact(theta, beta)``. Angles are in
 radians, matching the model code. The command-line interface accepts degrees.
 
-The analysis samples the current ``PlotLeg`` geometry directly. Valid contact
-states are foot rim, left rim, and right rim. All other sampled geometry is
-grouped as ``non_contact_region`` while retaining its original ``surface_name``
-for tracing.
+The analysis samples the three physical tyre arcs from ``PlotLeg`` directly:
+foot rim, left upper tyre, and right upper tyre. Structural upper/lower rim
+arcs are excluded. ``non_contact_region`` denotes only the open gap between
+the two upper tyres.
 
 Run from the project root:
 
@@ -39,8 +39,6 @@ DEFAULT_TABLE_DIR = NOTE_ROOT / "outputs" / "tables" / "kinematics"
 CONTACT_HEIGHT_TOL = 1e-3
 RIM_ARC_SAMPLES = 721
 
-TOP_NON_CONTACT_FRACTION = 0.35
-
 CONTACT_STATE_INFO = {
     "foot_rim": {
         "state_id": "F",
@@ -63,25 +61,22 @@ CONTACT_STATE_ORDER = list(CONTACT_STATE_INFO)
 
 RIM_SURFACES = {
     "foot_rim": {
-        "description": "bottom foot rim outer arc",
+        "model_attr": "foot_rim",
+        "contact_state": "foot_rim",
+        "gap_endpoint": None,
+        "description": "bottom foot tyre outer arc",
     },
-    "upper_rim_l": {
-        "description": "left upper structural rim outer arc",
+    "upper_tyre_l": {
+        "model_attr": "upper_rim_l_f",
+        "contact_state": "left_rim",
+        "gap_endpoint": "first",
+        "description": "left upper tyre outer arc",
     },
-    "upper_rim_r": {
-        "description": "right upper structural rim outer arc",
-    },
-    "lower_rim_l": {
-        "description": "left lower structural rim outer arc",
-    },
-    "lower_rim_r": {
-        "description": "right lower structural rim outer arc",
-    },
-    "upper_rim_l_f": {
-        "description": "left top-wheel outer arc near HL",
-    },
-    "upper_rim_r_f": {
-        "description": "right top-wheel outer arc near HR",
+    "upper_tyre_r": {
+        "model_attr": "upper_rim_r_f",
+        "contact_state": "right_rim",
+        "gap_endpoint": "last",
+        "description": "right upper tyre outer arc",
     },
 }
 
@@ -140,30 +135,19 @@ def surface_contact_state(
     arc_sample_index: int,
     sample_count: int,
 ) -> str:
-    if sample_count <= 1:
-        normalized_arc_position = 0.5
-    else:
-        normalized_arc_position = arc_sample_index / float(sample_count - 1)
+    surface_info = RIM_SURFACES.get(surface_name)
+    if surface_info is None:
+        return "non_contact_region"
 
-    if surface_name == "foot_rim":
-        return "foot_rim"
-
-    if surface_name == "lower_rim_l":
-        return "left_rim"
-    if surface_name == "lower_rim_r":
-        return "right_rim"
-
-    if surface_name in {"upper_rim_l", "upper_rim_l_f"}:
-        if normalized_arc_position <= TOP_NON_CONTACT_FRACTION:
-            return "non_contact_region"
-        return "left_rim"
-
-    if surface_name in {"upper_rim_r", "upper_rim_r_f"}:
-        if normalized_arc_position >= 1.0 - TOP_NON_CONTACT_FRACTION:
-            return "non_contact_region"
-        return "right_rim"
-
-    return "non_contact_region"
+    # The only non-contact sector is the open gap between the two upper tyres.
+    # It has no physical arc to sample, so its two boundary endpoints are used
+    # as support-direction sentinels by the lowest-point contact map.
+    gap_endpoint = surface_info["gap_endpoint"]
+    if gap_endpoint == "first" and arc_sample_index == 0:
+        return "non_contact_region"
+    if gap_endpoint == "last" and arc_sample_index == sample_count - 1:
+        return "non_contact_region"
+    return str(surface_info["contact_state"])
 
 
 def ordered_contact_states(states: set[str]) -> list[str]:
@@ -180,9 +164,9 @@ def sample_contact_geometry_points(
     theta: float,
     beta: float,
     arc_samples: int = RIM_ARC_SAMPLES,
-    include_reference_points: bool = True,
+    include_reference_points: bool = False,
 ) -> list[dict]:
-    """Sample 2D rim outer arcs and optional non-contact reference points."""
+    """Sample the three contactable 2D tyre arcs and optional references."""
     leg = PlotLeg()
     leg.forward(theta, beta, vector=False)
     leg.leg_shape.get_shape(np.array([0.0, 0.0]))
@@ -191,7 +175,7 @@ def sample_contact_geometry_points(
     point_index = 0
 
     for surface_name, surface_info in RIM_SURFACES.items():
-        rim_obj = getattr(leg.leg_shape, surface_name, None)
+        rim_obj = getattr(leg.leg_shape, surface_info["model_attr"], None)
         if rim_obj is None or not hasattr(rim_obj, "arc"):
             continue
 
@@ -258,7 +242,7 @@ def compute_ground_contact(
     beta: float,
     contact_height_tol: float = CONTACT_HEIGHT_TOL,
     arc_samples: int = RIM_ARC_SAMPLES,
-    include_reference_points: bool = True,
+    include_reference_points: bool = False,
 ) -> dict:
     """Compute geometric ground-contact candidates for one 2D theta-beta pose."""
     surface_records = sample_contact_geometry_points(
@@ -418,9 +402,9 @@ def parse_args() -> argparse.Namespace:
         help="Number of samples on each named rim outer arc.",
     )
     parser.add_argument(
-        "--exclude-reference-points",
+        "--include-reference-points",
         action="store_true",
-        help="Only use rim arcs; exclude explicit non-contact reference points.",
+        help="Add HL/HR/O diagnostic points (not part of the physical contact rim set).",
     )
     parser.add_argument(
         "--summary-csv",
@@ -447,7 +431,7 @@ def main() -> None:
         beta,
         contact_height_tol=args.contact_height_tol,
         arc_samples=args.arc_samples,
-        include_reference_points=not args.exclude_reference_points,
+        include_reference_points=args.include_reference_points,
     )
 
     write_contact_summary_csv(args.summary_csv, result)
