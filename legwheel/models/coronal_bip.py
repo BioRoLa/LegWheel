@@ -94,6 +94,31 @@ if RADIUS_LAW_DEFAULT not in ("torus", "measured"):
     raise ValueError(f"LEGWHEEL_RADIUS_LAW must be 'torus' or 'measured', "
                      f"got {RADIUS_LAW_DEFAULT!r}")
 
+# The AXIAL-DROP term (log S273, 2026-08-29). The wheel plane sits
+# WHEEL_AXIAL_OFFSET outboard of the hip along the axle; abducting the leg
+# (lean > 0, contact outboard) rotates that offset and RAISES the wheel
+# centre relative to the hip by a*sin(lean), so the hip-to-contact rest
+# length SHORTENS by the same amount -- and the body side above an
+# outboard-leaned wheel sits LOWER. This is the S33 statics mechanism
+# (measured 2026-08-13: lambda 10 -> roll -4.58 deg; reproduced by
+# stage2b_coronal_statics.py with zero free parameters) and it was absent
+# from this layer until 2026-08-29, which is why the return map predicted
+# rho* <= 0.16 deg where the plant does -0.33 deg/deg (S272's 60-run law)
+# and why the S267 deadbeat K row carried a wrong-sign roll transfer.
+# Sign verified by direct observation (S273 S5): dir=+1 -> all feet left,
+# left pair outboard, body LEFT side lower. First-order check: for an
+# antisymmetric +/-lambda pair the term gives roll = -2a*sin(lambda)/track
+# = -0.433*lambda at track 0.424 m -- the S33 statics slope.
+#
+# DEFAULT 0.0 PRESERVES THE RECORD: every number of the closed Stage 2b
+# (SS184-185, 263) was computed without this term and must reproduce.
+# Enable via LEGWHEEL_AXIAL_DROP=0.091675 (the measured offset) for the
+# corrected transfer; derivations must name which arm they ran.
+AXIAL_DROP_DEFAULT = float(os.environ.get("LEGWHEEL_AXIAL_DROP", "0.0"))
+if not (0.0 <= AXIAL_DROP_DEFAULT <= 0.15):
+    raise ValueError(f"LEGWHEEL_AXIAL_DROP out of range [0, 0.15]: "
+                     f"{AXIAL_DROP_DEFAULT}")
+
 
 @dataclass
 class SideGeometry:
@@ -114,7 +139,8 @@ class SideGeometry:
 def side_geometry(lean: float,
                   d_out0: float = WHEEL_AXIAL_OFFSET,
                   l0_sagittal: float = LEG_LENGTH_NOMINAL,
-                  radius_law: str = RADIUS_LAW_DEFAULT) -> SideGeometry:
+                  radius_law: str = RADIUS_LAW_DEFAULT,
+                  axial_drop: float = AXIAL_DROP_DEFAULT) -> SideGeometry:
     """Default cambered side geometry at wheel lean `lean` (rad, signed;
     positive leans the wheel top outboard for this side).
 
@@ -167,7 +193,10 @@ def side_geometry(lean: float,
     r_contact = rolling_radius(lean) if radius_law == "torus" else r0
     return SideGeometry(
         d_out=d_out0 * np.cos(lean) + r_contact * np.sin(lean),
-        l0=l0_sagittal - (r0 - r_contact),
+        # axial_drop: see AXIAL_DROP_DEFAULT above (S273). 0.0 = the
+        # pre-2026-08-29 record; WHEEL_AXIAL_OFFSET = the corrected
+        # transfer. Sign: outboard lean shortens the leg, lowers the side.
+        l0=l0_sagittal - (r0 - r_contact) - axial_drop * np.sin(lean),
     )
 
 
