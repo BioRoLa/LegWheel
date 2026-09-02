@@ -1,11 +1,11 @@
-"""Grid scan for which named LegWheel rim surfaces become lowest.
+"""Grid scan for which contactable LegWheel tyre surface becomes lowest.
 
 This is a first-pass parameter-space analyzer. It samples a theta/beta/gamma
 grid, finds the geometric ground-contact candidate set for each pose, and
-summarizes the observed parameter ranges for each named rim surface.
+summarizes the observed ranges for the physical tyre arcs and open upper gap.
 
-The scan reuses the current ``PlotLeg`` geometry and samples only the outer arc
-of named rim primitives. Joint centers, links, labels, and markers are excluded.
+The scan samples only ``foot_rim`` and the two ``Upper_Tyre`` outer arcs.
+Structural rims, joint centers, links, labels, and markers are excluded.
 
 Run from the project root:
 
@@ -44,12 +44,12 @@ for path in [PROJECT_ROOT, KINEMATICS_DIR]:
 
 from legwheel.config import RobotParams  # noqa: E402
 from legwheel.visualization.plot_leg import PlotLeg  # noqa: E402
+from ground_contact_single_pose import surface_contact_state  # noqa: E402
 from plot_leg_3d import to_display_xyz  # noqa: E402
 
 DEFAULT_TABLE_DIR = NOTE_ROOT / "outputs" / "tables" / "analysis"
 DEFAULT_FIGURE_DIR = NOTE_ROOT / "outputs" / "figures" / "analysis"
 CONTACT_Z_TOL = 1e-3
-TOP_NON_CONTACT_FRACTION = 0.35
 
 CONTACT_STATE_INFO = {
     "foot_rim": {
@@ -91,49 +91,32 @@ GROUP_COLORS = {
 
 SURFACE_COLORS = {
     "foot_rim": "#adc4a9",
-    "upper_rim_l": "#e29196",
-    "upper_rim_r": "#ECD09C",
-    "lower_rim_l": "#e29196",
-    "lower_rim_r": "#ECD09C",
-    "upper_rim_l_f": "#aad3f0",
-    "upper_rim_r_f": "#aad3f0",
+    "upper_tyre_l": "#e29196",
+    "upper_tyre_r": "#ECD09C",
 }
 
 RIM_SURFACES = {
     "foot_rim": {
         "group": "foot_rim",
+        "model_attr": "foot_rim",
         "description": "bottom tire/foot rim outer arc",
     },
-    "upper_rim_l": {
+    "upper_tyre_l": {
         "group": "left_rim",
-        "description": "left upper structural rim outer arc",
+        "model_attr": "upper_rim_l_f",
+        "description": "left upper tyre outer arc",
     },
-    "upper_rim_r": {
+    "upper_tyre_r": {
         "group": "right_rim",
-        "description": "right upper structural rim outer arc",
-    },
-    "lower_rim_l": {
-        "group": "left_rim",
-        "description": "left lower structural rim outer arc",
-    },
-    "lower_rim_r": {
-        "group": "right_rim",
-        "description": "right lower structural rim outer arc",
-    },
-    "upper_rim_l_f": {
-        "group": "non_contact_region",
-        "description": "left upper tire outer arc",
-    },
-    "upper_rim_r_f": {
-        "group": "non_contact_region",
+        "model_attr": "upper_rim_r_f",
         "description": "right upper tire outer arc",
     },
 }
 
 SURFACE_TO_CONTACT_STATE = {
     "foot_rim": "foot_rim",
-    "lower_rim_l": "left_rim",
-    "lower_rim_r": "right_rim",
+    "upper_tyre_l": "left_rim",
+    "upper_tyre_r": "right_rim",
 }
 
 
@@ -142,37 +125,21 @@ def contact_state_for_surface_point(
     local_x_m: float,
     surface_center_x_m: float,
 ) -> str:
-    """Map raw sampled rim points to the paper-style contact state used for maps."""
+    """Map a raw surface to its contact state, without upper-arc position detail."""
     if surface_name == "foot_rim":
         return "foot_rim"
     return SURFACE_TO_CONTACT_STATE.get(surface_name, "unknown")
 
 
 def contact_states_for_surface_samples(surface_name: str, sample_count: int) -> np.ndarray:
-    """Vectorized contact-state mapping for one sampled rim arc."""
-    if surface_name == "foot_rim":
-        return np.full(sample_count, "foot_rim", dtype=object)
-
-    if surface_name in {"upper_rim_l", "upper_rim_l_f"}:
-        normalized = np.linspace(0.0, 1.0, sample_count)
-        return np.where(
-            normalized <= TOP_NON_CONTACT_FRACTION,
-            "non_contact_region",
-            "left_rim",
-        ).astype(object)
-
-    if surface_name in {"upper_rim_r", "upper_rim_r_f"}:
-        normalized = np.linspace(0.0, 1.0, sample_count)
-        return np.where(
-            normalized >= 1.0 - TOP_NON_CONTACT_FRACTION,
-            "non_contact_region",
-            "right_rim",
-        ).astype(object)
-
-    return np.full(
-        sample_count,
-        SURFACE_TO_CONTACT_STATE.get(surface_name, "unknown"),
+    """Apply the shared single-pose taxonomy to one sampled rim arc."""
+    return np.fromiter(
+        (
+            surface_contact_state(surface_name, sample_index, sample_count)
+            for sample_index in range(sample_count)
+        ),
         dtype=object,
+        count=sample_count,
     )
 
 
@@ -251,7 +218,7 @@ def sample_named_rim_arrays(
         leg.leg_shape.get_shape(np.array([0.0, 0.0]), tyre_offset=leg.tyre_offset_at_w(lateral_m))
 
         for surface_name, surface_info in RIM_SURFACES.items():
-            rim_obj = getattr(leg.leg_shape, surface_name, None)
+            rim_obj = getattr(leg.leg_shape, surface_info["model_attr"], None)
             if rim_obj is None or not hasattr(rim_obj, "arc"):
                 continue
 
@@ -990,7 +957,7 @@ def main() -> None:
     ]
 
     surface_names = list(RIM_SURFACES.keys())
-    group_names = sorted({surface["group"] for surface in RIM_SURFACES.values()})
+    group_names = CONTACT_STATE_ORDER
     state_names = CONTACT_STATE_ORDER
     surface_range_rows = aggregate_ranges(pose_rows, "contact_surface_names", surface_names)
     group_range_rows = aggregate_ranges(pose_rows, "contact_surface_groups", group_names)

@@ -137,7 +137,8 @@ def build_theta_primitives_2d(
     primitives: list[ArcPrimitive | PointPrimitive] = []
 
     for surface_name in RIM_SURFACES:
-        rim_obj = getattr(leg.leg_shape, surface_name, None)
+        surface_info = RIM_SURFACES[surface_name]
+        rim_obj = getattr(leg.leg_shape, surface_info["model_attr"], None)
         if rim_obj is None or not hasattr(rim_obj, "arc"):
             continue
         outer_arc = rim_obj.arc[1]
@@ -279,7 +280,7 @@ def generate_contact_state_map_fast(
     beta_step_deg: float,
     contact_height_tol: float = CONTACT_HEIGHT_TOL,
     arc_samples: int = RIM_ARC_SAMPLES,
-    include_reference_points: bool = True,
+    include_reference_points: bool = False,
 ) -> dict:
     """Generate the same lowest-state map while reusing geometry across beta."""
     theta_values = value_grid(theta_min_deg, theta_max_deg, theta_step_deg)
@@ -518,7 +519,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--beta-step-deg", type=float, default=0.1)
     parser.add_argument("--contact-height-tol", type=float, default=CONTACT_HEIGHT_TOL)
     parser.add_argument("--arc-samples", type=int, default=RIM_ARC_SAMPLES)
-    parser.add_argument("--exclude-reference-points", action="store_true")
+    parser.add_argument(
+        "--include-reference-points",
+        action="store_true",
+        help="Include HL/HR/O diagnostic points; disabled for physical contact maps by default.",
+    )
     parser.add_argument("--dpi", type=int, default=240)
     parser.add_argument(
         "--npz",
@@ -557,7 +562,7 @@ def main() -> None:
         beta_step_deg=args.beta_step_deg,
         contact_height_tol=args.contact_height_tol,
         arc_samples=args.arc_samples,
-        include_reference_points=not args.exclude_reference_points,
+        include_reference_points=args.include_reference_points,
     )
     generated_at = time.perf_counter()
     boundaries, transition_counts = detect_class_boundaries_fast(map_data)

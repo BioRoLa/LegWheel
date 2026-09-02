@@ -99,7 +99,7 @@ def generate_contact_state_map(
     beta_step_deg: float,
     contact_height_tol: float = CONTACT_HEIGHT_TOL,
     arc_samples: int = RIM_ARC_SAMPLES,
-    include_reference_points: bool = True,
+    include_reference_points: bool = False,
 ) -> dict:
     """Scan theta-beta grid and classify each pose by lowest contact state."""
     theta_values = value_grid(theta_min_deg, theta_max_deg, theta_step_deg)
@@ -272,9 +272,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--contact-height-tol", type=float, default=CONTACT_HEIGHT_TOL)
     parser.add_argument("--arc-samples", type=int, default=RIM_ARC_SAMPLES)
     parser.add_argument(
-        "--exclude-reference-points",
+        "--include-reference-points",
         action="store_true",
-        help="Pass through to compute_ground_contact; excludes explicit non-contact reference points.",
+        help="Include HL/HR/O diagnostic points; disabled for physical contact maps by default.",
     )
     parser.add_argument("--dpi", type=int, default=240)
     parser.add_argument(
@@ -307,7 +307,7 @@ def main() -> None:
         beta_step_deg=args.beta_step_deg,
         contact_height_tol=args.contact_height_tol,
         arc_samples=args.arc_samples,
-        include_reference_points=not args.exclude_reference_points,
+        include_reference_points=args.include_reference_points,
     )
     boundary_segments, transition_counts = detect_state_boundaries(
         map_data["state_grid"],

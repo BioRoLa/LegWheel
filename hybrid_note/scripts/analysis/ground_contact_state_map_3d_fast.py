@@ -65,12 +65,7 @@ from ground_contact_state_map_fast import (  # noqa: E402
 DEFAULT_DATA_DIR = NOTE_ROOT / "outputs" / "data" / "analysis"
 DEFAULT_FIGURE_DIR = NOTE_ROOT / "outputs" / "figures" / "analysis"
 GEOMETRY_TYPES_3D = ("rim_surface", "reference_point")
-LATERAL_INVARIANT_SURFACES = {
-    "upper_rim_l",
-    "upper_rim_r",
-    "lower_rim_l",
-    "lower_rim_r",
-}
+LATERAL_INVARIANT_SURFACES: set[str] = set()
 
 
 @dataclass(frozen=True)
@@ -97,8 +92,9 @@ def build_theta_primitives_3d(
     leg.forward(theta, 0.0, vector=False)
     half_width = RobotParams.WHEEL_THICKNESS / 2.0
     laterals = np.linspace(-half_width, half_width, lateral_samples)
-    # Structural rim cross-sections do not depend on tyre_offset.  For them,
-    # z = sin(gamma) * lateral + constant, so only one lateral can be lowest.
+    # The three contactable tyre surfaces currently all depend on tyre_offset,
+    # so no surface is eligible for lateral-invariant pruning. Keep the generic
+    # path for future contact surfaces that may be invariant across wheel width.
     structural_lateral_index = 0 if np.sin(gamma) >= 0.0 else lateral_samples - 1
     primitives: list[Primitive3D] = []
 
@@ -113,7 +109,8 @@ def build_theta_primitives_3d(
                 and lateral_index != structural_lateral_index
             ):
                 continue
-            rim_obj = getattr(leg.leg_shape, surface_name, None)
+            surface_info = RIM_SURFACES[surface_name]
+            rim_obj = getattr(leg.leg_shape, surface_info["model_attr"], None)
             if rim_obj is None or not hasattr(rim_obj, "arc"):
                 continue
             outer_arc = rim_obj.arc[1]
