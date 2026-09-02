@@ -3,7 +3,9 @@ import numpy as np
 import pytest
 
 from legwheel.planners.hybrid import (
+    ContactStatus2D,
     HipPose2D,
+    LinkSegment2D,
     RectangleObstacle2D,
     RimId,
     SampledLegGeometry2D,
@@ -28,6 +30,19 @@ def _geometry(points, regions, surfaces=None, alpha=None):
         arc_angles_deg=np.linspace(-10.0, 10.0, count),
         alpha_rad=np.zeros(count) if alpha is None else alpha,
         hip_pose=HipPose2D([0.0, 0.0]),
+    )
+
+
+def _geometry_with_links(points, regions, surfaces, links):
+    count = len(points)
+    return SampledLegGeometry2D(
+        points_hip_xz_m=points,
+        surface_names=surfaces,
+        contact_regions=regions,
+        arc_angles_deg=np.linspace(-10.0, 10.0, count),
+        alpha_rad=np.zeros(count),
+        hip_pose=HipPose2D([0.0, 0.0]),
+        link_segments_hip_xz_m=links,
     )
 
 
@@ -242,6 +257,90 @@ def test_query_contact_preserves_multiple_rim_contacts():
     assert {item.rim for item in result.candidates} == {RimId.FOOT, RimId.RIGHT}
     assert all(item.terrain_surface_id == "ground" for item in result.candidates)
     assert not result.has_collisions
+
+
+def test_day67_case_a_right_rim_before_wall_is_no_contact():
+    terrain = TerrainProfile2D(obstacles=[RectangleObstacle2D("box", 0.4, 0.6, 0.05)])
+    result = query_contact(
+        _geometry([[0.35, 0.025]], ["right_rim"], ["upper_tyre_r"], [1.0]),
+        terrain,
+    )
+
+    assert result.statuses == (ContactStatus2D.NO_CONTACT,)
+    assert not result.valid_contact
+    assert not result.collision
+
+
+def test_day67_case_b_right_rim_face_touch_is_valid_planned_contact():
+    terrain = TerrainProfile2D(obstacles=[RectangleObstacle2D("box", 0.4, 0.6, 0.05)])
+    result = query_contact(
+        _geometry([[0.4, 0.025]], ["right_rim"], ["upper_tyre_r"], [1.0]),
+        terrain,
+        contact_tolerance_m=0.0,
+        collision_tolerance_m=1e-3,
+    )
+
+    assert result.statuses == (ContactStatus2D.VALID_RIGHT_RIM_FACE_CONTACT,)
+    assert result.valid_contact
+    assert not result.collision
+    assert result.candidates[0].rim is RimId.RIGHT
+    assert result.candidates[0].terrain_surface_id == "box_front"
+    assert result.candidates[0].point_world_xz_m.tolist() == pytest.approx([0.4, 0.025])
+    assert result.candidates[0].terrain_gap_m == pytest.approx(0.0)
+
+
+def test_day67_case_c_right_rim_top_touch_is_valid_top_contact():
+    terrain = TerrainProfile2D(obstacles=[RectangleObstacle2D("box", 0.4, 0.6, 0.05)])
+    result = query_contact(
+        _geometry([[0.5, 0.05]], ["right_rim"], ["upper_tyre_r"], [1.0]),
+        terrain,
+        contact_tolerance_m=0.0,
+    )
+
+    assert result.statuses == (ContactStatus2D.VALID_RIGHT_RIM_TOP_CONTACT,)
+    assert result.valid_contact
+    assert not result.collision
+    assert result.candidates[0].terrain_surface_id == "box_top"
+    assert result.candidates[0].terrain_gap_m == pytest.approx(0.0)
+
+
+def test_day67_case_d_link_inside_obstacle_is_invalid_link_collision():
+    terrain = TerrainProfile2D(obstacles=[RectangleObstacle2D("box", 0.4, 0.6, 0.05)])
+    link = LinkSegment2D("test_link", [[0.3, 0.025], [0.5, 0.025]])
+    result = query_contact(
+        _geometry_with_links(
+            [[0.0, 0.2]],
+            ["right_rim"],
+            ["upper_tyre_r"],
+            [link],
+        ),
+        terrain,
+    )
+
+    assert result.statuses == (ContactStatus2D.INVALID_LINK_COLLISION,)
+    assert not result.valid_contact
+    assert result.collision
+    assert len(result.link_collisions) == 1
+    assert result.link_collisions[0].geometry_id == "test_link"
+    assert result.link_collisions[0].terrain_surface_id == "box_front"
+    assert result.link_collisions[0].point_world_xz_m[0] > 0.4
+    assert result.link_collisions[0].penetration_depth_m > 0.0
+
+
+def test_rim_inside_obstacle_is_invalid_geometry_penetration():
+    terrain = TerrainProfile2D(obstacles=[RectangleObstacle2D("box", 0.4, 0.6, 0.05)])
+    result = query_contact(
+        _geometry([[0.5, 0.025]], ["left_rim"], ["upper_tyre_l"], [-1.0]),
+        terrain,
+    )
+
+    assert result.statuses == (ContactStatus2D.INVALID_GEOMETRY_PENETRATION,)
+    assert not result.valid_contact
+    assert result.collision
+    assert len(result.geometry_penetrations) == 1
+    assert result.geometry_penetrations[0].rim is RimId.LEFT
+    assert result.geometry_penetrations[0].terrain_surface_id == "box_top"
+    assert result.geometry_penetrations[0].penetration_depth_m == pytest.approx(0.025)
 
 
 def test_query_contact_rejects_invalid_collision_tolerance():
