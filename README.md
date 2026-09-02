@@ -50,7 +50,6 @@ uv run legwheel ik --leg 0 --x 0.2 --y 0.1 --z -0.25
 
 # Generate hardware-ready trajectory CSV
 uv run legwheel generate --gait Walk --vx 0.1 --cycles 5
-```
 
 ---
 
