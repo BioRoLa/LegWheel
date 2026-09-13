@@ -40,9 +40,13 @@ multiple contacts, so the meaningful turning input is the pair, one dimension.
 MODULE 4 -- ACTUATED STABILIZATION
 
 `RollPD` supplies a stance-phase ABAD roll torque -tau(kp*rho + kd*drho),
-clamped to a torque budget (default sized against the ABAD's 44.25 N.m ceiling
-x 2 joints per side x a duty margin; section 37's warning applies -- the joint
-already works near its limit in the running gait, so report the peak used).
+clamped to a torque budget (the 40 N.m default was sized against a 44.25 N.m
+per-joint ceiling x 2 joints per side x a duty margin -- that ceiling assumed a
+9:1 ABAD gearbox that was never installed; the installed stock 6:1 stalls at
+29.5 N.m per joint (log s326), so the default is a historical value kept for
+reproducibility, not the hardware budget; section 37's warning applies -- the
+joint already works near its limit in the running gait, so report the peak
+used).
 `steps_to_fail` and `perturbation_grid` evaluate survival, not eigenvalues --
 Chang's own headline (0.59% -> 100% surviving 7 steps) is a survival statistic.
 """
@@ -82,13 +86,17 @@ class RollPD:
 
     tau = -(kp*rho + kd*drho), clamped to +/-tau_max. Defaults: kd critical
     against J_roll; tau_max = 2 joints/side * 44.25 N.m * 0.45 duty-ish margin,
-    rounded down -- generous but not fantasy. peak_used records what the
+    rounded down. CORRECTION (log s326): 44.25 N.m was the HT-04 at a 9:1 ABAD
+    gearbox that was never installed; at the installed stock 6:1 the joint
+    stalls at 29.5 N.m, and the same arithmetic gives 2 * 29.5 * 0.45 = 26.55
+    N.m. The 40.0 default is left unchanged so recorded results reproduce; pass
+    tau_max explicitly for hardware-budget claims. peak_used records what the
     controller actually demanded, for the section 37 budget conversation.
     """
 
     kp: float = 400.0
     kd: float = 31.0
-    tau_max: float = 40.0
+    tau_max: float = 40.0   # historical 9:1 sizing; installed 6:1 gives 26.55
     peak_used: float = field(default=0.0, compare=False)
 
     def torque(self, rho: float, drho: float) -> float:
@@ -480,8 +488,10 @@ def _run_from(p: PairParams, x_star, u_star, x0,
     passive), and the largest single-stride change in either camber command
     from the deadbeat (0.0 when no gain). dlam_max is the flight-phase
     reorientation the ABAD must execute; divide by the flight time to compare
-    against the joint's speed limit (motor_rate_budget: 220 rpm at 9:1 is
-    ~2.56 rad/s at the joint).
+    against the joint's speed limit (installed stock 6:1: 330 rpm output
+    no-load = 34.6 rad/s at the joint, rated 140 rpm = 14.66 rad/s; the
+    former "220 rpm at 9:1 is ~2.56 rad/s" applied the ratio twice, to a 9:1
+    that was never installed).
 
     u_limits = (u_lo, u_hi) clips the deadbeat's command to a physical range.
     Without it the linear gain, fed a far-from-orbit state, commands hundreds

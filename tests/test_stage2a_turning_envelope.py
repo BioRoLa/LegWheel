@@ -75,7 +75,12 @@ def test_const_r_params_reproduce_cambered_params_on_the_geometric_law():
             assert abs(getattr(a, f) - getattr(b, f)) < 1e-15
 
 
-def test_coarse_grid_feasible_cells_respect_the_scrub_bound():
+def test_coarse_grid_feasible_cells_respect_the_scrub_bound(monkeypatch):
+    # This pins the scrub gate, not the torque gate: at the 29.5 N.m 6:1 stall
+    # (2026-09-14) no cell of this coarse grid passes the leg gate (v_td 1.05
+    # needs 31.6-35.3 N.m), so the feasible-cell checks would never run. Hold
+    # the leg gate at the old 35 N.m for this test only.
+    monkeypatch.setattr(env, "MOTOR_TORQUE_LIMIT", 35.0)
     cells = env.run_grid(np.array([0.65, 1.05]), np.array([0.0, 1.0, 20.0]),
                          step=2.0, laws=("empirical",), verbose=False)
     assert any(c["feasible"] for c in cells)          # straight cells at least

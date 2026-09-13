@@ -17,7 +17,8 @@ two corners did WORSE than passive. This script answers, in order:
    actually sits.
 3. PATHOLOGY: the clipped-PD-worse-than-passive cells, checked for the winner.
 4. RATE: the deadbeat's per-stride camber adjustment against the ABAD speed
-   limit (motor_rate_budget: 220 rpm at 9:1 ~= 2.56 rad/s at the joint) --
+   limit (installed stock 6:1: 330 rpm output no-load = 34.6 rad/s at the
+   joint; see ABAD_JOINT_SPEED for the 2026-09-14 correction) --
    the torque budget is enforced by the clamp, the SPEED budget is only
    measured here.
 5. CAUDAL BIAS: the Timeline's cheap extra dimension, read as a deliberate
@@ -51,7 +52,12 @@ SEED = [V_OP * np.cos(np.deg2rad(40.74)), 0.0, 0.32, 0.0, 0.0]
 
 MAX_STEPS = 12
 J_ROLL = PairParams().j_roll
-ABAD_JOINT_SPEED = 2.56          # rad/s at the joint, 220 rpm / 9:1 gearbox
+# 2026-09-14: the installed ABAD gearbox is the HT-04's stock 6:1, whose 330
+# rpm is already an output-shaft figure: 330 rpm = 34.6 rad/s no-load at the
+# joint (rated 140 rpm = 14.66 rad/s). This was 2.56 = (220 rpm)/9 -- a 9:1
+# never installed, and the ratio applied twice. Slew/rate numbers printed by
+# this script BEFORE 2026-09-14 used 2.56 and are ~13.5x too long.
+ABAD_JOINT_SPEED = 34.6          # rad/s at the joint, 330 rpm at the stock 6:1
 
 # Merged grid: NEAR (+-1.5..3 deg) sat inside it, FAR's inner ring (+-6 deg,
 # +-0.3 rad/s) bounds it, and unlike the section 45 grids it samples the

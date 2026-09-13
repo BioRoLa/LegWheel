@@ -24,19 +24,28 @@ CONSTRAINTS PER (v, lambda) CELL
                    geometric bound (Stage 3 Phase 5; scrub 13.8-17.2% of
                    rolling distance at the boundary). Geometric, not tunable.
     C3 leg torque  motor_torque_for(peak_grf/4, theta_min) * 2.33 erosion
-                   <= 35 N.m (pronk_operating_point's exact chain)
+                   <= 29.5 N.m, HT-04 stall at the stock 6:1 (log s326; was
+                   35; pronk_operating_point's exact chain)
     C4 ABAD hold   quasi-static moment of the leg force at the profile
-                   contact, f_leg * (d_plane + w(lambda)) <= 40 N.m (log s335;
+                   contact, f_leg * (d_plane + w(lambda)) <= 29.5 N.m, ABAD
+                   stall at the installed 6:1 (log s326; was 40) (log s335;
                    was f_leg * (d_plane*cos + r_eff*sin)). An ESTIMATE, not dynamics;
                    section 57's 31.2 N.m stabilization demand is annotated as
                    reserve on the same joint, never summed with this.
-    C5 slew        NOT a gate: a steady turn holds camber, so the 2.56 rad/s
-                   ABAD speed only bounds one-flight reachability (entry) and
-                   the per-stride Ackermann re-trim. Reported, drawn dashed.
+    C5 slew        NOT a gate: a steady turn holds camber, so the 34.6 rad/s
+                   ABAD speed (was 2.56, a double-ratio error) only bounds
+                   one-flight reachability (entry) and the per-stride Ackermann
+                   re-trim. Reported, drawn dashed.
+    The s84 cache (stage2a_figs/stage2a_grid.npz) was gated at 35/40 N.m (C4
+    on the legacy lever); its slew ms are at 2.56 rad/s. The PNGs this script
+    writes are NOT the paper figure: the paper's Fig. 4 is regenerated from
+    that cache, regated at 29.5/29.5 with C4 at the profile contact, by
+    corgi-abad-icra2027/figures/make_stage2a_figs.py.
 
 TWO RADIUS LAWS, BOTH RUN
-    geometric   r_eff(lambda) = R_tread*cos - w_flat*sin + r_corner (the
-                reduction's own law; exact 0.145 at lambda = 0)
+    geometric   r_eff(lambda) = R_tread + r_corner*cos (the reduction's own
+                law, the profile contact's radius since log s336; was
+                R_tread*cos - w_flat*sin + r_corner; exact 0.145 at lambda = 0)
     empirical   r = WHEEL_ROLL_RADIUS_SIM = 0.14482, lambda-independent
                 (Stage 1.5 measured the sim's forward channel; knobby tread)
     The empirical law is primary for sim-facing claims (log section 75); the
@@ -55,6 +64,8 @@ REGISTERED PREDICTIONS (written before the first full grid; log section 83)
         scrub, not torque.
     E3  Radius-law sensitivity < 2% of envelope area.
     E4  Entry slew never binds a steady cell (lambda_in/2.56 << t_flight).
+        [Registered at the erroneous 2.56 rad/s; at the correct 34.6 rad/s
+        (ABAD_JOINT_SPEED) the slew is 13.5x shorter, so E4 only gets easier.]
 
 WHAT THIS DOES NOT CLAIM
     - Turning MECHANISM: uniform camber steers ~0.02% of the geometric turn
@@ -96,8 +107,15 @@ from legwheel.config import RobotParams
 MASS, G = 30.0, 9.81                       # pronk_operating_point.py
 K_REL = 18.0                               # pronk_operating_point.py
 NOMINAL_THETA_DEG = 100.0                  # pronk_operating_point.py
-MOTOR_TORQUE_LIMIT = 35.0                  # pronk_operating_point.py
-TORQUE_EROSION = 35.0 / 15.02              # measured; trot_fixed_point.py
+# NOTE the s84 cache (stage2a_figs/stage2a_grid.npz) was produced at the old
+# gates 35 / 40 N.m and 2.56 rad/s; corgi-abad-icra2027/figures/
+# make_stage2a_figs.py regates it at 29.5 / 29.5 for the paper.
+# C3 gate: HT-04 stall at the installed stock 6:1 (log s326; was 35.0).
+MOTOR_TORQUE_LIMIT = 29.5                  # N.m
+# 2.33 is a clamp-bounded LOWER BOUND, not a measurement of the true factor:
+# the measured peak was clipped at the 35 N.m clamp on 100% of strides
+# (trot_fixed_point.py). The 35.0 here is that clamp, NOT the C3 gate.
+TORQUE_EROSION = 35.0 / 15.02              # measured lower bound; trot_fixed_point.py
 MIN_APEX_MM = 10.0                         # grazing filter
 MAX_DUTY = 0.55                            # grazing filter
 MEASURED_V = (0.70, 0.85)                  # measured operating band
@@ -107,9 +125,15 @@ V_DESIGN = 2.035                           # v~1.20 design point (annotation)
 PSI_DOT_MAX = 0.29                         # rad/s, hard bound (Phase 5, OI#6)
 SCRUB_BAND = (0.138, 0.172)                # envelope-crossing band (Phase 5)
 WHEEL_BASE = RobotParams.WHEEL_BASE        # 0.510
-ABAD_TAU_MAX = 40.0                        # N.m practical (RollPD.tau_max)
+# C4 gate: HT-04 stall at the installed stock 6:1 (log s326; was 40.0).
+ABAD_TAU_MAX = 29.5                        # N.m
 ABAD_RESERVE = 31.2                        # N.m, section 57 winner NEAR peak
-ABAD_JOINT_SPEED = 2.56                    # rad/s (stage2b_budget_gain_sweep)
+# ABAD joint speed at the installed stock 6:1: the HT-04's 330 rpm is already
+# an OUTPUT-shaft figure (motor_rate_budget.py), so 330 rpm = 34.6 rad/s
+# no-load. The old 2.56 was (220 rpm)/9 -- the 9:1 output speed divided by the
+# ratio again (gear ratio applied twice, and a 9:1 never installed). The rated
+# alternative is 140 rpm = 14.66 rad/s.
+ABAD_JOINT_SPEED = 34.6                    # rad/s, 330 rpm output no-load (was 2.56)
 D_PLANE = 0.091675                         # ABAD axis -> wheel plane (stage15)
 R_EMPIRICAL = RobotParams.WHEEL_ROLL_RADIUS_SIM   # 0.14482, lambda-indep
 
@@ -321,6 +345,7 @@ def run_grid(v_grid, lam_grid_deg, step, laws=("empirical", "geometric"),
                         "flight_s": fp.flight_time,
                         "tau_leg": tau,
                         "tau_abad": abad_hold_torque(f_leg, lam, r_eff),
+                        "c4_lever": "profile",   # log s335; older caches lack it
                         "lam_out_deg": np.rad2deg(lam_out),
                         "entry_slew_ms": 1e3 * lam / ABAD_JOINT_SPEED,
                         "retrim_ms": 1e3 * (lam - lam_out) / ABAD_JOINT_SPEED,
@@ -398,6 +423,11 @@ def print_table(cells):
 
 
 def make_figures(cells):
+    """Stage diagnostic PNGs from the cells' own cached verdicts.
+
+    These PNGs are NOT the paper figure. The paper's Fig. 4 is regenerated
+    from the cached grid by corgi-abad-icra2027/figures/make_stage2a_figs.py,
+    which regates C3/C4 at 29.5 N.m (C4 at the profile contact)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -509,11 +539,34 @@ def check_predictions(cells):
               f"{frac:.2f} (lam {worst_steady['lam_deg']:.1f}d) "
               f"{'PASS' if frac < 1.0 else 'FAIL'}")
     if worst_any:
+        # the verdict follows the number: at the old 2.56 rad/s large-lam
+        # entry did not fit one flight; at 34.6 rad/s it may
+        fits = slew_frac(worst_any) < 1.0
         print(f"   context: over all existence cells the worst is "
               f"{slew_frac(worst_any):.2f} (lam {worst_any['lam_deg']:.0f}d, "
-              f"v_td {worst_any['v_td']:.2f}) -- large-lam entry does NOT "
-              f"fit one flight (the section-57 rate budget, re-found), but "
-              f"those cells are scrub-infeasible as turns anyway")
+              f"v_td {worst_any['v_td']:.2f}) -- " +
+              ("even large-lam entry fits one flight" if fits else
+               "large-lam entry does NOT fit one flight (the section-57 "
+               "rate budget, re-found), but those cells are "
+               "scrub-infeasible as turns anyway"))
+
+
+def gate_constants() -> dict:
+    """The gate constants a grid's verdicts were computed at -- stored with
+    every --cache so the npz is self-describing."""
+    return {"leg": float(MOTOR_TORQUE_LIMIT), "abad": float(ABAD_TAU_MAX),
+            "joint_speed": float(ABAD_JOINT_SPEED),
+            "erosion": float(TORQUE_EROSION),
+            "psi_dot_max": float(PSI_DOT_MAX)}
+
+
+def load_cache(path):
+    """(cells, gates) from a --cache npz. gates is None for caches written
+    before the 'gates' record existed (e.g. the s84 stage2a_grid.npz)."""
+    with np.load(path, allow_pickle=True) as z:
+        cells = list(z["cells"])
+        gates = z["gates"].item() if "gates" in z.files else None
+    return cells, gates
 
 
 def main(argv):
@@ -528,8 +581,17 @@ def main(argv):
         cache_in = argv[argv.index("--from-cache") + 1]
 
     if cache_in:
-        cells = list(np.load(cache_in, allow_pickle=True)["cells"])
+        cells, gates = load_cache(cache_in)
         print(f"loaded {len(cells)} cells from {cache_in}")
+        if gates is None:
+            print("  cache has no 'gates' record (written before 2026-09-14): "
+                  "its feasible/binding verdicts and slew ms are as cached, "
+                  "gated at the constants of that time (the s84 cache: "
+                  "35/40 N.m, C4 on the legacy lever; slew ms at 2.56 rad/s) "
+                  "-- NOT regated here")
+        elif gates != gate_constants():
+            print(f"  cache gated at {gates}; current {gate_constants()} "
+                  f"-- verdicts are as cached, NOT regated here")
     else:
         v_grid = V_GRID_FULL if full else V_GRID_QUICK
         step = 0.5 if full else 2.0
@@ -537,8 +599,10 @@ def main(argv):
               f"2 laws, beta step {step}")
         cells = run_grid(v_grid, LAM_GRID_DEG, step, verbose=not full)
         if cache_out:
-            np.savez_compressed(cache_out, cells=np.array(cells, dtype=object))
-            print(f"cached {len(cells)} cells to {cache_out}")
+            np.savez_compressed(cache_out, cells=np.array(cells, dtype=object),
+                                gates=np.array(gate_constants(), dtype=object))
+            print(f"cached {len(cells)} cells to {cache_out} "
+                  f"(gates {gate_constants()})")
 
     print_table(cells)
     check_predictions(cells)
