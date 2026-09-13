@@ -25,8 +25,9 @@ CONSTRAINTS PER (v, lambda) CELL
                    rolling distance at the boundary). Geometric, not tunable.
     C3 leg torque  motor_torque_for(peak_grf/4, theta_min) * 2.33 erosion
                    <= 35 N.m (pronk_operating_point's exact chain)
-    C4 ABAD hold   quasi-static lever estimate f_leg * (d_plane*cos(lambda)
-                   + r_eff*sin(lambda)) <= 40 N.m. An ESTIMATE, not dynamics;
+    C4 ABAD hold   quasi-static moment of the leg force at the profile
+                   contact, f_leg * (d_plane + w(lambda)) <= 40 N.m (log s335;
+                   was f_leg * (d_plane*cos + r_eff*sin)). An ESTIMATE, not dynamics;
                    section 57's 31.2 N.m stabilization demand is annotated as
                    reserve on the same joint, never summed with this.
     C5 slew        NOT a gate: a steady turn holds camber, so the 2.56 rad/s
@@ -85,6 +86,8 @@ from legwheel.models.slip_rf_cambered import (
     cambered_params, cambered_stride, rolling_radius, turn_radius,
 )
 from legwheel.models.cambered_return_map import CONTACT_TRACK, ackermann_pair
+from legwheel.models.contact_profile import (abad_moment, contact_point,
+                                             leg_plane_force)
 from legwheel.planners import gslip_template as tpl
 from legwheel.planners import gslip_to_corgi as g2c
 from legwheel.config import RobotParams
@@ -222,10 +225,20 @@ def leg_torque(p_cell: SlipRfParams, v: float, fp, leg_map) -> float:
     return float(tau * TORQUE_EROSION), float(f_leg)
 
 
-def abad_hold_torque(f_leg: float, lam: float, r_eff: float) -> float:
+def abad_hold_torque(f_leg: float, lam: float, r_eff: float = None) -> float:
     """Quasi-static ABAD moment to hold the leg plane at `lam` under the
-    peak leg force: lever = d_plane*cos + r_eff*sin. An estimate."""
-    return float(f_leg * (D_PLANE * np.cos(lam) + r_eff * np.sin(lam)))
+    peak leg force. An estimate.
+
+    Log s335 (2026-09-13): the moment of the force at the PROFILE contact
+    (contact_profile.contact_point), taken along the leaned leg axis -- the
+    coordinated-turn reduction's stance force -- which is exactly
+    f_leg * (D_PLANE + w). The former lever D_PLANE*cos + r_eff*sin put a
+    vertical force at a contact left on the leg plane. `r_eff` no longer
+    enters (a rolling radius cannot locate the contact); kept in the
+    signature so cached callers do not break. Rerun on the cached grid: zero
+    verdict changes, max feasible demand 21.8 -> 21.5 N.m at 6:1."""
+    pt = contact_point(lam, D_PLANE)
+    return float(abad_moment(pt, *leg_plane_force(lam, f_leg)))
 
 
 # --- selftest (refusal-gated; hand answers, not round-trips) ------------------

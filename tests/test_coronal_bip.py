@@ -99,28 +99,38 @@ def test_side_geometry_lateral_offset_uses_the_ROLLING_radius() -> None:
     R_CORNER (0.015, the shoulder fillet) governs migration ACROSS THE TREAD,
     which is a different quantity and ~20x smaller.
     """
-    from legwheel.models.slip_rf_cambered import rolling_radius
+    from legwheel.models.slip_rf_cambered import (R_TREAD, W_FLAT,
+                                                  rolling_radius)
 
     r0 = rolling_radius(0.0)
     assert r0 == pytest.approx(0.145, abs=1e-9)
 
     for deg in (5.0, 10.0, 15.0, 20.0, 30.0):
         lam = np.deg2rad(deg)
-        g = bip.side_geometry(lam, radius_law="measured")
-        expect = bip.WHEEL_AXIAL_OFFSET * np.cos(lam) + r0 * np.sin(lam)
-        assert g.d_out == pytest.approx(expect, abs=1e-12)
+        # The legacy form stays reachable, and pinned, for reproduction only.
+        legacy = bip.side_geometry(lam, radius_law="measured", lateral="legacy")
+        assert legacy.d_out == pytest.approx(
+            bip.WHEEL_AXIAL_OFFSET * np.cos(lam) + r0 * np.sin(lam), abs=1e-12)
+        # S335: the profile contact, hand-computed -- lower shoulder, crown
+        # cancelled, and the SAME for both radius laws.
+        expect = ((bip.WHEEL_AXIAL_OFFSET - W_FLAT) * np.cos(lam)
+                  + R_TREAD * np.sin(lam))
+        for law in ("measured", "torus"):
+            g = bip.side_geometry(lam, radius_law=law, lateral="profile")
+            assert g.d_out == pytest.approx(expect, abs=1e-12)
 
     # The migration must be MONOTONE and OUTBOARD across the working band.
     # The R_CORNER form failed both: it peaked near 10 deg and went negative
     # by 20, i.e. the coupling channel reversed sign inside the band the
     # thesis operates in.
-    migr = [bip.side_geometry(np.deg2rad(d), radius_law="measured").d_out
+    migr = [bip.side_geometry(np.deg2rad(d), radius_law="measured",
+                              lateral="profile").d_out
             - bip.WHEEL_AXIAL_OFFSET for d in (5, 10, 15, 20, 30)]
     assert all(m > 0 for m in migr), migr
     assert all(b > a for a, b in zip(migr, migr[1:])), migr
-    # Scale check against the term S40 quotes as the contribution: at 10 deg
-    # the migration is ~24 mm, not the ~1.2 mm the old coefficient gave.
-    assert migr[1] == pytest.approx(0.0240, abs=0.0015)
+    # Scale check: at 10 deg the profile contact is +16.3 mm outboard of
+    # upright (S335; the legacy form said +24 mm, the R_CORNER form ~1.2).
+    assert migr[1] == pytest.approx(0.01626, abs=0.0002)
 
 
 def test_asymmetric_stiffness_rolls_the_bounce() -> None:

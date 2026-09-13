@@ -20,6 +20,23 @@ U_LIMITS = (np.array([np.deg2rad(40.0), -np.deg2rad(30.0), -np.deg2rad(30.0)]),
             np.array([np.deg2rad(89.0), +np.deg2rad(30.0), +np.deg2rad(30.0)]))
 
 
+@pytest.fixture
+def legacy_lateral(monkeypatch):
+    """Run the map on the pre-2026-09-13 lateral contact (log s335).
+
+    The profile contact (the default) steps by w_c = 5 mm through lam = 0:
+    the flat band touches at its shoulder. A central-difference J_u straddling
+    lam* = 0 therefore differentiates a discontinuity, and the deadbeat gain
+    built from it is meaningless (measured: NEAR-grid survival 1.0 -> 0.0
+    under the measured law). The tests using this fixture pin the deadbeat
+    MACHINERY on the geometry its gains were tuned for; they make no claim
+    about the profile geometry, where linearising at the straight orbit is
+    undefined."""
+    from functools import partial
+    monkeypatch.setattr(crm, "side_geometry",
+                        partial(bip.side_geometry, lateral="legacy"))
+
+
 @pytest.fixture(scope="module")
 def fixed_point():
     p = PairParams()
@@ -117,7 +134,7 @@ def test_basin_scan_uses_a_fresh_controller_so_per_cell_peaks_are_independent(
 
 
 def test_basin_radius_shrinks_when_the_torque_clamp_tightens(
-        fixed_point) -> None:
+        fixed_point, legacy_lateral) -> None:
     """The clamp is the budget: starving the PD cannot enlarge the connected
     basin. r(theta) under a 15 N.m clamp must not exceed r(theta) at 40."""
     p, x_star, u_star = fixed_point
@@ -165,7 +182,7 @@ def test_exec_bias_zero_is_bit_identical_to_no_bias(fixed_point) -> None:
 
 
 def test_sweep_gains_hold_the_near_grid_inside_the_abad_budget(
-        fixed_point_canonical) -> None:
+        fixed_point_canonical, legacy_lateral) -> None:
     """The claim section 45 could only print, now asserted: at the canonical
     orbit the budget-sweep gains (kp 100, kd 12.5, clamp 40) plus the clamped
     deadbeat survive the entire NEAR grid with UNCLIPPED peak demand inside

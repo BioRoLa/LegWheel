@@ -51,6 +51,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.optimize import brentq
 
+from legwheel.models.contact_profile import CORGI_TREAD, contact_point
 from legwheel.models.slip_rf_cambered import rolling_radius
 
 G_DEFAULT = 9.81
@@ -119,6 +120,25 @@ if not (0.0 <= AXIAL_DROP_DEFAULT <= 0.15):
     raise ValueError(f"LEGWHEEL_AXIAL_DROP out of range [0, 0.15]: "
                      f"{AXIAL_DROP_DEFAULT}")
 
+# WHERE THE CONTACT SITS LATERALLY (log s335, 2026-09-13).
+#
+#   "profile"  contact_profile.contact_point on the Corgi tread: the tread
+#              point (d_out0 + w, rho) rotated by the lean, lowest point taken.
+#              THE DEFAULT, and the same function C4 uses.
+#   "legacy"   d_out0*cos(lean) + r_contact*sin(lean), the pre-2026-09-13 form
+#              (paper Eq. 4). It swings the rolling radius about the axle with
+#              the contact left ON the leg plane, dropping w*cos(lean): +5.3 /
+#              +7.5 / +8.7 mm too far outboard at 1 / 10 / 15 deg on this
+#              tread. Kept ONLY so s45/s184/s274-era numbers reproduce.
+#
+# The radius law does not choose between these: a rolling radius alone cannot
+# locate the contact across the tread, so both laws take the profile's
+# lateral position and differ only in l0.
+CONTACT_LATERAL_DEFAULT = os.environ.get("LEGWHEEL_CONTACT_LATERAL", "profile")
+if CONTACT_LATERAL_DEFAULT not in ("profile", "legacy"):
+    raise ValueError(f"LEGWHEEL_CONTACT_LATERAL must be 'profile' or "
+                     f"'legacy', got {CONTACT_LATERAL_DEFAULT!r}")
+
 
 @dataclass
 class SideGeometry:
@@ -140,17 +160,24 @@ def side_geometry(lean: float,
                   d_out0: float = WHEEL_AXIAL_OFFSET,
                   l0_sagittal: float = LEG_LENGTH_NOMINAL,
                   radius_law: str = RADIUS_LAW_DEFAULT,
-                  axial_drop: float = AXIAL_DROP_DEFAULT) -> SideGeometry:
+                  axial_drop: float = AXIAL_DROP_DEFAULT,
+                  lateral: str = CONTACT_LATERAL_DEFAULT) -> SideGeometry:
     """Default cambered side geometry at wheel lean `lean` (rad, signed;
-    positive leans the wheel top outboard for this side).
+    positive swings this side's contact OUTBOARD -- log s274 s1).
 
-    d_out is the lateral offset HIP TO CONTACT, and it has two parts:
+    d_out is the lateral offset HIP TO CONTACT. Under lateral="profile" (the
+    default) it is contact_profile.contact_point(lean, d_out0).y: the tread
+    point (d_out0 + w, rho) rotated by the lean, where w is the contact's
+    position across the tread. On an ideal torus that is
+    d_out0*cos + R*sin -- the crown cancels out of the lateral coordinate --
+    and on the Corgi tread (d_out0 - sgn*w_c)*cos + R_t*sin. See
+    CONTACT_LATERAL_DEFAULT for the "legacy" form this replaced.
 
-      * the wheel plane sits d_out0 along the hip axis, and leaning rotates
-        that axis, so its lateral component goes as d_out0*cos(lean);
-      * the contact sits a rolling radius BELOW the wheel centre, and the wheel
-        pivots about its axle, so that ground point swings outboard by
-        r*sin(lean).
+    ⚠ SUPERSEDED 2026-09-13 (log s335): the "two parts" reading below
+    (d_out0*cos + r*sin) is the legacy form. Its r*sin coefficient beat
+    R_CORNER, but it counts the crown in the leg plane; the Webots contact
+    sweep S190/S197 fits the profile form with no free parameter (mean
+    residual 7.25 -> 1.7-3.9 mm).
 
     ⚠ CORRECTED 2026-08-23 (log S183). This function previously used
     `0.015 * sin(lean)` -- R_CORNER, the shoulder fillet -- where the rolling
@@ -187,12 +214,17 @@ def side_geometry(lean: float,
     if radius_law not in ("torus", "measured"):
         raise ValueError(f"radius_law must be 'torus' or 'measured', "
                          f"got {radius_law!r}")
+    if lateral not in ("profile", "legacy"):
+        raise ValueError(f"lateral must be 'profile' or 'legacy', "
+                         f"got {lateral!r}")
     r0 = rolling_radius(0.0)
-    # One law drives both terms: the radius the contact sits at is the radius
-    # it swings on. Mixing them would be a third geometry nobody validated.
     r_contact = rolling_radius(lean) if radius_law == "torus" else r0
+    if lateral == "profile":
+        d_out = contact_point(lean, d_out0, CORGI_TREAD).y
+    else:
+        d_out = d_out0 * np.cos(lean) + r_contact * np.sin(lean)
     return SideGeometry(
-        d_out=d_out0 * np.cos(lean) + r_contact * np.sin(lean),
+        d_out=d_out,
         # axial_drop: see AXIAL_DROP_DEFAULT above (S273). 0.0 = the
         # pre-2026-08-29 record; WHEEL_AXIAL_OFFSET = the corrected
         # transfer. Sign: outboard lean shortens the leg, lowers the side.
