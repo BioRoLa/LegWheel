@@ -54,14 +54,13 @@ WHAT WAS WRONG (before 2026-09-13)
   drops w cos phi. On the ideal torus the excess is r sin phi cos phi
   (0.35 / 3.4 / 5.0 mm at 1 / 10 / 15 deg for r = 20 mm).
 
-OPEN, NOT CHANGED HERE: `slip_rf_cambered.rolling_radius` returns
-R_t cos phi - w_c sin|phi| + r_c. This profile's lowest point sits
-rho cos phi - w sin phi = R_t cos phi + w_c sin|phi| + r_c below the axle
-(a tilted coin RISES), and its rolling radius is rho = R_t + r_c cos phi.
-The shipped law matches neither. `tests/test_contact_profile.py` pins the gap
-to the axle height (2 w_c sin|phi|) so it cannot drift silently. That law
-feeds the sagittal reduction and side_geometry's rest length, neither of
-which this module touches.
+RESOLVED 2026-09-13 (log s336): `slip_rf_cambered.rolling_radius` used to
+return Stage 0's R_t cos phi - w_c sin|phi| + r_c, which is neither this
+profile's rolling radius rho = R_t + r_c cos phi nor its axle height
+rho cos phi - w sin phi = R_t cos phi + w_c sin|phi| + r_c (a tilted band
+RISES; the old form is the height of the shoulder that does not touch). It
+now returns rho; heights use `axle_height`; the old formula survives only as
+`slip_rf_cambered.stage0_contact_height_legacy` for closed-stage analysers.
 """
 
 from __future__ import annotations

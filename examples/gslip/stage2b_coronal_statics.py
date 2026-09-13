@@ -20,7 +20,10 @@ a rigid body on two contacts must roll until both touch. Roll is therefore
 first-order in lambda (the sin-scaling section 42 identified), and the ride
 drop follows from the rolled geometry plus the Stage 0 hub-clearance model
 
-    h(phi) = R_tread*cos(phi) - w_flat*sin(phi) + r_corner .
+    h(phi) = R_tread*cos(phi) + w_flat*sin|phi| + r_corner .
+
+(log s336: the lower shoulder touches, so the w_flat term is +. Stage 0's
+minus sign gave the height of the shoulder NOT touching.)
 
 This is a pure 2-unknown geometry solve -- no forces, no dynamics, no free
 parameters. Wheel mode is rigid, all radii are the wheel's, and every constant
@@ -40,6 +43,8 @@ from __future__ import annotations
 import numpy as np
 from scipy.optimize import fsolve
 
+from legwheel.models.contact_profile import CORGI_TREAD, axle_height
+
 # Stage 0 constants, wheeled mode (theta = 17 deg: every rim centre coincides
 # with the hip, so the "leg" is just the wheel).
 W_HIP = 0.120           # hip lateral offset (m)
@@ -55,8 +60,11 @@ MEASURED = {  # lambda_cmd_deg: (achieved_deg, roll_deg, drop_mm)
 
 
 def hub_clearance(phi: float) -> float:
-    """Wheel-centre height above ground at lean phi -- Stage 0's tread model."""
-    return R_TREAD * np.cos(phi) - W_FLAT * np.sin(abs(phi)) + R_CORNER
+    """Wheel-centre height above ground at lean phi: the tread profile's axle
+    height (contact_profile.axle_height, log s336). The Stage 0 form this
+    replaced, R_TREAD*cos - W_FLAT*sin|phi| + R_CORNER, reproduced s33 at roll
+    ratio 0.80-0.81 and drop ratio 0.44-0.86."""
+    return axle_height(phi, CORGI_TREAD)
 
 
 # Empirical sim-calibrated alternative (log section 72): the sim's measured

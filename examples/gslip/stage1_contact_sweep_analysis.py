@@ -21,8 +21,10 @@ sweep starts with its carry-ins already enforced:
 4. THE ANALYSER SELF-TESTS on synthetic known answers at startup and refuses
    to run if its own arithmetic is off (diag README rule).
 
-The gate formula is imported from slip_rf_cambered.rolling_radius -- the SAME
-function the models use, so a Stage 1 correction lands everywhere at once.
+The gate formula is imported from slip_rf_cambered -- since log s336 as
+stage0_contact_height_legacy, the registered Stage 1 gate kept verbatim so this
+closed stage reproduces. Its w_flat sign is wrong; the corrected height is
+contact_profile.axle_height, and rolling_radius is now a radius, not a height.
 Section 42's warning stands: the rolling-radius drop (1 - cos lambda) is NOT
 the measured body-height drop (sin lambda); this script never compares the
 two.
@@ -39,7 +41,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from legwheel.models.slip_rf_cambered import rolling_radius
+from legwheel.models.slip_rf_cambered import stage0_contact_height_legacy
 
 # lr pattern signs (A, B, C, D); left pair {A, D}, right pair {B, C}.
 LR_SIGNS = np.array([+1.0, -1.0, -1.0, +1.0])
@@ -125,8 +127,8 @@ def diagonal_residual(gam_pre_deg: np.ndarray) -> dict:
 
 def gate_height(lam_deg: float) -> float:
     """Expected contact height (m) at achieved lean lam -- THE Stage 1 gate,
-    from the shared seam function."""
-    return float(rolling_radius(np.deg2rad(lam_deg)))
+    from the shared seam function (the registered Stage 0 form, log s336)."""
+    return float(stage0_contact_height_legacy(np.deg2rad(lam_deg)))
 
 
 def _window_mean(t, v, lo, hi):

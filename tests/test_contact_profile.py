@@ -109,11 +109,14 @@ def test_leg_plane_force_lever_is_the_axial_contact_offset(deg) -> None:
     assert cp.abad_moment(c, 0.0, 100.0) == pytest.approx(100.0 * c.y, abs=1e-12)
 
 
-def test_shipped_rolling_radius_disagrees_with_this_profile_OPEN() -> None:
-    """Pinned, NOT fixed (log s335). rolling_radius = R_t cos - w_c sin|phi| + r_c;
-    this profile's axle height is R_t cos + w_c sin|phi| + r_c. If this fails,
-    one of them changed: decide which is right and record why."""
+def test_rolling_radius_is_the_profile_contact_radius() -> None:
+    """Log s336 (was pinned OPEN in s335). rolling_radius is rho at the profile
+    contact, R_t + r_c cos -- second order, no cusp. The Stage 0 formula it
+    replaced sits exactly 2 w_c sin|phi| below this profile's axle height:
+    it is the height of the shoulder that does not touch."""
     for deg in (-15.0, 5.0, 10.0, 20.0):
         phi = np.deg2rad(deg)
-        gap = cp.axle_height(phi) - src.rolling_radius(phi)
+        assert src.rolling_radius(phi) == pytest.approx(
+            cp.contact_point(phi, D).rho, abs=1e-15)
+        gap = cp.axle_height(phi) - src.stage0_contact_height_legacy(phi)
         assert gap == pytest.approx(2 * src.W_FLAT * abs(np.sin(phi)), abs=1e-15)

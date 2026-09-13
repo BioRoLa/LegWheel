@@ -143,7 +143,8 @@ def test_rolling_radius_drop_is_NOT_the_measured_ride_height_drop() -> None:
         rolling-radius drop  1 : 3.97 : 8.82     ~ 1 - cos(lambda)
 
     A first-order quantity against a second-order one. By 30 deg this module says
-    19.9 mm against a measured 6.45. Nothing is wrong with either: the wheel's
+    2.0 mm against a measured 6.45 (19.9 mm under the Stage 0 law it replaced,
+    log s336). Nothing is wrong with either: the wheel's
     rolling radius shrinks as 1-cos, while the BODY also rolls (-4.6 / -9.2 /
     -13.8 deg in that run), and a rolling body drops through a sin(rho) lever --
     the measured drop is ~27 mm * sin(body roll), roughly constant across all
@@ -155,10 +156,11 @@ def test_rolling_radius_drop_is_NOT_the_measured_ride_height_drop() -> None:
     r0 = cam.rolling_radius(0.0)
     drops = [(r0 - cam.rolling_radius(np.deg2rad(d))) * 1e3 for d in (10.0, 20.0, 30.0)]
 
-    # Second-order: follows 1 - cos(lambda), to within the flat-tread term.
+    # Second-order: exactly 1 - cos(lambda) since log s336 (rolling radius
+    # R_t + r_c cos). The Stage 0 law's flat-tread term gave 3.36 / 7.00.
     ratios = [d / drops[0] for d in drops]
-    assert ratios[1] == pytest.approx(3.36, abs=0.05)
-    assert ratios[2] == pytest.approx(7.00, abs=0.05)
+    assert ratios[1] == pytest.approx(3.97, abs=0.05)
+    assert ratios[2] == pytest.approx(8.82, abs=0.05)
 
     # And is emphatically NOT the measured sequence.
     for got, measured in zip(drops, (2.00, 4.34, 6.45)):

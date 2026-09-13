@@ -51,8 +51,10 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.optimize import brentq
 
-from legwheel.models.contact_profile import CORGI_TREAD, contact_point
-from legwheel.models.slip_rf_cambered import rolling_radius
+from legwheel.models.contact_profile import (CORGI_TREAD, axle_height,
+                                             contact_point)
+from legwheel.models.slip_rf_cambered import (rolling_radius,
+                                              stage0_contact_height_legacy)
 
 G_DEFAULT = 9.81
 
@@ -218,17 +220,26 @@ def side_geometry(lean: float,
         raise ValueError(f"lateral must be 'profile' or 'legacy', "
                          f"got {lateral!r}")
     r0 = rolling_radius(0.0)
-    r_contact = rolling_radius(lean) if radius_law == "torus" else r0
     if lateral == "profile":
         d_out = contact_point(lean, d_out0, CORGI_TREAD).y
     else:
-        d_out = d_out0 * np.cos(lean) + r_contact * np.sin(lean)
+        # Legacy lateral, as the pre-S335 record evaluated it: the Stage 0
+        # height formula (torus law) or r0 (measured law), swung about the axle.
+        r_leg = (stage0_contact_height_legacy(lean) if radius_law == "torus"
+                 else r0)
+        d_out = d_out0 * np.cos(lean) + r_leg * np.sin(lean)
+    # Rest length follows the AXLE HEIGHT (log s336). Under "torus" that is the
+    # profile's axle_height, R_t cos + w_c sin|lean| + r_c -- a tilted band
+    # RISES -- replacing Stage 0's R_t cos - w_c sin|lean| + r_c (the shoulder
+    # not touching). Under "measured" it holds at r0. Exact pre-S336 torus-law
+    # numbers need LegWheel b45e5a9.
+    h_axle = axle_height(lean, CORGI_TREAD) if radius_law == "torus" else r0
     return SideGeometry(
         d_out=d_out,
         # axial_drop: see AXIAL_DROP_DEFAULT above (S273). 0.0 = the
         # pre-2026-08-29 record; WHEEL_AXIAL_OFFSET = the corrected
         # transfer. Sign: outboard lean shortens the leg, lowers the side.
-        l0=l0_sagittal - (r0 - r_contact) - axial_drop * np.sin(lean),
+        l0=l0_sagittal - (r0 - h_axle) - axial_drop * np.sin(lean),
     )
 
 

@@ -32,19 +32,25 @@ lateral migration handled in the coronal model), not here.
 ROLLING RADIUS UNDER CAMBER
 
 The Corgi's tread is not a full torus: it is flat across the middle with a
-filleted shoulder, so the Stage 0 contact model is
+filleted shoulder. Once leaned, the contact rides the lower shoulder fillet, so
+the rolling radius -- the contact's distance from the axle, which sets forward
+progress per radian of wheel rotation -- is
 
-    r_eff(lambda) = R_tread*cos(lambda) - w_flat*sin(lambda) + r_corner
+    r_eff(lambda) = R_tread + r_corner*cos(lambda)
 
-At lambda = 0 this returns R_tread + r_corner = 0.130 + 0.015 = 0.145 m EXACTLY,
-which is the sagittal foot radius. That exactness is not a coincidence to be
-grateful for -- it is what makes the lambda = 0 identity check below a real test
-of the reduction rather than a test of rounding.
+(contact_profile.contact_point(...).rho). At lambda = 0 this returns
+R_tread + r_corner = 0.130 + 0.015 = 0.145 m EXACTLY, the sagittal foot radius --
+what makes the lambda = 0 identity check below a real test of the reduction
+rather than a test of rounding. Like the ideal torus it is second order (0.9 mm
+at 20 deg), and it stays within 0.2 mm of the sim's lean-independent
+0.14482 m to 10 deg.
 
-The middle term is the one an earlier version of the gate dropped by using the
-full-torus form h = R*cos(lambda) + r. It is worth 1.71 mm at lambda = 20 deg --
-small, but Stage 1 is a *validation* stage where an unmodelled 1.7 mm bias reads
-as model failure.
+CORRECTED 2026-09-13 (log s336). This used to be Stage 0's
+R_tread*cos - w_flat*sin|lambda| + r_corner: a contact HEIGHT with the
+flat-band term's sign reversed (the height of the shoulder that does NOT touch;
+a tilted band rises), used here as a radius. Its "first-order term worth
+1.71 mm at 20 deg" was that sign error. Kept as stage0_contact_height_legacy()
+for the closed Stage 1 analyser only; heights now use contact_profile.axle_height.
 
 WHAT THIS DOES NOT COVER
 
@@ -75,9 +81,23 @@ R_CORNER = 0.015   # torus minor radius, the shoulder fillet
 
 def rolling_radius(lam: float, r_tread: float = R_TREAD,
                    w_flat: float = W_FLAT, r_corner: float = R_CORNER) -> float:
-    """Effective rolling radius at camber `lam` (rad). Stage 0's contact model.
+    """Rolling radius at camber `lam` (rad): the profile contact's distance
+    from the axle, r_tread + r_corner*cos(lam) (log s336). `w_flat` moves the
+    contact across the tread, not its radius; kept for signature compatibility.
 
     Returns r_tread + r_corner exactly at lam = 0.
+    """
+    return float(r_tread + r_corner * np.cos(lam))
+
+
+def stage0_contact_height_legacy(lam: float, r_tread: float = R_TREAD,
+                                 w_flat: float = W_FLAT,
+                                 r_corner: float = R_CORNER) -> float:
+    """Stage 0's contact-height formula, r_tread*cos - w_flat*sin|lam| + r_corner.
+
+    Kept ONLY so closed-stage analysers (the Stage 1 gate) reproduce their
+    record. The w_flat sign is wrong (log s336): the true axle height is
+    contact_profile.axle_height = r_tread*cos + w_flat*sin|lam| + r_corner.
     """
     return float(r_tread * np.cos(lam) - w_flat * np.sin(abs(lam)) + r_corner)
 
