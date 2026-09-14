@@ -98,6 +98,26 @@ def test_corgi_tread_upright_identity_and_closed_form() -> None:
             (D - src.W_FLAT) * np.cos(phi) + src.R_TREAD * np.sin(phi), abs=1e-15)
 
 
+@pytest.mark.parametrize("big_l", [0.0, 0.1481, 0.3])
+@pytest.mark.parametrize("deg", [-20.0, -5.0, 5.0, 12.5, 20.0])
+def test_hip_to_axle_shifts_the_contact_by_L_n_and_not_the_leg_axis_moment(
+        deg, big_l) -> None:
+    """Log s339 s5o. The axle L from the hip along n adds exactly
+    (L sin phi, -L cos phi), leaves the profile contact (w, rho) alone, and
+    leaves the AB/AD moment of a leg-axis force at f (d_wheel + w): C4 does
+    not depend on L. The default L = 0 is bit-identical to no argument."""
+    phi = np.deg2rad(deg)
+    c0 = cp.contact_point(phi, D)
+    c = cp.contact_point(phi, D, hip_to_axle=big_l)
+    assert (c.w, c.rho) == (c0.w, c0.rho)
+    assert c.y == pytest.approx(c0.y + big_l * np.sin(phi), abs=1e-15)
+    assert c.z == pytest.approx(c0.z - big_l * np.cos(phi), abs=1e-15)
+    fy, fz = cp.leg_plane_force(phi, 100.0)
+    assert cp.abad_moment(c, fy, fz) == pytest.approx(100.0 * (D + c.w),
+                                                      abs=1e-12)
+    assert cp.contact_point(phi, D, hip_to_axle=0.0) == c0
+
+
 @pytest.mark.parametrize("deg", [-20.0, -5.0, 5.0, 12.5, 20.0])
 def test_leg_plane_force_lever_is_the_axial_contact_offset(deg) -> None:
     """A force along the leaned leg axis has AB/AD moment f (d_wheel + w): the

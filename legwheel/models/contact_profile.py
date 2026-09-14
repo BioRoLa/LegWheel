@@ -12,23 +12,32 @@ FRAMES (front view, one side, coronal_bip's per-side outboard convention)
   lean phi    rotation of the leg about the fore-aft AB/AD axis. phi > 0
               swings the contact OUTBOARD (log s274 s1, verified by eye).
   leg frame   a = (cos phi, sin phi): along the axle, outboard.
-              n = (sin phi, -cos phi): in the leg plane, axle -> ground when
-              upright.
+              n = (sin phi, -cos phi): in the leg plane, hip -> axle ->
+              ground when upright.
   profile     the tread cross-section in the leg frame: a surface point at
               axial coordinate w (along a, from the wheel centre plane) and
               radial distance rho from the axle (along n).
 
-The wheel centre plane sits d_wheel along a. As in coronal_bip, the in-plane
-leg belongs to the spring leg and the pivot is the axle, so a profile point
-sits at (d_wheel + w) a + rho n:
+The wheel centre plane sits d_wheel along a, and the axle sits L =
+`hip_to_axle` along n from the hip (L = 0 at theta = 17 deg, where the rim
+closes around the hip; 0.1481 m at the theta = 100 deg running stance, log
+s21). A profile point sits at (d_wheel + w) a + (L + rho) n:
 
-    y = (d_wheel + w) cos phi + rho sin phi
-    z = (d_wheel + w) sin phi - rho cos phi
+    y = (d_wheel + w) cos phi + (L + rho) sin phi
+    z = (d_wheel + w) sin phi - (L + rho) cos phi
 
 and the contact is the profile point with the lowest z. That minimisation is
-the only place the profile enters.
+the only place the profile enters, and L does not change which point wins.
 
-COROLLARIES, all exact
+L DEFAULTS TO 0, i.e. the pivot is the axle, and every caller in legwheel/
+and examples/ uses that default. (y, z) is then the contact relative to the
+axle's station on the AB/AD axis, which is the hip-relative contact only at
+theta = 17 deg; at theta = 100 deg the hip-relative contact is
+(y + L sin phi, z - L cos phi). coronal_bip.side_geometry(pivot="hip") adds
+the L sin phi (log s339 s5o).
+
+COROLLARIES, all exact (y and z written at L = 0; any L adds L sin phi to y
+and -L cos phi to z)
 
   Ideal torus (spine R, crown r):  w = -r sin phi,  rho = R + r cos phi, so
       y = d_wheel cos phi + R sin phi,   z = d_wheel sin phi - R cos phi - r.
@@ -45,7 +54,8 @@ COROLLARIES, all exact
   so the contact steps by w_c either side of zero -- a rigid-profile fact.
 
   AB/AD moment of a force f along the leaned leg axis (-n): exactly
-  f (d_wheel + w). The finite profile's lever is w, i.e. d_lat.
+  f (d_wheel + w), at any L -- L n is parallel to the force. The finite
+  profile's lever is w, i.e. d_lat.
 
 WHAT WAS WRONG (before 2026-09-13)
 
@@ -115,13 +125,17 @@ def profile_contact(phi: float, profile: TreadProfile = CORGI_TREAD
 
 
 def contact_point(phi: float, d_wheel: float,
-                  profile: TreadProfile = CORGI_TREAD) -> ContactPoint:
-    """The contact in the hip frame: one rotation of (d_wheel + w, rho)."""
+                  profile: TreadProfile = CORGI_TREAD,
+                  hip_to_axle: float = 0.0) -> ContactPoint:
+    """The contact in the hip frame: one rotation of
+    (d_wheel + w, hip_to_axle + rho). hip_to_axle = 0 (the default) puts the
+    axle on the AB/AD axis; see the module docstring."""
     w, rho = profile_contact(phi, profile)
     c, s = float(np.cos(phi)), float(np.sin(phi))
     axial = d_wheel + w
-    return ContactPoint(w=w, rho=rho, y=axial * c + rho * s,
-                        z=axial * s - rho * c)
+    radial = hip_to_axle + rho
+    return ContactPoint(w=w, rho=rho, y=axial * c + radial * s,
+                        z=axial * s - radial * c)
 
 
 def axle_height(phi: float, profile: TreadProfile = CORGI_TREAD) -> float:

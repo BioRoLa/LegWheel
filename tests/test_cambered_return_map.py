@@ -220,6 +220,27 @@ def test_sweep_gains_hold_the_near_grid_inside_the_abad_budget(
         assert res.survival_fraction == pytest.approx(0.625, abs=1e-9)
 
 
+def test_hip_pivot_leaves_the_straight_stride_bit_for_bit_and_moves_a_leaned_one(
+        monkeypatch) -> None:
+    """Log s339 s5o, at the map: at lam = 0 the hip pivot's geometry is the
+    axle's exactly, so one stride from the canonical seed is identical bit
+    for bit (the straight orbit cannot move); a leaned pair is not."""
+    from functools import partial
+
+    apex = [V_OP * np.cos(np.deg2rad(40.74)), 0.0, 0.326, 0.0, 0.0]
+    beta = np.deg2rad(80.91)
+    p = PairParams()
+    out = {}
+    for pivot in ("axle", "hip"):
+        monkeypatch.setattr(crm, "side_geometry",
+                            partial(bip.side_geometry, pivot=pivot))
+        out[pivot] = (crm.apex_map(p, apex, [beta, 0.0, 0.0]),
+                      crm.apex_map(p, apex, [beta, np.deg2rad(10.0),
+                                             np.deg2rad(8.16)]))
+    assert np.array_equal(out["axle"][0], out["hip"][0])
+    assert np.max(np.abs(out["axle"][1] - out["hip"][1])) > 1e-4
+
+
 def test_roll_pd_reset_zeroes_the_peak_recorder() -> None:
     ctrl = RollPD()
     ctrl.torque(0.1, 0.0)

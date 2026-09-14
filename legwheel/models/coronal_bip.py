@@ -62,7 +62,7 @@ G_DEFAULT = 9.81
 # slip_rf_cambered: self-contained, overridable per instance.
 HALF_TRACK_HIP = 0.120        # hip lateral offset from centreline (m)
 WHEEL_AXIAL_OFFSET = 0.091675  # wheel plane outboard of the hip (m)
-LEG_LENGTH_NOMINAL = 0.293    # hip-to-contact at the theta = 100 deg stance (m)
+LEG_LENGTH_NOMINAL = 0.293    # sagittal leg at theta = 100 deg: hip-axle + r0 (m)
 K_SIDE_DEFAULT = 2 * 8941.0   # two sagittal legs per coronal side (N/m)
 I_ROLL_DEFAULT = 0.611906     # kg m^2, from the proto (section 41)
 MASS_DEFAULT = 30.0           # kg, scale reading
@@ -141,6 +141,58 @@ if CONTACT_LATERAL_DEFAULT not in ("profile", "legacy"):
     raise ValueError(f"LEGWHEEL_CONTACT_LATERAL must be 'profile' or "
                      f"'legacy', got {CONTACT_LATERAL_DEFAULT!r}")
 
+# WHERE THE LEAN PIVOTS THE LEG (log s339 s5o, 2026-09-14).
+#
+#   "axle"  d_out is the contact's lateral offset from the AXLE's station on
+#           the AB/AD axis: contact_profile.contact_point with the axle on
+#           that axis. THE DEFAULT, so every closed Stage 2b / s335 / s336
+#           number reproduces bit for bit.
+#   "hip"   the leg is rigid and pivots at the hip. At the theta = 100 deg
+#           running stance the axle sits L = l0_sagittal - r0 = 0.148 m from
+#           the hip (LegModel: 0.1481), and the lean swings that length too:
+#           d_out = the "axle" d_out + L*sin(lean). l0 is the same in both.
+#
+# WHAT WAS WRONG. _leg_force, coronal_return_map._foot_held and
+# cambered_return_map._foot_offset_body all put the foot d_out outboard of the
+# HIP, so under "axle" every leaned foot is L*sin(lean) short: 25.7 / 38.3 /
+# 50.6 mm at 10 / 15 / 20 deg. Under "hip", d_out matches CorgiLegKinematics
+# at theta = 100 deg, leg straight down, to 0.04 mm over 0-20 deg. In the 3D
+# map the legs land at beta* = 80.9 deg; with the rim centre on the leg axis
+# (gslip_to_corgi's mapping) its lateral lever is L*sin(beta*) with LegModel's
+# L = 0.1481 m, and d_out is long by 0.30 / 0.45 / 0.60 mm at 10 / 15 / 20 deg.
+# The pivots agree at L = 0 (theta = 17 deg, rim closed around the hip) and at
+# lean = 0, so the straight orbit does not move.
+#
+# WHY l0 IS NOT TOUCHED. The legs put the foot on a sphere of radius l0 about
+# the hip (d_out lateral, sqrt(l0^2 - fx^2 - d_out^2) below), and a rigid
+# leg's contact stays on a sphere about its pivot, up to the tread profile.
+# With the lateral right, the sphere makes the height change itself: at
+# beta = 90 deg the foot rises 18.8 mm from lean 0 to 10 deg (torus law,
+# axial_drop 0) against the FK's 19.3. Moving the "axle" foot rigidly by
+# L*(sin, 1 - cos) instead, with l0 grown to reach it, gives 9.3 mm. The
+# sphere's radius is the model's lean-0 convention (l0 = 0.293 m), not the
+# rigid leg's 3D hip-to-contact 0.307 m, so the rise is not the FK's at every
+# lean: model minus FK at 5 / 10 / 15 / 20 deg, axial_drop 0, is
+# -1.6 / -0.5 / +1.9 / +5.7 mm (torus law), -1.7 / -1.7 / -1.8 / -2.0 mm
+# (measured law).
+#
+# CONSEQUENCE FOR AXIAL_DROP. The d*sin(lean) rise that term adds is already
+# in the sphere once the lateral carries L, so under "hip" a nonzero
+# axial_drop counts it twice (torus law, axial_drop 0.091675: rise 36.8 mm at
+# 10 deg against the FK's 19.3). Torus law, antisymmetric +/-10 deg pair, beta = 90 deg: the rigid
+# leg's height split is exactly 2*d_wheel*sin(lam) = 31.8 mm; "hip" gives
+# 28.6 mm at axial_drop 0; "axle" gives 11.5 mm at 0 and 45.1 mm at 0.091675.
+# Under "axle" the term is what supplies the split the missing swing does not.
+# The "hip" arm this geometry supports is axial_drop = 0. The switches stay
+# independent so both arms can be run; derivations must name which.
+#
+# C4 is untouched: the AB/AD moment of a force along the leaned leg axis is
+# f*(d_wheel + w) at any L (contact_profile.contact_point, hip_to_axle).
+CORONAL_PIVOT_DEFAULT = os.environ.get("LEGWHEEL_CORONAL_PIVOT", "axle")
+if CORONAL_PIVOT_DEFAULT not in ("axle", "hip"):
+    raise ValueError(f"LEGWHEEL_CORONAL_PIVOT must be 'axle' or 'hip', "
+                     f"got {CORONAL_PIVOT_DEFAULT!r}")
+
 
 @dataclass
 class SideGeometry:
@@ -150,8 +202,13 @@ class SideGeometry:
     lands here and nowhere else.
 
     Args:
-        d_out: lateral offset, hip to contact, positive outboard (m)
-        l0: leg rest length, hip to contact (m)
+        d_out: lateral offset of the foot from the hip, positive outboard (m).
+            Every consumer places the foot at hip + s*d_out. Under
+            lateral="profile" it is the contact's hip-relative offset under
+            pivot="hip" (for the hip_to_axle used); under pivot="axle" (the
+            default) only when the axle is on the AB/AD axis (theta = 17
+            deg). See CORONAL_PIVOT_DEFAULT.
+        l0: leg rest length, hip to foot (m); the same under both pivots.
     """
 
     d_out: float
@@ -163,17 +220,25 @@ def side_geometry(lean: float,
                   l0_sagittal: float = LEG_LENGTH_NOMINAL,
                   radius_law: str = RADIUS_LAW_DEFAULT,
                   axial_drop: float = AXIAL_DROP_DEFAULT,
-                  lateral: str = CONTACT_LATERAL_DEFAULT) -> SideGeometry:
+                  lateral: str = CONTACT_LATERAL_DEFAULT,
+                  pivot: str = CORONAL_PIVOT_DEFAULT,
+                  hip_to_axle: float | None = None) -> SideGeometry:
     """Default cambered side geometry at wheel lean `lean` (rad, signed;
     positive swings this side's contact OUTBOARD -- log s274 s1).
 
-    d_out is the lateral offset HIP TO CONTACT. Under lateral="profile" (the
-    default) it is contact_profile.contact_point(lean, d_out0).y: the tread
-    point (d_out0 + w, rho) rotated by the lean, where w is the contact's
-    position across the tread. On an ideal torus that is
-    d_out0*cos + R*sin -- the crown cancels out of the lateral coordinate --
-    and on the Corgi tread (d_out0 - sgn*w_c)*cos + R_t*sin. See
-    CONTACT_LATERAL_DEFAULT for the "legacy" form this replaced.
+    d_out is the lateral offset at which the legs place the foot, measured
+    from the hip. Under pivot="axle" and lateral="profile" (both defaults) it
+    is contact_profile.contact_point(lean, d_out0).y: the tread point
+    (d_out0 + w, rho) rotated by the lean about the AB/AD axis with the axle
+    on that axis, where w is the contact's position across the tread. On an
+    ideal torus that is d_out0*cos + R*sin -- the crown cancels out of the
+    lateral coordinate -- and on the Corgi tread
+    (d_out0 - sgn*w_c)*cos + R_t*sin. See CONTACT_LATERAL_DEFAULT for the
+    "legacy" form this replaced. pivot="hip" adds hip_to_axle*sin(lean), the
+    swing of the hip-to-axle length (None: l0_sagittal - r0, 0.148 m at the
+    default l0_sagittal, the theta = 100 deg stance), which under
+    lateral="profile" makes d_out the contact's hip-relative offset; l0 is
+    unchanged. See CORONAL_PIVOT_DEFAULT.
 
     ⚠ SUPERSEDED 2026-09-13 (log s335): the "two parts" reading below
     (d_out0*cos + r*sin) is the legacy form. Its r*sin coefficient beat
@@ -191,11 +256,14 @@ def side_geometry(lean: float,
       r_corner*sin(lean)  migration of the contact ACROSS THE TREAD, bounded
                           by the tread half-width (~20 mm). Real, and small.
       r*sin(lean)         displacement of the contact IN SPACE relative to the
-                          hip. NOT bounded by tread width -- 49.5 mm at 20 deg
-                          on a 20 mm tread is not a contradiction, because it
-                          is not measured across the tread.
+                          axle's station on the AB/AD axis (relative to the
+                          hip when the axle is on the hip; see
+                          CORONAL_PIVOT_DEFAULT). NOT bounded by tread width
+                          -- 49.5 mm at 20 deg on a 20 mm tread is not a
+                          contradiction, because it is not measured across
+                          the tread.
 
-    `d_out` is documented as hip-to-contact, i.e. the second quantity, so the
+    `d_out` is a displacement in space, i.e. the second quantity, so the
     second coefficient is the right one. The old form under-stated the lateral
     coupling ~20x at lambda = 10 deg and turned NEGATIVE by 20 deg -- a
     coupling channel that shrinks and reverses across the working band.
@@ -219,6 +287,10 @@ def side_geometry(lean: float,
     if lateral not in ("profile", "legacy"):
         raise ValueError(f"lateral must be 'profile' or 'legacy', "
                          f"got {lateral!r}")
+    if pivot not in ("axle", "hip"):
+        raise ValueError(f"pivot must be 'axle' or 'hip', got {pivot!r}")
+    if hip_to_axle is not None and hip_to_axle < 0.0:
+        raise ValueError(f"hip_to_axle must be >= 0, got {hip_to_axle!r}")
     r0 = rolling_radius(0.0)
     if lateral == "profile":
         d_out = contact_point(lean, d_out0, CORGI_TREAD).y
@@ -234,13 +306,18 @@ def side_geometry(lean: float,
     # not touching). Under "measured" it holds at r0. Exact pre-S336 torus-law
     # numbers need LegWheel b45e5a9.
     h_axle = axle_height(lean, CORGI_TREAD) if radius_law == "torus" else r0
-    return SideGeometry(
-        d_out=d_out,
-        # axial_drop: see AXIAL_DROP_DEFAULT above (S273). 0.0 = the
-        # pre-2026-08-29 record; WHEEL_AXIAL_OFFSET = the corrected
-        # transfer. Sign: outboard lean shortens the leg, lowers the side.
-        l0=l0_sagittal - (r0 - h_axle) - axial_drop * np.sin(lean),
-    )
+    # axial_drop: see AXIAL_DROP_DEFAULT above (S273). 0.0 = the
+    # pre-2026-08-29 record; WHEEL_AXIAL_OFFSET = the corrected
+    # transfer. Sign: outboard lean shortens the leg, lowers the side.
+    l0 = l0_sagittal - (r0 - h_axle) - axial_drop * np.sin(lean)
+    if pivot == "hip":
+        # See CORONAL_PIVOT_DEFAULT. The lean swings the hip-to-axle length L
+        # about the hip as well, so the contact sits L*sin(lean) further
+        # outboard. l0 is not touched: the legs put the foot on a sphere of
+        # radius l0 about the hip, and a rigid leg's contact stays on one.
+        big_l = l0_sagittal - r0 if hip_to_axle is None else hip_to_axle
+        d_out = d_out + big_l * np.sin(lean)
+    return SideGeometry(d_out=d_out, l0=l0)
 
 
 @dataclass
