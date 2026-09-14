@@ -1,0 +1,282 @@
+Log s341 low-edge convergence. stage2a_turning_envelope selftest: PASS
+paper regate imported from /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/make_stage2a_figs.py
+  gates: C2 psi <= 0.29, C3 leg <= 29.5 (6:1) / 44.25 (9:1), C4 profile contact <= 29.5
+  solver window: beta 60-86 deg at the step, alpha 1-45 deg (n_samples 20), duty <= 0.55, apex >= 10.0 mm, min |slope| selected
+LegWheel HEAD 9b48ab5
+step 0.5: s341 task time 88-204 s over 6 tasks (2 workers, machine shared with another solve)
+step 0.25: s341 task time 141-325 s over 6 tasks (2 workers, machine shared with another solve)
+step 0.125: s341 task time 187-730 s over 14 tasks (2 workers, machine shared with another solve)
+
+--- reproduction of reused s340 cells (fresh solve, first 3 lambdas) ---
+  step 0.25 empirical v_td 0.700: existence identical True; max |diff| over v_fwd/beta/alpha/slope/duty/tau 0
+  step 0.5 empirical v_td 0.700: existence identical True; max |diff| over v_fwd/beta/alpha/slope/duty/tau 0
+
+--- all cells (binding = paper regate's first-failing gate) ---
+ step law  v_td lam  src |   beta  alpha  duty  apex  slope  v_fwd   psi  tauL  tauA |        6:1        9:1
+0.500 emp 0.600 0.0 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.600 0.5 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.600 1.0 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.625 0.0 s341 |                                                 no fixed point |  existence  existence
+0.500 emp 0.625 0.5 s341 |                                                 no fixed point |  existence  existence
+0.500 emp 0.625 1.0 s341 |                                                 no fixed point |  existence  existence
+0.500 emp 0.650 0.0 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.650 0.5 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.650 1.0 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.675 0.0 s341 |                                                 no fixed point |  existence  existence
+0.500 emp 0.675 0.5 s341 |                                                 no fixed point |  existence  existence
+0.500 emp 0.675 1.0 s341 |                                                 no fixed point |  existence  existence
+0.500 emp 0.700 0.0 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.700 0.5 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.700 1.0 s340 |                                                 no fixed point |  existence  existence
+0.500 emp 0.725 0.0 s341 | 84.000  43.35 0.539  12.6 +1.270 0.5217 0.000 27.75 20.45 |       none       none
+0.500 emp 0.725 0.5 s341 | 84.000  43.35 0.539  12.6 +1.270 0.5217 0.164 27.75 19.30 |       none       none
+0.500 emp 0.725 1.0 s341 | 84.000  43.35 0.539  12.6 +1.270 0.5217 0.328 27.75 19.27 |      scrub      scrub
+0.500 emp 0.750 0.0 s340 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.000 28.58 21.07 |       none       none
+0.500 emp 0.750 0.5 s340 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.162 28.58 19.89 |       none       none
+0.500 emp 0.750 1.0 s340 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.324 28.58 19.86 |      scrub      scrub
+0.500 geo 0.600 0.0 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.600 0.5 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.600 1.0 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.625 0.0 s341 |                                                 no fixed point |  existence  existence
+0.500 geo 0.625 0.5 s341 |                                                 no fixed point |  existence  existence
+0.500 geo 0.625 1.0 s341 |                                                 no fixed point |  existence  existence
+0.500 geo 0.650 0.0 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.650 0.5 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.650 1.0 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.675 0.0 s341 |                                                 no fixed point |  existence  existence
+0.500 geo 0.675 0.5 s341 |                                                 no fixed point |  existence  existence
+0.500 geo 0.675 1.0 s341 |                                                 no fixed point |  existence  existence
+0.500 geo 0.700 0.0 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.700 0.5 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.700 1.0 s340 |                                                 no fixed point |  existence  existence
+0.500 geo 0.725 0.0 s341 | 84.000  43.32 0.539  12.6 +1.270 0.5220 0.000 27.74 20.44 |       none       none
+0.500 geo 0.725 0.5 s341 | 84.000  43.32 0.539  12.6 +1.270 0.5220 0.164 27.74 19.30 |       none       none
+0.500 geo 0.725 1.0 s341 | 84.000  43.32 0.539  12.6 +1.270 0.5220 0.328 27.75 19.27 |      scrub      scrub
+0.500 geo 0.750 0.0 s340 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.000 28.57 21.07 |       none       none
+0.500 geo 0.750 0.5 s340 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.162 28.57 19.89 |       none       none
+0.500 geo 0.750 1.0 s340 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.324 28.57 19.86 |      scrub      scrub
+0.250 emp 0.600 0.0 s340 |                                                 no fixed point |  existence  existence
+0.250 emp 0.600 0.5 s340 |                                                 no fixed point |  existence  existence
+0.250 emp 0.600 1.0 s340 |                                                 no fixed point |  existence  existence
+0.250 emp 0.625 0.0 s341 |                                                 no fixed point |  existence  existence
+0.250 emp 0.625 0.5 s341 |                                                 no fixed point |  existence  existence
+0.250 emp 0.625 1.0 s341 |                                                 no fixed point |  existence  existence
+0.250 emp 0.650 0.0 s340 |                                                 no fixed point |  existence  existence
+0.250 emp 0.650 0.5 s340 |                                                 no fixed point |  existence  existence
+0.250 emp 0.650 1.0 s340 |                                                 no fixed point |  existence  existence
+0.250 emp 0.675 0.0 s341 |                                                 no fixed point |  existence  existence
+0.250 emp 0.675 0.5 s341 |                                                 no fixed point |  existence  existence
+0.250 emp 0.675 1.0 s341 |                                                 no fixed point |  existence  existence
+0.250 emp 0.700 0.0 s340 | 84.250  44.14 0.545  12.1 +1.268 0.4971 0.000 27.46 20.22 |       none       none
+0.250 emp 0.700 0.5 s340 | 84.250  44.14 0.545  12.1 +1.268 0.4971 0.172 27.46 19.09 |       none       none
+0.250 emp 0.700 1.0 s340 | 84.250  44.14 0.545  12.1 +1.268 0.4971 0.344 27.46 19.07 |      scrub      scrub
+0.250 emp 0.725 0.0 s341 | 84.000  43.35 0.539  12.6 +1.270 0.5217 0.000 27.75 20.45 |       none       none
+0.250 emp 0.725 0.5 s341 | 84.000  43.35 0.539  12.6 +1.270 0.5217 0.164 27.75 19.30 |       none       none
+0.250 emp 0.725 1.0 s341 | 84.000  43.35 0.539  12.6 +1.270 0.5217 0.328 27.75 19.27 |      scrub      scrub
+0.250 emp 0.750 0.0 s340 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.000 28.58 21.07 |       none       none
+0.250 emp 0.750 0.5 s340 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.162 28.58 19.89 |       none       none
+0.250 emp 0.750 1.0 s340 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.324 28.58 19.86 |      scrub      scrub
+0.250 geo 0.600 0.0 s340 |                                                 no fixed point |  existence  existence
+0.250 geo 0.600 0.5 s340 |                                                 no fixed point |  existence  existence
+0.250 geo 0.600 1.0 s340 |                                                 no fixed point |  existence  existence
+0.250 geo 0.625 0.0 s341 |                                                 no fixed point |  existence  existence
+0.250 geo 0.625 0.5 s341 |                                                 no fixed point |  existence  existence
+0.250 geo 0.625 1.0 s341 |                                                 no fixed point |  existence  existence
+0.250 geo 0.650 0.0 s340 |                                                 no fixed point |  existence  existence
+0.250 geo 0.650 0.5 s340 |                                                 no fixed point |  existence  existence
+0.250 geo 0.650 1.0 s340 |                                                 no fixed point |  existence  existence
+0.250 geo 0.675 0.0 s341 |                                                 no fixed point |  existence  existence
+0.250 geo 0.675 0.5 s341 |                                                 no fixed point |  existence  existence
+0.250 geo 0.675 1.0 s341 |                                                 no fixed point |  existence  existence
+0.250 geo 0.700 0.0 s340 | 84.250  44.11 0.546  12.1 +1.268 0.4973 0.000 27.45 20.22 |       none       none
+0.250 geo 0.700 0.5 s340 | 84.250  44.11 0.546  12.1 +1.268 0.4973 0.172 27.45 19.09 |       none       none
+0.250 geo 0.700 1.0 s340 | 84.250  44.11 0.546  12.1 +1.268 0.4973 0.344 27.46 19.06 |      scrub      scrub
+0.250 geo 0.725 0.0 s341 | 84.000  43.32 0.539  12.6 +1.270 0.5220 0.000 27.74 20.44 |       none       none
+0.250 geo 0.725 0.5 s341 | 84.000  43.32 0.539  12.6 +1.270 0.5220 0.164 27.74 19.30 |       none       none
+0.250 geo 0.725 1.0 s341 | 84.000  43.32 0.539  12.6 +1.270 0.5220 0.328 27.75 19.27 |      scrub      scrub
+0.250 geo 0.750 0.0 s340 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.000 28.57 21.07 |       none       none
+0.250 geo 0.750 0.5 s340 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.162 28.57 19.89 |       none       none
+0.250 geo 0.750 1.0 s340 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.324 28.57 19.86 |      scrub      scrub
+0.125 emp 0.600 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.600 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.600 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.625 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.625 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.625 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.650 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.650 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.650 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.675 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.675 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.675 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 emp 0.700 0.0 s341 | 84.250  44.14 0.545  12.1 +1.268 0.4971 0.000 27.46 20.22 |       none       none
+0.125 emp 0.700 0.5 s341 | 84.250  44.14 0.545  12.1 +1.268 0.4971 0.172 27.46 19.09 |       none       none
+0.125 emp 0.700 1.0 s341 | 84.250  44.14 0.545  12.1 +1.268 0.4971 0.344 27.46 19.07 |      scrub      scrub
+0.125 emp 0.725 0.0 s341 | 84.125  44.42 0.533  13.1 +1.268 0.5124 0.000 28.01 20.65 |       none       none
+0.125 emp 0.725 0.5 s341 | 84.125  44.42 0.533  13.1 +1.268 0.5124 0.167 28.02 19.49 |       none       none
+0.125 emp 0.725 1.0 s341 | 84.125  44.42 0.533  13.1 +1.268 0.5124 0.334 28.02 19.46 |      scrub      scrub
+0.125 emp 0.750 0.0 s341 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.000 28.58 21.07 |       none       none
+0.125 emp 0.750 0.5 s341 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.162 28.58 19.89 |       none       none
+0.125 emp 0.750 1.0 s341 | 84.000  44.68 0.522  14.2 +1.268 0.5278 0.324 28.58 19.86 |      scrub      scrub
+0.125 geo 0.600 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.600 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.600 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.625 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.625 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.625 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.650 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.650 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.650 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.675 0.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.675 0.5 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.675 1.0 s341 |                                                 no fixed point |  existence  existence
+0.125 geo 0.700 0.0 s341 | 84.250  44.11 0.546  12.1 +1.268 0.4973 0.000 27.45 20.22 |       none       none
+0.125 geo 0.700 0.5 s341 | 84.250  44.11 0.546  12.1 +1.268 0.4973 0.172 27.45 19.09 |       none       none
+0.125 geo 0.700 1.0 s341 | 84.250  44.11 0.546  12.1 +1.268 0.4973 0.344 27.46 19.06 |      scrub      scrub
+0.125 geo 0.725 0.0 s341 | 84.125  44.39 0.533  13.1 +1.268 0.5127 0.000 28.01 20.64 |       none       none
+0.125 geo 0.725 0.5 s341 | 84.125  44.39 0.533  13.1 +1.268 0.5127 0.167 28.01 19.49 |       none       none
+0.125 geo 0.725 1.0 s341 | 84.125  44.39 0.533  13.1 +1.268 0.5127 0.334 28.01 19.46 |      scrub      scrub
+0.125 geo 0.750 0.0 s341 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.000 28.57 21.07 |       none       none
+0.125 geo 0.750 0.5 s341 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.162 28.57 19.89 |       none       none
+0.125 geo 0.750 1.0 s341 | 84.000  44.65 0.522  14.2 +1.267 0.5281 0.324 28.57 19.86 |      scrub      scrub
+
+--- lower edge per step ---
+empirical step 0.500: v_td with a non-grazing FP (any lambda): ['0.725', '0.750']; at lambda 0: ['0.725', '0.750']; with a 6:1-feasible cambered cell: ['0.725', '0.750']
+    lowest FP: v_td 0.725, v_fwd 0.5217 (lambda 0.0); beta 84.000, alpha 43.35, slope +1.2699, duty 0.5388, apex 12.6 mm, tau_leg 27.75, tau_abad 20.45, psi 0.000, 6:1 none
+    lowest 6:1-feasible cambered: v_td 0.725, v_fwd 0.5217 (lambda 0.5); beta 84.000, alpha 43.35, slope +1.2699, duty 0.5389, apex 12.6 mm, tau_leg 27.75, tau_abad 19.30, psi 0.164, 6:1 none
+empirical step 0.250: v_td with a non-grazing FP (any lambda): ['0.700', '0.725', '0.750']; at lambda 0: ['0.700', '0.725', '0.750']; with a 6:1-feasible cambered cell: ['0.700', '0.725', '0.750']
+    lowest FP: v_td 0.700, v_fwd 0.4971 (lambda 0.0); beta 84.250, alpha 44.14, slope +1.2682, duty 0.5454, apex 12.1 mm, tau_leg 27.46, tau_abad 20.22, psi 0.000, 6:1 none
+    lowest 6:1-feasible cambered: v_td 0.700, v_fwd 0.4971 (lambda 0.5); beta 84.250, alpha 44.14, slope +1.2682, duty 0.5454, apex 12.1 mm, tau_leg 27.46, tau_abad 19.09, psi 0.172, 6:1 none
+empirical step 0.125: v_td with a non-grazing FP (any lambda): ['0.700', '0.725', '0.750']; at lambda 0: ['0.700', '0.725', '0.750']; with a 6:1-feasible cambered cell: ['0.700', '0.725', '0.750']
+    lowest FP: v_td 0.700, v_fwd 0.4971 (lambda 0.0); beta 84.250, alpha 44.14, slope +1.2682, duty 0.5454, apex 12.1 mm, tau_leg 27.46, tau_abad 20.22, psi 0.000, 6:1 none
+    lowest 6:1-feasible cambered: v_td 0.700, v_fwd 0.4971 (lambda 0.5); beta 84.250, alpha 44.14, slope +1.2682, duty 0.5454, apex 12.1 mm, tau_leg 27.46, tau_abad 19.09, psi 0.172, 6:1 none
+  empirical: 0.25 -> 0.125 lowest-FP v_td 0.700 -> 0.700 (same); lowest 6:1-feasible cambered v_td 0.700 -> 0.700 (same)
+  empirical: 0.5 -> 0.25 lowest-FP v_td 0.725 -> 0.700; lowest 6:1-feasible cambered 0.725 -> 0.700
+geometric step 0.500: v_td with a non-grazing FP (any lambda): ['0.725', '0.750']; at lambda 0: ['0.725', '0.750']; with a 6:1-feasible cambered cell: ['0.725', '0.750']
+    lowest FP: v_td 0.725, v_fwd 0.5220 (lambda 0.0); beta 84.000, alpha 43.32, slope +1.2696, duty 0.5390, apex 12.6 mm, tau_leg 27.74, tau_abad 20.44, psi 0.000, 6:1 none
+    lowest 6:1-feasible cambered: v_td 0.725, v_fwd 0.5220 (lambda 0.5); beta 84.000, alpha 43.32, slope +1.2696, duty 0.5390, apex 12.6 mm, tau_leg 27.74, tau_abad 19.30, psi 0.164, 6:1 none
+geometric step 0.250: v_td with a non-grazing FP (any lambda): ['0.700', '0.725', '0.750']; at lambda 0: ['0.700', '0.725', '0.750']; with a 6:1-feasible cambered cell: ['0.700', '0.725', '0.750']
+    lowest FP: v_td 0.700, v_fwd 0.4973 (lambda 0.0); beta 84.250, alpha 44.11, slope +1.2679, duty 0.5456, apex 12.1 mm, tau_leg 27.45, tau_abad 20.22, psi 0.000, 6:1 none
+    lowest 6:1-feasible cambered: v_td 0.700, v_fwd 0.4973 (lambda 0.5); beta 84.250, alpha 44.11, slope +1.2679, duty 0.5456, apex 12.1 mm, tau_leg 27.45, tau_abad 19.09, psi 0.172, 6:1 none
+geometric step 0.125: v_td with a non-grazing FP (any lambda): ['0.700', '0.725', '0.750']; at lambda 0: ['0.700', '0.725', '0.750']; with a 6:1-feasible cambered cell: ['0.700', '0.725', '0.750']
+    lowest FP: v_td 0.700, v_fwd 0.4973 (lambda 0.0); beta 84.250, alpha 44.11, slope +1.2679, duty 0.5456, apex 12.1 mm, tau_leg 27.45, tau_abad 20.22, psi 0.000, 6:1 none
+    lowest 6:1-feasible cambered: v_td 0.700, v_fwd 0.4973 (lambda 0.5); beta 84.250, alpha 44.11, slope +1.2679, duty 0.5456, apex 12.1 mm, tau_leg 27.45, tau_abad 19.09, psi 0.172, 6:1 none
+  geometric: 0.25 -> 0.125 lowest-FP v_td 0.700 -> 0.700 (same); lowest 6:1-feasible cambered v_td 0.700 -> 0.700 (same)
+  geometric: 0.5 -> 0.25 lowest-FP v_td 0.725 -> 0.700; lowest 6:1-feasible cambered 0.725 -> 0.700
+
+--- selected beta* and v_fwd at lambda 0.5 by step (empirical) ---
+  v_td 0.600: 0.5: -- | 0.25: -- | 0.125: --
+  v_td 0.625: 0.5: -- | 0.25: -- | 0.125: --
+  v_td 0.650: 0.5: -- | 0.25: -- | 0.125: --
+  v_td 0.675: 0.5: -- | 0.25: -- | 0.125: --
+  v_td 0.700: 0.5: -- | 0.25: beta 84.250 v_fwd 0.4971 slope +1.2682 | 0.125: beta 84.250 v_fwd 0.4971 slope +1.2682
+  v_td 0.725: 0.5: beta 84.000 v_fwd 0.5217 slope +1.2699 | 0.25: beta 84.000 v_fwd 0.5217 slope +1.2699 | 0.125: beta 84.125 v_fwd 0.5124 slope +1.2678
+  v_td 0.750: 0.5: beta 84.000 v_fwd 0.5278 slope +1.2676 | 0.25: beta 84.000 v_fwd 0.5278 slope +1.2676 | 0.125: beta 84.000 v_fwd 0.5278 slope +1.2676
+
+--- diag: passing interval by interpolation (duty = 0.55 on the shallow side, alpha = 45 on the steep side) ---
+family point per beta = the fixed point (production or widened call) with alpha nearest 45
+  v_td 0.650: duty 0.55 at beta 84.9735, alpha 45 at beta 84.6624 -> width -0.3111 deg (CLOSED); v_fwd at mid 0.4432; apex 11.8/10.8 mm, slope +1.2636 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: none [solver: none]; 0.25: none [solver: none]; 0.125: none [solver: none]; 0.0625: none; 0.03125: none
+  v_td 0.675: duty 0.55 at beta 84.5522, alpha 45 at beta 84.5049 -> width -0.0473 deg (CLOSED); v_fwd at mid 0.4705; apex 11.8/11.6 mm, slope +1.2660 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: none [solver: none]; 0.25: none [solver: none]; 0.125: none [solver: none]; 0.0625: none; 0.03125: none
+  v_td 0.680: duty 0.55 at beta 84.4704, alpha 45 at beta 84.4735 -> width +0.0031 deg (OPEN); v_fwd at mid 0.4759; apex 11.8/11.8 mm, slope +1.2665 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: none; 0.25: none; 0.125: none; 0.0625: none; 0.03125: none
+  v_td 0.685: duty 0.55 at beta 84.3894, alpha 45 at beta 84.4422 -> width +0.0528 deg (OPEN); v_fwd at mid 0.4812; apex 11.8/12.0 mm, slope +1.2669 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: none; 0.25: none; 0.125: none; 0.0625: [84.4375]; 0.03125: [84.40625, 84.4375]
+  v_td 0.690: duty 0.55 at beta 84.3090, alpha 45 at beta 84.4109 -> width +0.1019 deg (OPEN); v_fwd at mid 0.4865; apex 11.8/12.1 mm, slope +1.2674 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: none; 0.25: none; 0.125: [84.375]; 0.0625: [84.3125, 84.375]; 0.03125: [84.3125, 84.34375, 84.375, 84.40625]
+  v_td 0.695: duty 0.55 at beta 84.2293, alpha 45 at beta 84.3796 -> width +0.1503 deg (OPEN); v_fwd at mid 0.4918; apex 11.7/12.3 mm, slope +1.2678 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: none; 0.25: [84.25]; 0.125: [84.25, 84.375]; 0.0625: [84.25, 84.3125, 84.375]; 0.03125: [84.25, 84.28125, 84.3125, 84.34375, 84.375]
+  v_td 0.700: duty 0.55 at beta 84.1502, alpha 45 at beta 84.3484 -> width +0.1981 deg (OPEN); v_fwd at mid 0.4971; apex 11.7/12.5 mm, slope +1.2682 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: none [solver: none]; 0.25: [84.25] [solver: FP]; 0.125: [84.25] [solver: FP]; 0.0625: [84.1875, 84.25, 84.3125]; 0.03125: [84.15625, 84.1875, 84.21875, 84.25, 84.28125, 84.3125, 84.34375]
+  v_td 0.725: duty 0.55 at beta 83.7642, alpha 45 at beta 84.1928 -> width +0.4286 deg (OPEN); v_fwd at mid 0.5233; apex 11.7/13.4 mm, slope +1.2703 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: [84.0] [solver: FP]; 0.25: [84.0] [solver: FP]; 0.125: [83.875, 84.0, 84.125] [solver: FP]; 0.0625: [83.8125, 83.875, 83.9375, 84.0, 84.0625, 84.125, 84.1875]; 0.03125: [83.78125, 83.8125, 83.84375, 83.875, 83.90625, 83.9375, 83.96875, 84.0, 84.03125, 84.0625, 84.09375, 84.125, 84.15625, 84.1875]
+  v_td 0.750: duty 0.55 at beta 83.3915, alpha 45 at beta 84.0381 -> width +0.6466 deg (OPEN); v_fwd at mid 0.5491; apex 11.6/14.3 mm, slope +1.2721 (scan 83.000-85.500, 101 pts, 0 gaps, 0 betas with >1 FP)
+      beta-lattice points inside (60 + k h): 0.5: [83.5, 84.0] [solver: FP]; 0.25: [83.5, 83.75, 84.0] [solver: FP]; 0.125: [83.5, 83.625, 83.75, 83.875, 84.0] [solver: FP]; 0.0625: [83.4375, 83.5, 83.5625, 83.625, 83.6875, 83.75, 83.8125, 83.875, 83.9375, 84.0]; 0.03125: [83.40625, 83.4375, 83.46875, 83.5, 83.53125, 83.5625, 83.59375, 83.625, 83.65625, 83.6875, 83.71875, 83.75, 83.78125, 83.8125, 83.84375, 83.875, 83.90625, 83.9375, 83.96875, 84.0, 84.03125]
+  interval closes between v_td 0.675 (width -0.0473) and 0.680 (+0.0031): linear estimate v_td* = 0.6797, v_fwd* ~ 0.4755 m/s
+  width grows by ~9.51 deg per m/s of v_td over the scanned speeds (linear fit)
+
+--- diag: dense beta scan, lambda 0.5 deg, empirical law, find_fixed_points as solve_existence calls it ---
+pass = alpha in [1, 45] (found by the production call), duty <= 0.55, apex >= 10 mm
+v_td 0.650: beta 83.000-85.500 at 0.025, 101 points; passing betas: 0
+    alpha<=45 FP with the lowest duty: beta 84.650 alpha 44.89 duty 0.5641 apex 10.7 v_fwd 0.4556 (wide)
+    duty/apex-passing FP with the lowest alpha: beta 84.975 alpha 47.86 duty 0.5499 apex 11.8 v_fwd 0.4315 (wide)
+v_td 0.675: beta 83.000-85.500 at 0.025, 101 points; passing betas: 0
+    alpha<=45 FP with the lowest duty: beta 84.500 alpha 44.96 duty 0.5523 apex 11.6 v_fwd 0.4726 (prod)
+    duty/apex-passing FP with the lowest alpha: beta 84.575 alpha 45.63 duty 0.5490 apex 11.9 v_fwd 0.4670 (wide)
+v_td 0.680: beta 83.000-85.500 at 0.025, 101 points; passing betas: 0
+    alpha<=45 FP with the lowest duty: beta 84.450 alpha 44.79 duty 0.5509 apex 11.7 v_fwd 0.4775 (prod)
+    duty/apex-passing FP with the lowest alpha: beta 84.475 alpha 45.01 duty 0.5498 apex 11.8 v_fwd 0.4756 (wide)
+v_td 0.685: beta 83.000-85.500 at 0.025, 101 points; passing betas: 2
+    passing beta interval(s): 84.400-84.425 (contiguous)
+      at beta 84.400: alpha 44.626, duty 0.5495, apex 11.8 mm, slope +1.2672, v_fwd 0.4824
+      at beta 84.425: alpha 44.848, duty 0.5484, apex 11.9 mm, slope +1.2668, v_fwd 0.4805
+      just below (beta 84.375): ['prod a 44.40 duty 0.5506 apex 11.7']
+      just above (beta 84.450): ['wide a 45.07 duty 0.5473 apex 12.0']
+      lattice step 0.5: grid betas inside [84.400, 84.425]: none (interval known to +-0.025)
+      lattice step 0.25: grid betas inside [84.400, 84.425]: none (interval known to +-0.025)
+      lattice step 0.125: grid betas inside [84.400, 84.425]: none (interval known to +-0.025)
+      lattice step 0.0625: grid betas inside [84.400, 84.425]: none (interval known to +-0.025)
+v_td 0.690: beta 83.000-85.500 at 0.025, 101 points; passing betas: 4
+    passing beta interval(s): 84.325-84.400 (contiguous)
+      at beta 84.325: alpha 44.241, duty 0.5493, apex 11.8 mm, slope +1.2680, v_fwd 0.4891
+      at beta 84.400: alpha 44.904, duty 0.5459, apex 12.1 mm, slope +1.2667, v_fwd 0.4836
+      just below (beta 84.300): ['prod a 44.02 duty 0.5504 apex 11.7']
+      just above (beta 84.425): ['wide a 45.12 duty 0.5448 apex 12.2']
+      lattice step 0.5: grid betas inside [84.325, 84.400]: none (interval known to +-0.025)
+      lattice step 0.25: grid betas inside [84.325, 84.400]: none (interval known to +-0.025)
+      lattice step 0.125: grid betas inside [84.325, 84.400]: [84.375] (interval known to +-0.025)
+      lattice step 0.0625: grid betas inside [84.325, 84.400]: [84.375] (interval known to +-0.025)
+v_td 0.695: beta 83.000-85.500 at 0.025, 101 points; passing betas: 6
+    passing beta interval(s): 84.250-84.375 (contiguous)
+      at beta 84.250: alpha 43.859, duty 0.5490, apex 11.8 mm, slope +1.2688, v_fwd 0.4958
+      at beta 84.375: alpha 44.960, duty 0.5434, apex 12.3 mm, slope +1.2666, v_fwd 0.4866
+      just below (beta 84.225): ['prod a 43.64 duty 0.5502 apex 11.7']
+      just above (beta 84.400): ['wide a 45.18 duty 0.5423 apex 12.4']
+      lattice step 0.5: grid betas inside [84.250, 84.375]: none (interval known to +-0.025)
+      lattice step 0.25: grid betas inside [84.250, 84.375]: [84.25] (interval known to +-0.025)
+      lattice step 0.125: grid betas inside [84.250, 84.375]: [84.25, 84.375] (interval known to +-0.025)
+      lattice step 0.0625: grid betas inside [84.250, 84.375]: [84.25, 84.3125, 84.375] (interval known to +-0.025)
+v_td 0.700: beta 83.000-85.500 at 0.025, 101 points; passing betas: 7
+    passing beta interval(s): 84.175-84.325 (contiguous)
+      at beta 84.175: alpha 43.480, duty 0.5488, apex 11.8 mm, slope +1.2696, v_fwd 0.5026
+      at beta 84.325: alpha 44.796, duty 0.5421, apex 12.4 mm, slope +1.2670, v_fwd 0.4915
+      just below (beta 84.150): ['prod a 43.26 duty 0.5500 apex 11.7']
+      just above (beta 84.350): ['wide a 45.01 duty 0.5410 apex 12.5']
+      lattice step 0.5: grid betas inside [84.175, 84.325]: none (interval known to +-0.025)
+      lattice step 0.25: grid betas inside [84.175, 84.325]: [84.25] (interval known to +-0.025)
+      lattice step 0.125: grid betas inside [84.175, 84.325]: [84.25] (interval known to +-0.025)
+      lattice step 0.0625: grid betas inside [84.175, 84.325]: [84.1875, 84.25, 84.3125] (interval known to +-0.025)
+v_td 0.725: beta 83.000-85.500 at 0.025, 101 points; passing betas: 17
+    passing beta interval(s): 83.775-84.175 (contiguous)
+      at beta 83.775: alpha 41.407, duty 0.5495, apex 11.7 mm, slope +1.2743, v_fwd 0.5380
+      at beta 84.175: alpha 44.848, duty 0.5311, apex 13.3 mm, slope +1.2671, v_fwd 0.5087
+      just below (beta 83.750): ['prod a 41.19 duty 0.5507 apex 11.6']
+      just above (beta 84.200): ['wide a 45.06 duty 0.5301 apex 13.4']
+      lattice step 0.5: grid betas inside [83.775, 84.175]: [84.0] (interval known to +-0.025)
+      lattice step 0.25: grid betas inside [83.775, 84.175]: [84.0] (interval known to +-0.025)
+      lattice step 0.125: grid betas inside [83.775, 84.175]: [83.875, 84.0, 84.125] (interval known to +-0.025)
+      lattice step 0.0625: grid betas inside [83.775, 84.175]: [83.8125, 83.875, 83.9375, 84.0, 84.0625, 84.125] (interval known to +-0.025)
+v_td 0.750: beta 83.000-85.500 at 0.025, 101 points; passing betas: 26
+    passing beta interval(s): 83.400-84.025 (contiguous)
+      at beta 83.400: alpha 39.615, duty 0.5496, apex 11.7 mm, slope +1.2788, v_fwd 0.5717
+      at beta 84.025: alpha 44.891, duty 0.5206, apex 14.3 mm, slope +1.2673, v_fwd 0.5259
+      just below (beta 83.375): ['prod a 39.40 duty 0.5508 apex 11.6']
+      just above (beta 84.050): ['wide a 45.10 duty 0.5195 apex 14.4']
+      lattice step 0.5: grid betas inside [83.400, 84.025]: [83.5, 84.0] (interval known to +-0.025)
+      lattice step 0.25: grid betas inside [83.400, 84.025]: [83.5, 83.75, 84.0] (interval known to +-0.025)
+      lattice step 0.125: grid betas inside [83.400, 84.025]: [83.5, 83.625, 83.75, 83.875, 84.0] (interval known to +-0.025)
+      lattice step 0.0625: grid betas inside [83.400, 84.025]: [83.4375, 83.5, 83.5625, 83.625, 83.6875, 83.75, 83.8125, 83.875, 83.9375, 84.0] (interval known to +-0.025)
+
+--- confirm: fresh run_grid solves between grid speeds, lambda (0, 0.5), empirical, production window ---
+  step 0.125 v_td 0.690: diag predicts lattice betas inside the interval [84.375]; 173 s
+    lambda 0.0: FP beta 84.3750, alpha 44.683, duty 0.5470, apex 12.0 mm, slope +1.2671, v_fwd 0.4854, psi 0.000, tau_leg 27.39, tau_abad 20.17; 6:1 none
+    lambda 0.5: FP beta 84.3750, alpha 44.683, duty 0.5470, apex 12.0 mm, slope +1.2671, v_fwd 0.4854, psi 0.176, tau_leg 27.39, tau_abad 19.04; 6:1 none
+  step 0.0625 v_td 0.685: diag predicts lattice betas inside the interval [84.4375]; 319 s
+    lambda 0.0: FP beta 84.4375, alpha 44.958, duty 0.5478, apex 11.9 mm, slope +1.2666, v_fwd 0.4796, psi 0.000, tau_leg 27.36, tau_abad 20.15; 6:1 none
+    lambda 0.5: FP beta 84.4375, alpha 44.959, duty 0.5478, apex 11.9 mm, slope +1.2666, v_fwd 0.4796, psi 0.179, tau_leg 27.36, tau_abad 19.02; 6:1 none
+  step 0.25 v_td 0.690: diag predicts lattice betas inside the interval []; 129 s
+    lambda 0.0: no fixed point
+    lambda 0.5: no fixed point
+
+wrote /mnt/c/Users/alexc/code/LegWheel/examples/gslip/stage2a_figs/s341_lowedge_convergence.npz

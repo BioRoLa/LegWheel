@@ -1,0 +1,4 @@
+3 tasks requested, 3 not yet in s341_lowedge_convergence.jsonl; 2 workers
+  confirm step 0.125 emp v_td 0.690: 2/2 exist, 173 s (wall 173 s)
+  confirm step 0.250 emp v_td 0.690: 0/2 exist, 129 s (wall 301 s)
+  confirm step 0.062 emp v_td 0.685: 2/2 exist, 319 s (wall 319 s)

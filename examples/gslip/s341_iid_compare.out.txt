@@ -1,0 +1,539 @@
+
+====================================================================================================
+s341 R3: Sec. II-D numbers, s84 cache of record vs beta step 0.25
+====================================================================================================
+paper figure module: /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/make_stage2a_figs.py (sha256 8c77ad97e299; imported via runpy, run_name 'x')
+  gates: C2 psi <= 0.29, C3 leg 29.5 (6:1) / 44.25 (9:1) [stage 35.0], C4 profile contact <= 29.5; measured band v_fwd 0.7-0.85 m/s
+paper HEAD 34e4355; LegWheel HEAD 9b48ab5
+  s84 grid    : /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/stage2a_grid.npz sha256 5fc8b2e3033b, 546 cells, keys ['cells']
+  s84 sliver  : /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/stage2a_fine_sliver.npz sha256 0c8f001b6263, 135 cells, keys ['cells']
+  s025 grid   : /mnt/c/Users/alexc/code/LegWheel/examples/gslip/stage2a_figs/stage2a_grid_step025.npz sha256 a15d53ebd7f6, 546 cells, keys ['cells', 'cells_step05_control', 'gates', 'meta']
+  s025 sliver : /mnt/c/Users/alexc/code/LegWheel/examples/gslip/stage2a_figs/stage2a_fine_sliver_step025.npz sha256 1af59464881c, 432 cells, keys ['cells', 'cells_step05_control', 'windows', 'gates', 'meta']
+  s336 grid   : /mnt/c/Users/alexc/code/LegWheel/examples/gslip/stage2a_figs/stage2a_grid_s336.npz sha256 6aec753c8a42, 546 cells, keys ['cells']
+  dataset s84   grid       : 546 cells ({'empirical': 273, 'geometric': 273}); paper inputs, step 0.5
+  dataset s84   grid+sliver: 681 cells ({'empirical': 408, 'geometric': 273}); paper inputs, step 0.5
+  dataset s025  grid       : 546 cells ({'empirical': 273, 'geometric': 273}); step 0.25, R2 extended sliver
+  dataset s025  grid+sliver: 978 cells ({'empirical': 489, 'geometric': 489}); step 0.25, R2 extended sliver
+  dataset s025w grid       : 546 cells ({'empirical': 273, 'geometric': 273}); step 0.25, sliver cut to original windows
+  dataset s025w grid+sliver: 834 cells ({'empirical': 417, 'geometric': 417}); step 0.25, sliver cut to original windows
+  dataset s336  grid       : 546 cells ({'empirical': 273, 'geometric': 273}); step 0.5, s336 geometric radius law (grid only)
+  sliver cells, empirical: s84 135, s025 216, s025 cut to original windows 144
+  sliver cells, geometric: s84 0, s025 216, s025 cut to original windows 144
+
+====================================================================================================
+0. Provenance: regate at each cache's own gates vs its stored verdicts
+====================================================================================================
+  s84 grid    : gates leg 35.0 / abad 29.5 / psi 0.29 (fallback; the s84 cache predates stored gates): binding mismatches 0 / 546
+  s84 sliver  : gates leg 35.0 / abad 29.5 / psi 0.29 (fallback; the s84 cache predates stored gates): binding mismatches 0 / 135
+  s025 grid   : gates leg 29.5 / abad 29.5 / psi 0.29 (stored in cache): binding mismatches 0 / 546
+  s025 sliver : gates leg 29.5 / abad 29.5 / psi 0.29 (stored in cache): binding mismatches 0 / 432
+  s336 grid   : gates leg 35.0 / abad 29.5 / psi 0.29 (fallback; the s84 cache predates stored gates): binding mismatches 0 / 546
+  s84   grid: binding flips 35 -> 29.5 N.m leg gate: 36 (['none->leg-torque']); eroded tau_leg of flipped 29.69-34.81
+  s025  grid: binding flips 35 -> 29.5 N.m leg gate: 30 (['none->leg-torque']); eroded tau_leg of flipped 30.28-34.29
+  s336  grid: binding flips 35 -> 29.5 N.m leg gate: 36 (['none->leg-torque']); eroded tau_leg of flipped 29.69-34.81
+
+====================================================================================================
+1. '(~0.73 v_td here)': v_fwd / v_td
+====================================================================================================
+  grid        s84  : emp existing 0.700-0.851 (mean 0.750, n 191); feasible cambered 6:1 0.704-0.722, 9:1 0.703-0.851 | geo existing 0.700-0.851 (mean 0.752, n 192); feasible cambered 6:1 0.704-0.723, 9:1 0.703-0.851
+  grid        s025 : emp existing 0.699-0.836 (mean 0.744, n 202); feasible cambered 6:1 0.704-0.722, 9:1 0.703-0.836 | geo existing 0.701-0.837 (mean 0.745, n 202); feasible cambered 6:1 0.704-0.723, 9:1 0.703-0.837
+  grid        s336 : emp existing 0.700-0.851 (mean 0.750, n 191); feasible cambered 6:1 0.704-0.722, 9:1 0.703-0.851 | geo existing 0.701-0.822 (mean 0.749, n 191); feasible cambered 6:1 0.704-0.723, 9:1 0.703-0.822
+  grid+sliver s84  : emp existing 0.700-0.851 (mean 0.751, n 326); feasible cambered 6:1 0.704-0.722, 9:1 0.703-0.851 | geo existing 0.700-0.851 (mean 0.752, n 192); feasible cambered 6:1 0.704-0.723, 9:1 0.703-0.851
+  grid+sliver s025 : emp existing 0.699-0.836 (mean 0.749, n 418); feasible cambered 6:1 0.704-0.722, 9:1 0.703-0.836 | geo existing 0.701-0.837 (mean 0.749, n 418); feasible cambered 6:1 0.704-0.723, 9:1 0.703-0.837
+  grid+sliver s025w: emp existing 0.699-0.836 (mean 0.746, n 346); feasible cambered 6:1 0.704-0.722, 9:1 0.703-0.836 | geo existing 0.701-0.837 (mean 0.746, n 346); feasible cambered 6:1 0.704-0.723, 9:1 0.703-0.837
+
+====================================================================================================
+2. Feasible cambered span, per-speed R_min and its ratio to the scrub line (II-D p.4, p.5)
+====================================================================================================
+
+  [6:1 empirical]
+    grid        s84  : v_fwd 0.5278-0.5778 [0.53-0.58] v_td 0.75-0.80 (2 speeds, 2 cells); R_min 3.254-3.900 [3.3-3.9] m; line v/0.29 at those speeds 1.820-1.993; R_min/line 1.788-1.957; phi_max - lam(R_min) 0.394-0.479 deg; max feasible lam 0.500 (v_td 0.75, v_fwd 0.5278)
+    grid        s025 : v_fwd 0.4971-0.5778 [0.50-0.58] v_td 0.70-0.80 (3 speeds, 3 cells); R_min 2.886-3.900 [2.9-3.9] m; line v/0.29 at those speeds 1.714-1.993; R_min/line 1.684-1.957; phi_max - lam(R_min) 0.342-0.479 deg; max feasible lam 0.500 (v_td 0.70, v_fwd 0.4971)
+    grid        s336 : v_fwd 0.5278-0.5778 [0.53-0.58] v_td 0.75-0.80 (2 speeds, 2 cells); R_min 3.254-3.900 [3.3-3.9] m; line v/0.29 at those speeds 1.820-1.993; R_min/line 1.788-1.957; phi_max - lam(R_min) 0.394-0.479 deg; max feasible lam 0.500 (v_td 0.75, v_fwd 0.5278)
+    grid+sliver s84  : v_fwd 0.5278-0.5778 [0.53-0.58] v_td 0.75-0.80 (2 speeds, 14 cells); R_min 1.855-2.077 [1.9-2.1] m; line v/0.29 at those speeds 1.820-1.993; R_min/line 1.019-1.042; phi_max - lam(R_min) 0.017-0.040 deg; max feasible lam 0.939 (v_td 0.80, v_fwd 0.5778)
+    grid+sliver s025 : v_fwd 0.4971-0.5778 [0.50-0.58] v_td 0.70-0.80 (3 speeds, 21 cells); R_min 1.771-2.077 [1.8-2.1] m; line v/0.29 at those speeds 1.714-1.993; R_min/line 1.019-1.042; phi_max - lam(R_min) 0.017-0.040 deg; max feasible lam 0.939 (v_td 0.80, v_fwd 0.5778)
+    grid+sliver s025w: v_fwd 0.4971-0.5778 [0.50-0.58] v_td 0.70-0.80 (3 speeds, 21 cells); R_min 1.771-2.077 [1.8-2.1] m; line v/0.29 at those speeds 1.714-1.993; R_min/line 1.019-1.042; phi_max - lam(R_min) 0.017-0.040 deg; max feasible lam 0.939 (v_td 0.80, v_fwd 0.5778)
+
+  [6:1 geometric]
+    grid        s84  : v_fwd 0.5280-0.5780 [0.53-0.58] v_td 0.75-0.80 (2 speeds, 2 cells); R_min 3.257-3.903 [3.3-3.9] m; line v/0.29 at those speeds 1.821-1.993; R_min/line 1.789-1.958; phi_max - lam(R_min) 0.394-0.479 deg; max feasible lam 0.500 (v_td 0.75, v_fwd 0.5280)
+    grid        s025 : v_fwd 0.4973-0.5781 [0.50-0.58] v_td 0.70-0.80 (3 speeds, 3 cells); R_min 2.889-3.904 [2.9-3.9] m; line v/0.29 at those speeds 1.715-1.994; R_min/line 1.685-1.958; phi_max - lam(R_min) 0.342-0.479 deg; max feasible lam 0.500 (v_td 0.70, v_fwd 0.4973)
+    grid        s336 : v_fwd 0.5281-0.5781 [0.53-0.58] v_td 0.75-0.80 (2 speeds, 2 cells); R_min 3.257-3.904 [3.3-3.9] m; line v/0.29 at those speeds 1.821-1.994; R_min/line 1.789-1.958; phi_max - lam(R_min) 0.394-0.479 deg; max feasible lam 0.500 (v_td 0.75, v_fwd 0.5281)
+    grid+sliver s84  : v_fwd 0.5280-0.5780 [0.53-0.58] v_td 0.75-0.80 (2 speeds, 2 cells); R_min 3.257-3.903 [3.3-3.9] m; line v/0.29 at those speeds 1.821-1.993; R_min/line 1.789-1.958; phi_max - lam(R_min) 0.394-0.479 deg; max feasible lam 0.500 (v_td 0.75, v_fwd 0.5280)
+    grid+sliver s025 : v_fwd 0.4973-0.5781 [0.50-0.58] v_td 0.70-0.80 (3 speeds, 21 cells); R_min 1.772-2.079 [1.8-2.1] m; line v/0.29 at those speeds 1.715-1.993; R_min/line 1.020-1.043; phi_max - lam(R_min) 0.017-0.040 deg; max feasible lam 0.939 (v_td 0.80, v_fwd 0.5781)
+    grid+sliver s025w: v_fwd 0.4973-0.5781 [0.50-0.58] v_td 0.70-0.80 (3 speeds, 21 cells); R_min 1.772-2.079 [1.8-2.1] m; line v/0.29 at those speeds 1.715-1.993; R_min/line 1.020-1.043; phi_max - lam(R_min) 0.017-0.040 deg; max feasible lam 0.939 (v_td 0.80, v_fwd 0.5781)
+
+  [9:1 empirical]
+    grid        s84  : v_fwd 0.5278-1.2334 [0.53-1.23] v_td 0.75-1.45 (15 speeds, 35 cells); R_min 2.306-5.016 [2.3-5.0] m; line v/0.29 at those speeds 1.820-4.253; R_min/line 1.033-1.957; phi_max - lam(R_min) 0.050-0.479 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2333)
+    grid        s025 : v_fwd 0.4971-1.2126 [0.50-1.21] v_td 0.70-1.45 (16 speeds, 36 cells); R_min 2.167-5.206 [2.2-5.2] m; line v/0.29 at those speeds 1.714-4.181; R_min/line 1.026-1.957; phi_max - lam(R_min) 0.032-0.479 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2125)
+    grid        s336 : v_fwd 0.5278-1.2334 [0.53-1.23] v_td 0.75-1.45 (15 speeds, 35 cells); R_min 2.306-5.016 [2.3-5.0] m; line v/0.29 at those speeds 1.820-4.253; R_min/line 1.033-1.957; phi_max - lam(R_min) 0.050-0.479 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2333)
+    grid+sliver s84  : v_fwd 0.5278-1.2334 [0.53-1.23] v_td 0.75-1.45 (15 speeds, 144 cells); R_min 1.855-4.440 [1.9-4.4] m; line v/0.29 at those speeds 1.820-4.253; R_min/line 1.004-1.050; phi_max - lam(R_min) 0.004-0.092 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2333)
+    grid+sliver s025 : v_fwd 0.4971-1.2126 [0.50-1.21] v_td 0.70-1.45 (16 speeds, 155 cells); R_min 1.771-4.203 [1.8-4.2] m; line v/0.29 at those speeds 1.714-4.181; R_min/line 1.004-1.042; phi_max - lam(R_min) 0.004-0.047 deg; max feasible lam 2.042 (v_td 1.45, v_fwd 1.2125)
+    grid+sliver s025w: v_fwd 0.4971-1.2126 [0.50-1.21] v_td 0.70-1.45 (16 speeds, 149 cells); R_min 1.771-4.291 [1.8-4.3] m; line v/0.29 at those speeds 1.714-4.181; R_min/line 1.004-1.070; phi_max - lam(R_min) 0.004-0.128 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2125)
+
+  [9:1 geometric]
+    grid        s84  : v_fwd 0.5280-1.2334 [0.53-1.23] v_td 0.75-1.45 (15 speeds, 35 cells); R_min 2.307-5.016 [2.3-5.0] m; line v/0.29 at those speeds 1.821-4.252; R_min/line 1.033-1.958; phi_max - lam(R_min) 0.050-0.479 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2331)
+    grid        s025 : v_fwd 0.4973-1.2131 [0.50-1.21] v_td 0.70-1.45 (16 speeds, 36 cells); R_min 2.169-5.210 [2.2-5.2] m; line v/0.29 at those speeds 1.715-4.183; R_min/line 1.027-1.958; phi_max - lam(R_min) 0.032-0.479 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2130)
+    grid        s336 : v_fwd 0.5281-1.1918 [0.53-1.19] v_td 0.75-1.45 (15 speeds, 35 cells); R_min 2.308-5.020 [2.3-5.0] m; line v/0.29 at those speeds 1.821-4.109; R_min/line 1.009-1.958; phi_max - lam(R_min) 0.018-0.479 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.1917)
+    grid+sliver s84  : v_fwd 0.5280-1.2334 [0.53-1.23] v_td 0.75-1.45 (15 speeds, 35 cells); R_min 2.307-5.016 [2.3-5.0] m; line v/0.29 at those speeds 1.821-4.252; R_min/line 1.033-1.958; phi_max - lam(R_min) 0.050-0.479 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2331)
+    grid+sliver s025 : v_fwd 0.4973-1.2131 [0.50-1.21] v_td 0.70-1.45 (16 speeds, 155 cells); R_min 1.772-4.207 [1.8-4.2] m; line v/0.29 at those speeds 1.715-4.183; R_min/line 1.004-1.043; phi_max - lam(R_min) 0.005-0.048 deg; max feasible lam 2.042 (v_td 1.45, v_fwd 1.2130)
+    grid+sliver s025w: v_fwd 0.4973-1.2131 [0.50-1.21] v_td 0.70-1.45 (16 speeds, 149 cells); R_min 1.772-4.295 [1.8-4.3] m; line v/0.29 at those speeds 1.715-4.183; R_min/line 1.004-1.070; phi_max - lam(R_min) 0.005-0.129 deg; max feasible lam 2.000 (v_td 1.45, v_fwd 1.2130)
+
+  per-speed R_min cells, empirical law, grid+sliver (v_td: v_fwd, lam, R, R/line, beta*):
+    6:1 s84  : 0.75: 0.5278 0.877 1.855 1.019 84.00; 0.80: 0.5778 0.939 2.077 1.042 83.50
+    6:1 s025 : 0.70: 0.4971 0.815 1.771 1.033 84.25; 0.75: 0.5278 0.877 1.855 1.019 84.00; 0.80: 0.5778 0.939 2.077 1.042 83.50
+    6:1 s025w: 0.70: 0.4971 0.815 1.771 1.033 84.25; 0.75: 0.5278 0.877 1.855 1.019 84.00; 0.80: 0.5778 0.939 2.077 1.042 83.50
+    9:1 s84  : 0.75: 0.5278 0.877 1.855 1.019 84.00; 0.80: 0.5778 0.939 2.077 1.042 83.50; 0.85: 0.6284 1.051 2.194 1.013 83.00; 0.90: 0.6404 1.063 2.253 1.020 83.00; 0.95: 0.6919 1.124 2.487 1.043 82.50; 1.00: 0.7028 1.186 2.432 1.004 82.50; 1.05: 0.7553 1.248 2.669 1.025 82.00; 1.10: 0.8082 1.360 2.804 1.006 81.50; 1.15: 0.8615 1.422 3.048 1.026 81.00; 1.20: 0.9153 1.533 3.191 1.011 80.50; 1.25: 0.9696 1.595 3.442 1.029 80.00; 1.30: 1.0243 1.707 3.589 1.016 79.50; 1.35: 1.0795 1.769 3.846 1.033 79.00; 1.40: 1.1351 1.830 4.111 1.050 78.50; 1.45: 1.2333 2.000 4.440 1.044 77.50
+    9:1 s025 : 0.70: 0.4971 0.815 1.771 1.033 84.25; 0.75: 0.5278 0.877 1.855 1.019 84.00; 0.80: 0.5778 0.939 2.077 1.042 83.50; 0.85: 0.6091 1.001 2.165 1.031 83.25; 0.90: 0.6404 1.063 2.253 1.020 83.00; 0.95: 0.6716 1.124 2.344 1.012 82.75; 1.00: 0.7028 1.186 2.432 1.004 82.50; 1.05: 0.7553 1.248 2.669 1.025 82.00; 1.10: 0.7869 1.310 2.760 1.017 81.75; 1.15: 0.8615 1.422 3.048 1.026 81.00; 1.20: 0.9153 1.533 3.191 1.011 80.50; 1.25: 0.9696 1.595 3.442 1.029 80.00; 1.30: 1.0243 1.707 3.589 1.016 79.50; 1.35: 1.1007 1.819 3.889 1.025 78.75; 1.40: 1.1563 1.930 4.045 1.014 78.25; 1.45: 1.2125 2.042 4.203 1.005 77.75
+    9:1 s025w: 0.70: 0.4971 0.815 1.771 1.033 84.25; 0.75: 0.5278 0.877 1.855 1.019 84.00; 0.80: 0.5778 0.939 2.077 1.042 83.50; 0.85: 0.6091 1.001 2.165 1.031 83.25; 0.90: 0.6404 1.063 2.253 1.020 83.00; 0.95: 0.6716 1.124 2.344 1.012 82.75; 1.00: 0.7028 1.186 2.432 1.004 82.50; 1.05: 0.7553 1.248 2.669 1.025 82.00; 1.10: 0.7869 1.310 2.760 1.017 81.75; 1.15: 0.8615 1.422 3.048 1.026 81.00; 1.20: 0.9153 1.533 3.191 1.011 80.50; 1.25: 0.9696 1.595 3.442 1.029 80.00; 1.30: 1.0243 1.707 3.589 1.016 79.50; 1.35: 1.1007 1.769 3.999 1.054 78.75; 1.40: 1.1564 1.830 4.266 1.070 78.25; 1.45: 1.2125 2.000 4.291 1.026 77.75
+
+====================================================================================================
+2b. 'the coarse grid's 2.3-3.3 m R_min values were grid artifacts' (grid only) and '135 added cells'
+====================================================================================================
+  6:1 s84   emp grid-only per-speed R_min: 3.254-3.900 m over 2 speeds; lams [0.5]
+  6:1 s84   geo grid-only per-speed R_min: 3.257-3.903 m over 2 speeds; lams [0.5]
+  6:1 s025  emp grid-only per-speed R_min: 2.886-3.900 m over 3 speeds; lams [0.5]
+  6:1 s025  geo grid-only per-speed R_min: 2.889-3.904 m over 3 speeds; lams [0.5]
+  6:1 s336  emp grid-only per-speed R_min: 3.254-3.900 m over 2 speeds; lams [0.5]
+  6:1 s336  geo grid-only per-speed R_min: 3.257-3.904 m over 2 speeds; lams [0.5]
+  9:1 s84   emp grid-only per-speed R_min: 2.306-5.016 m over 15 speeds; lams [0.5, 1.0, 1.5, 2.0]
+  9:1 s84   geo grid-only per-speed R_min: 2.307-5.016 m over 15 speeds; lams [0.5, 1.0, 1.5, 2.0]
+  9:1 s025  emp grid-only per-speed R_min: 2.167-5.206 m over 16 speeds; lams [0.5, 1.0, 1.5, 2.0]
+  9:1 s025  geo grid-only per-speed R_min: 2.169-5.210 m over 16 speeds; lams [0.5, 1.0, 1.5, 2.0]
+  9:1 s336  emp grid-only per-speed R_min: 2.306-5.016 m over 15 speeds; lams [0.5, 1.0, 1.5, 2.0]
+  9:1 s336  geo grid-only per-speed R_min: 2.308-5.020 m over 15 speeds; lams [0.5, 1.0, 1.5, 2.0]
+
+====================================================================================================
+3. Measured band v_fwd 0.7-0.85 m/s: binding split, divides at 1 deg (HEAD) and at phi_max (working tree), torque feasibility
+====================================================================================================
+  analytic phi_max = atan(0.29 v/g) over the band: 1.185-1.439 deg
+
+  [6:1 empirical]
+    grid        s84  : 42 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 33 (lam 1.500-30.000), leg-torque 9 (lam 0.000-1.000), abad 0; feasible cambered 0; min tau_leg 33.04; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 33 (not scrub 0), below 9 (not leg-torque 0)
+        divide phi_max: above 33 (not scrub 0), below 9 (not leg-torque 0)
+    grid        s025 : 46 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 37 (lam 1.500-30.000), leg-torque 9 (lam 0.000-1.000), abad 0; feasible cambered 0; min tau_leg 33.67; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 37 (not scrub 0), below 9 (not leg-torque 0)
+        divide phi_max: above 37 (not scrub 0), below 9 (not leg-torque 0)
+    grid        s336 : 42 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 33 (lam 1.500-30.000), leg-torque 9 (lam 0.000-1.000), abad 0; feasible cambered 0; min tau_leg 33.04; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 33 (not scrub 0), below 9 (not leg-torque 0)
+        divide phi_max: above 33 (not scrub 0), below 9 (not leg-torque 0)
+    grid+sliver s84  : 69 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 41 (lam 1.236-30.000), leg-torque 28 (lam 0.000-1.360), abad 0; feasible cambered 0; min tau_leg 33.04; max scrub-feasible lam 1.360; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 57 (not scrub 16), below 12 (not leg-torque 0) e.g. v_td 1.00 lam 1.036 leg-torque; v_td 1.00 lam 1.086 leg-torque; v_td 1.00 lam 1.136 leg-torque; v_td 1.00 lam 1.186 leg-torque
+        divide phi_max: above 41 (not scrub 0), below 28 (not leg-torque 0)
+    grid+sliver s025 : 83 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 56 (lam 1.236-30.000), leg-torque 27 (lam 0.000-1.310), abad 0; feasible cambered 0; min tau_leg 33.67; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 71 (not scrub 15), below 12 (not leg-torque 0) e.g. v_td 1.10 lam 1.060 leg-torque; v_td 1.10 lam 1.110 leg-torque; v_td 1.10 lam 1.160 leg-torque; v_td 1.10 lam 1.210 leg-torque
+        divide phi_max: above 56 (not scrub 0), below 27 (not leg-torque 0)
+    grid+sliver s025w: 73 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 46 (lam 1.236-30.000), leg-torque 27 (lam 0.000-1.310), abad 0; feasible cambered 0; min tau_leg 33.67; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 61 (not scrub 15), below 12 (not leg-torque 0) e.g. v_td 1.10 lam 1.060 leg-torque; v_td 1.10 lam 1.110 leg-torque; v_td 1.10 lam 1.160 leg-torque; v_td 1.10 lam 1.210 leg-torque
+        divide phi_max: above 46 (not scrub 0), below 27 (not leg-torque 0)
+
+  [6:1 geometric]
+    grid        s84  : 43 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 34 (lam 1.500-30.000), leg-torque 9 (lam 0.000-1.000), abad 0; feasible cambered 0; min tau_leg 32.73; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 34 (not scrub 0), below 9 (not leg-torque 0)
+        divide phi_max: above 34 (not scrub 0), below 9 (not leg-torque 0)
+    grid        s025 : 47 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 0, scrub 38 (lam 1.500-30.000), leg-torque 9 (lam 0.000-1.000), abad 0; feasible cambered 0; min tau_leg 33.69; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 38 (not scrub 0), below 9 (not leg-torque 0)
+        divide phi_max: above 38 (not scrub 0), below 9 (not leg-torque 0)
+    grid        s336 : 43 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 0, scrub 34 (lam 1.500-30.000), leg-torque 9 (lam 0.000-1.000), abad 0; feasible cambered 0; min tau_leg 33.07; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 34 (not scrub 0), below 9 (not leg-torque 0)
+        divide phi_max: above 34 (not scrub 0), below 9 (not leg-torque 0)
+    grid+sliver s84  : 43 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 0, scrub 34 (lam 1.500-30.000), leg-torque 9 (lam 0.000-1.000), abad 0; feasible cambered 0; min tau_leg 32.73; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 34 (not scrub 0), below 9 (not leg-torque 0)
+        divide phi_max: above 34 (not scrub 0), below 9 (not leg-torque 0)
+    grid+sliver s025 : 84 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 0, scrub 57 (lam 1.236-30.000), leg-torque 27 (lam 0.000-1.310), abad 0; feasible cambered 0; min tau_leg 33.69; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 72 (not scrub 15), below 12 (not leg-torque 0) e.g. v_td 1.10 lam 1.060 leg-torque; v_td 1.10 lam 1.110 leg-torque; v_td 1.10 lam 1.160 leg-torque; v_td 1.10 lam 1.210 leg-torque
+        divide phi_max: above 57 (not scrub 0), below 27 (not leg-torque 0)
+    grid+sliver s025w: 74 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 0, scrub 47 (lam 1.236-30.000), leg-torque 27 (lam 0.000-1.310), abad 0; feasible cambered 0; min tau_leg 33.69; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 62 (not scrub 15), below 12 (not leg-torque 0) e.g. v_td 1.10 lam 1.060 leg-torque; v_td 1.10 lam 1.110 leg-torque; v_td 1.10 lam 1.160 leg-torque; v_td 1.10 lam 1.210 leg-torque
+        divide phi_max: above 47 (not scrub 0), below 27 (not leg-torque 0)
+
+  [9:1 empirical]
+    grid        s84  : 42 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 9 (lam 0.000-1.000), scrub 33 (lam 1.500-30.000), leg-torque 0, abad 0; feasible cambered 6; min tau_leg 33.04; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 33 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+        divide phi_max: above 33 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid        s025 : 46 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 9 (lam 0.000-1.000), scrub 37 (lam 1.500-30.000), leg-torque 0, abad 0; feasible cambered 6; min tau_leg 33.67; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 37 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+        divide phi_max: above 37 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid        s336 : 42 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 9 (lam 0.000-1.000), scrub 33 (lam 1.500-30.000), leg-torque 0, abad 0; feasible cambered 6; min tau_leg 33.04; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 33 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+        divide phi_max: above 33 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid+sliver s84  : 69 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 28 (lam 0.000-1.360), scrub 41 (lam 1.236-30.000), leg-torque 0, abad 0; feasible cambered 25; min tau_leg 33.04; max scrub-feasible lam 1.360; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 57 (not scrub 16), below 12 (not leg-torque 12) e.g. v_td 1.00 lam 1.036 none; v_td 1.00 lam 1.086 none; v_td 1.00 lam 1.136 none; v_td 1.00 lam 1.186 none
+        divide phi_max: above 41 (not scrub 0), below 28 (not leg-torque 28) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid+sliver s025 : 83 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 27 (lam 0.000-1.310), scrub 56 (lam 1.236-30.000), leg-torque 0, abad 0; feasible cambered 24; min tau_leg 33.67; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 71 (not scrub 15), below 12 (not leg-torque 12) e.g. v_td 1.10 lam 1.060 none; v_td 1.10 lam 1.110 none; v_td 1.10 lam 1.160 none; v_td 1.10 lam 1.210 none
+        divide phi_max: above 56 (not scrub 0), below 27 (not leg-torque 27) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid+sliver s025w: 73 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 27 (lam 0.000-1.310), scrub 46 (lam 1.236-30.000), leg-torque 0, abad 0; feasible cambered 24; min tau_leg 33.67; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 61 (not scrub 15), below 12 (not leg-torque 12) e.g. v_td 1.10 lam 1.060 none; v_td 1.10 lam 1.110 none; v_td 1.10 lam 1.160 none; v_td 1.10 lam 1.210 none
+        divide phi_max: above 46 (not scrub 0), below 27 (not leg-torque 27) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+
+  [9:1 geometric]
+    grid        s84  : 43 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 9 (lam 0.000-1.000), scrub 34 (lam 1.500-30.000), leg-torque 0, abad 0; feasible cambered 6; min tau_leg 32.73; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 34 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+        divide phi_max: above 34 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid        s025 : 47 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 9 (lam 0.000-1.000), scrub 38 (lam 1.500-30.000), leg-torque 0, abad 0; feasible cambered 6; min tau_leg 33.69; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 38 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+        divide phi_max: above 38 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid        s336 : 43 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 9 (lam 0.000-1.000), scrub 34 (lam 1.500-30.000), leg-torque 0, abad 0; feasible cambered 6; min tau_leg 33.07; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 34 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+        divide phi_max: above 34 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid+sliver s84  : 43 cells at v_td [1.0, 1.05, 1.1, 1.15]; binding none 9 (lam 0.000-1.000), scrub 34 (lam 1.500-30.000), leg-torque 0, abad 0; feasible cambered 6; min tau_leg 32.73; max scrub-feasible lam 1.000; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 34 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+        divide phi_max: above 34 (not scrub 0), below 9 (not leg-torque 9) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid+sliver s025 : 84 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 27 (lam 0.000-1.310), scrub 57 (lam 1.236-30.000), leg-torque 0, abad 0; feasible cambered 24; min tau_leg 33.69; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 72 (not scrub 15), below 12 (not leg-torque 12) e.g. v_td 1.10 lam 1.060 none; v_td 1.10 lam 1.110 none; v_td 1.10 lam 1.160 none; v_td 1.10 lam 1.210 none
+        divide phi_max: above 57 (not scrub 0), below 27 (not leg-torque 27) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+    grid+sliver s025w: 74 cells at v_td [1.0, 1.05, 1.1, 1.15, 1.2]; binding none 27 (lam 0.000-1.310), scrub 47 (lam 1.236-30.000), leg-torque 0, abad 0; feasible cambered 24; min tau_leg 33.69; max scrub-feasible lam 1.310; all scrub-feasible <= own phi_max: True
+        divide 1deg: above 62 (not scrub 15), below 12 (not leg-torque 12) e.g. v_td 1.10 lam 1.060 none; v_td 1.10 lam 1.110 none; v_td 1.10 lam 1.160 none; v_td 1.10 lam 1.210 none
+        divide phi_max: above 47 (not scrub 0), below 27 (not leg-torque 27) e.g. v_td 1.00 lam 0.000 none; v_td 1.00 lam 0.500 none; v_td 1.00 lam 1.000 none; v_td 1.05 lam 0.000 none
+
+====================================================================================================
+4. 9:1: 'the sweep's top', 'covering the measured band', in-band R_min '2.4-2.9 m'
+====================================================================================================
+  scrub line at the band edges: 2.414-2.931 m
+  grid        s84   emp: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2334 beta* 77.50 tau_leg 35.54; covers band: True; in-band per-speed R_min 2.885-3.814 at v_fwd [0.703, 0.755, 0.808]
+  grid        s84   geo: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2334 beta* 77.50 tau_leg 35.55; covers band: True; in-band per-speed R_min 2.886-3.816 at v_fwd [0.703, 0.755, 0.808]
+  grid        s025  emp: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2126 beta* 77.75 tau_leg 36.51; covers band: True; in-band per-speed R_min 2.885-3.616 at v_fwd [0.703, 0.755, 0.787]
+  grid        s025  geo: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2131 beta* 77.75 tau_leg 36.49; covers band: True; in-band per-speed R_min 2.888-3.620 at v_fwd [0.703, 0.756, 0.787]
+  grid        s336  emp: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2334 beta* 77.50 tau_leg 35.54; covers band: True; in-band per-speed R_min 2.885-3.814 at v_fwd [0.703, 0.755, 0.808]
+  grid        s336  geo: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.1918 beta* 78.00 tau_leg 37.42; covers band: True; in-band per-speed R_min 2.888-3.818 at v_fwd [0.703, 0.756, 0.809]
+  grid+sliver s84   emp: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2334 beta* 77.50 tau_leg 35.54; covers band: True; in-band per-speed R_min 2.432-2.804 at v_fwd [0.703, 0.755, 0.808]
+  grid+sliver s84   geo: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2334 beta* 77.50 tau_leg 35.55; covers band: True; in-band per-speed R_min 2.886-3.816 at v_fwd [0.703, 0.755, 0.808]
+  grid+sliver s025  emp: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2126 beta* 77.75 tau_leg 36.51; covers band: True; in-band per-speed R_min 2.432-2.760 at v_fwd [0.703, 0.755, 0.787]
+  grid+sliver s025  geo: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2131 beta* 77.75 tau_leg 36.49; covers band: True; in-band per-speed R_min 2.435-2.763 at v_fwd [0.703, 0.756, 0.787]
+  grid+sliver s025w emp: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2126 beta* 77.75 tau_leg 36.51; covers band: True; in-band per-speed R_min 2.432-2.760 at v_fwd [0.703, 0.755, 0.787]
+  grid+sliver s025w geo: fastest feasible cambered cell v_td 1.45 (sweep top 1.45: True) v_fwd 1.2131 beta* 77.75 tau_leg 36.49; covers band: True; in-band per-speed R_min 2.435-2.763 at v_fwd [0.703, 0.756, 0.787]
+
+====================================================================================================
+5. Largest eroded leg demand among feasible cells ('37.2 N.m') and C4 ('21.5' / '27.9', never binds)
+====================================================================================================
+
+  [6:1]
+    grid        s84  : leg demand empi all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500); geom all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500); both all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500)
+                       C4 max feasible demand 21.51 N.m (emp v_td 0.80 lam 0.000); all existing cells: max 27.87, > 29.5: 0, binding abad 0
+    grid        s025 : leg demand empi all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500); geom all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500); both all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500)
+                       C4 max feasible demand 21.51 N.m (emp v_td 0.80 lam 0.000); all existing cells: max 27.18, > 29.5: 0, binding abad 0
+    grid        s336 : leg demand empi all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500); geom all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500); both all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500)
+                       C4 max feasible demand 21.51 N.m (emp v_td 0.80 lam 0.000); all existing cells: max 27.87, > 29.5: 0, binding abad 0
+    grid+sliver s84  : leg demand empi all 29.16 / cambered 29.16 (v_td 0.80 lam 0.939); geom all 29.15 / cambered 29.15 (v_td 0.80 lam 0.500); both all 29.16 / cambered 29.16 (v_td 0.80 lam 0.939)
+                       C4 max feasible demand 21.51 N.m (emp v_td 0.80 lam 0.000); all existing cells: max 27.87, > 29.5: 0, binding abad 0
+    grid+sliver s025 : leg demand empi all 29.16 / cambered 29.16 (v_td 0.80 lam 0.939); geom all 29.15 / cambered 29.15 (v_td 0.80 lam 0.939); both all 29.16 / cambered 29.16 (v_td 0.80 lam 0.939)
+                       C4 max feasible demand 21.51 N.m (emp v_td 0.80 lam 0.000); all existing cells: max 27.18, > 29.5: 0, binding abad 0
+    grid+sliver s025w: leg demand empi all 29.16 / cambered 29.16 (v_td 0.80 lam 0.939); geom all 29.15 / cambered 29.15 (v_td 0.80 lam 0.939); both all 29.16 / cambered 29.16 (v_td 0.80 lam 0.939)
+                       C4 max feasible demand 21.51 N.m (emp v_td 0.80 lam 0.000); all existing cells: max 27.18, > 29.5: 0, binding abad 0
+
+  [9:1]
+    grid        s84  : leg demand empi all 37.19 / cambered 37.19 (v_td 1.40 lam 1.500); geom all 37.44 / cambered 37.44 (v_td 1.45 lam 1.000); both all 37.44 / cambered 37.44 (v_td 1.45 lam 1.000)
+                       C4 max feasible demand 27.87 N.m (geo v_td 1.45 lam 0.000); all existing cells: max 27.87, > 29.5: 0, binding abad 0
+    grid        s025 : leg demand empi all 36.54 / cambered 36.54 (v_td 1.30 lam 1.500); geom all 36.52 / cambered 36.52 (v_td 1.30 lam 1.500); both all 36.54 / cambered 36.54 (v_td 1.30 lam 1.500)
+                       C4 max feasible demand 27.18 N.m (emp v_td 1.30 lam 0.000); all existing cells: max 27.18, > 29.5: 0, binding abad 0
+    grid        s336 : leg demand empi all 37.19 / cambered 37.19 (v_td 1.40 lam 1.500); geom all 37.43 / cambered 37.43 (v_td 1.45 lam 2.000); both all 37.43 / cambered 37.43 (v_td 1.45 lam 2.000)
+                       C4 max feasible demand 27.87 N.m (geo v_td 1.45 lam 0.000); all existing cells: max 27.87, > 29.5: 0, binding abad 0
+    grid+sliver s84  : leg demand empi all 37.19 / cambered 37.19 (v_td 1.40 lam 1.830); geom all 37.44 / cambered 37.44 (v_td 1.45 lam 1.000); both all 37.44 / cambered 37.44 (v_td 1.45 lam 1.000)
+                       C4 max feasible demand 27.87 N.m (geo v_td 1.45 lam 0.000); all existing cells: max 27.87, > 29.5: 0, binding abad 0
+    grid+sliver s025 : leg demand empi all 36.54 / cambered 36.54 (v_td 1.30 lam 1.707); geom all 36.52 / cambered 36.52 (v_td 1.30 lam 1.707); both all 36.54 / cambered 36.54 (v_td 1.30 lam 1.707)
+                       C4 max feasible demand 27.18 N.m (emp v_td 1.30 lam 0.000); all existing cells: max 27.18, > 29.5: 0, binding abad 0
+    grid+sliver s025w: leg demand empi all 36.54 / cambered 36.54 (v_td 1.30 lam 1.707); geom all 36.52 / cambered 36.52 (v_td 1.30 lam 1.707); both all 36.54 / cambered 36.54 (v_td 1.30 lam 1.707)
+                       C4 max feasible demand 27.18 N.m (emp v_td 1.30 lam 0.000); all existing cells: max 27.18, > 29.5: 0, binding abad 0
+
+====================================================================================================
+6. E1: bank in the band and at the top; 'feasible cells bank at most 2 deg' (C4 paragraph)
+====================================================================================================
+  grid        s84   emp: band max scrub-feasible lam 1.000 (9:1 band feasible max 1.000); max feasible lam 6:1 0.500, 9:1 2.000 at v_fwd 1.2333 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid        s84   geo: band max scrub-feasible lam 1.000 (9:1 band feasible max 1.000); max feasible lam 6:1 0.500, 9:1 2.000 at v_fwd 1.2331 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid        s025  emp: band max scrub-feasible lam 1.000 (9:1 band feasible max 1.000); max feasible lam 6:1 0.500, 9:1 2.000 at v_fwd 1.2125 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid        s025  geo: band max scrub-feasible lam 1.000 (9:1 band feasible max 1.000); max feasible lam 6:1 0.500, 9:1 2.000 at v_fwd 1.2130 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.916
+  grid        s336  emp: band max scrub-feasible lam 1.000 (9:1 band feasible max 1.000); max feasible lam 6:1 0.500, 9:1 2.000 at v_fwd 1.2333 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid        s336  geo: band max scrub-feasible lam 1.000 (9:1 band feasible max 1.000); max feasible lam 6:1 0.500, 9:1 2.000 at v_fwd 1.1917 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.916
+  grid+sliver s84   emp: band max scrub-feasible lam 1.360 (9:1 band feasible max 1.360); max feasible lam 6:1 0.939, 9:1 2.000 at v_fwd 1.2333 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid+sliver s84   geo: band max scrub-feasible lam 1.000 (9:1 band feasible max 1.000); max feasible lam 6:1 0.500, 9:1 2.000 at v_fwd 1.2331 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid+sliver s025  emp: band max scrub-feasible lam 1.310 (9:1 band feasible max 1.310); max feasible lam 6:1 0.939, 9:1 2.042 at v_fwd 1.2125 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid+sliver s025  geo: band max scrub-feasible lam 1.310 (9:1 band feasible max 1.310); max feasible lam 6:1 0.939, 9:1 2.042 at v_fwd 1.2130 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.916
+  grid+sliver s025w emp: band max scrub-feasible lam 1.310 (9:1 band feasible max 1.310); max feasible lam 6:1 0.939, 9:1 2.000 at v_fwd 1.2125 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.915
+  grid+sliver s025w geo: band max scrub-feasible lam 1.310 (9:1 band feasible max 1.310); max feasible lam 6:1 0.939, 9:1 2.000 at v_fwd 1.2130 (v_td 1.45); 9:1 feasible lam >= 1.5 only at v_fwd >= 0.916
+
+====================================================================================================
+7. E3: feasible sets empirical vs geometric (the stage script's metric |sym diff| / |union|) and an R_min-curve area proxy
+====================================================================================================
+  35 stage grid        s84  : emp 22 geo 22 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.07 %, area under R_min(v) +0.04 %
+  35 stage grid        s025 : emp 21 geo 21 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.15 %
+  35 stage grid        s336 : emp 22 geo 22 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.15 %
+  35 stage grid+sliver s84  : n/a (the record sliver is empirical-only)
+  35 stage grid+sliver s025 : emp 69 geo 69 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.15 %
+  35 stage grid+sliver s025w: emp 69 geo 69 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.15 %
+  6:1      grid        s84  : emp 4 geo 4 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.07 %, area under R_min(v) +0.10 %
+  6:1      grid        s025 : emp 6 geo 6 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.15 %
+  6:1      grid        s336 : emp 4 geo 4 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.14 %
+  6:1      grid+sliver s84  : n/a (the record sliver is empirical-only)
+  6:1      grid+sliver s025 : emp 24 geo 24 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.15 %
+  6:1      grid+sliver s025w: emp 24 geo 24 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.15 %
+  9:1      grid        s84  : emp 50 geo 50 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.07 %, area under R_min(v) -0.05 %
+  9:1      grid        s025 : emp 52 geo 52 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.13 %
+  9:1      grid        s336 : emp 50 geo 50 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 6.64 %, area under R_min(v) -7.65 %
+  9:1      grid+sliver s84  : n/a (the record sliver is empirical-only)
+  9:1      grid+sliver s025 : emp 171 geo 171 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.13 %
+  9:1      grid+sliver s025w: emp 165 geo 165 identical True; metric 0.0 %; only-emp [] only-geo []; R_min curves same speeds, max |dR|/R 0.10 %, area under R_min(v) +0.13 %
+
+====================================================================================================
+8. E4: worst entry slew / flight (lambda / omega / flight_s)
+====================================================================================================
+  grid        s84   6:1 feasible: no-load 34.6: 0.23 % (lam 0.500, flight 107 ms, geo v_td 0.75); rated 14.66: 0.55 % (lam 0.500, flight 107 ms, geo v_td 0.75)
+  grid        s84   9:1 feasible: no-load 34.6: 0.66 % (lam 2.000, flight 152 ms, emp v_td 1.45); rated 14.66: 1.57 % (lam 2.000, flight 152 ms, emp v_td 1.45)
+  grid        s84   all existing (context): no-load 34.6: 15.44 % (lam 30.0, geo v_td 0.80); rated 14.66: 36.39 % (lam 30.0, geo v_td 0.80)
+  grid        s025  6:1 feasible: no-load 34.6: 0.25 % (lam 0.500, flight 99 ms, geo v_td 0.70); rated 14.66: 0.60 % (lam 0.500, flight 99 ms, geo v_td 0.70)
+  grid        s025  9:1 feasible: no-load 34.6: 0.64 % (lam 2.000, flight 159 ms, geo v_td 1.45); rated 14.66: 1.50 % (lam 2.000, flight 159 ms, geo v_td 1.45)
+  grid        s025  all existing (context): no-load 34.6: 15.29 % (lam 30.0, emp v_td 0.80); rated 14.66: 36.05 % (lam 30.0, emp v_td 0.80)
+  grid        s336  6:1 feasible: no-load 34.6: 0.23 % (lam 0.500, flight 107 ms, geo v_td 0.75); rated 14.66: 0.55 % (lam 0.500, flight 107 ms, geo v_td 0.75)
+  grid        s336  9:1 feasible: no-load 34.6: 0.66 % (lam 2.000, flight 152 ms, emp v_td 1.45); rated 14.66: 1.57 % (lam 2.000, flight 152 ms, emp v_td 1.45)
+  grid        s336  all existing (context): no-load 34.6: 15.29 % (lam 30.0, emp v_td 0.80); rated 14.66: 36.05 % (lam 30.0, emp v_td 0.80)
+  grid+sliver s84   6:1 feasible: no-load 34.6: 0.43 % (lam 0.939, flight 112 ms, emp v_td 0.80); rated 14.66: 1.00 % (lam 0.939, flight 112 ms, emp v_td 0.80)
+  grid+sliver s84   9:1 feasible: no-load 34.6: 0.66 % (lam 2.000, flight 152 ms, emp v_td 1.45); rated 14.66: 1.57 % (lam 2.000, flight 152 ms, emp v_td 1.45)
+  grid+sliver s84   all existing (context): no-load 34.6: 15.44 % (lam 30.0, geo v_td 0.80); rated 14.66: 36.39 % (lam 30.0, geo v_td 0.80)
+  grid+sliver s025  6:1 feasible: no-load 34.6: 0.43 % (lam 0.939, flight 111 ms, geo v_td 0.80); rated 14.66: 1.00 % (lam 0.939, flight 111 ms, geo v_td 0.80)
+  grid+sliver s025  9:1 feasible: no-load 34.6: 0.65 % (lam 2.042, flight 159 ms, geo v_td 1.45); rated 14.66: 1.53 % (lam 2.042, flight 159 ms, geo v_td 1.45)
+  grid+sliver s025  all existing (context): no-load 34.6: 15.29 % (lam 30.0, emp v_td 0.80); rated 14.66: 36.05 % (lam 30.0, emp v_td 0.80)
+  grid+sliver s025w 6:1 feasible: no-load 34.6: 0.43 % (lam 0.939, flight 111 ms, geo v_td 0.80); rated 14.66: 1.00 % (lam 0.939, flight 111 ms, geo v_td 0.80)
+  grid+sliver s025w 9:1 feasible: no-load 34.6: 0.64 % (lam 2.000, flight 159 ms, geo v_td 1.45); rated 14.66: 1.50 % (lam 2.000, flight 159 ms, geo v_td 1.45)
+  grid+sliver s025w all existing (context): no-load 34.6: 15.29 % (lam 30.0, emp v_td 0.80); rated 14.66: 36.05 % (lam 30.0, emp v_td 0.80)
+
+====================================================================================================
+9. 'from 0.21 rad/s up, or without C2, the feasible speed range under either gearbox is unchanged'
+====================================================================================================
+  Feasible(T) = feasible at T=inf and psi <= T (regate's C2 is the only T-dependent gate), so the
+  span can only widen with T. Breakpoint = smallest cell psi from which the readout equals T=inf.
+
+  [grid s84]
+    6:1 emp v_fwd exact: T=inf (0.5263977851711793, 0.5778346248171894); breakpoint psi 3.2860 (v_td 0.75 lam 10.000 v_fwd 0.5264 beta* 84.00); just below it: (0.5270234568046822, 0.5778346248171894)
+    6:1 emp v_fwd 2-dec: T=inf ('0.53', '0.58'); breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: ('0.58', '0.58')
+    6:1 emp v_td set   : T=inf [0.75, 0.8]; breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: [0.8]
+    6:1 emp 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.53', '0.58'), T 0.2: ('0.53', '0.58'), T 0.21: ('0.53', '0.58'), T 0.29: ('0.53', '0.58'), T 0.36: ('0.53', '0.58'), T 0.4: ('0.53', '0.58'), T inf: ('0.53', '0.58')
+    6:1 geo v_fwd exact: T=inf (0.5263600839815475, 0.5780438303314226); breakpoint psi 1.6306 (v_td 0.75 lam 5.000 v_fwd 0.5264 beta* 84.00); just below it: (0.527495319455883, 0.5780438303314226)
+    6:1 geo v_fwd 2-dec: T=inf ('0.53', '0.58'); breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5280 beta* 84.00); just below it: ('0.58', '0.58')
+    6:1 geo v_td set   : T=inf [0.75, 0.8]; breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5280 beta* 84.00); just below it: [0.8]
+    6:1 geo 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.53', '0.58'), T 0.2: ('0.53', '0.58'), T 0.21: ('0.53', '0.58'), T 0.29: ('0.53', '0.58'), T 0.36: ('0.53', '0.58'), T 0.4: ('0.53', '0.58'), T inf: ('0.53', '0.58')
+    9:1 emp v_fwd exact: T=inf (0.5263977851711793, 1.2334030655087103); breakpoint psi 3.2860 (v_td 0.75 lam 10.000 v_fwd 0.5264 beta* 84.00); just below it: (0.5270234568046822, 1.2334030655087103)
+    9:1 emp v_fwd 2-dec: T=inf ('0.53', '1.23'); breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: ('0.58', '1.23')
+    9:1 emp v_td set   : T=inf [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 emp 2-dec span by T: T 0.16: ('0.58', '1.23'), T 0.18: ('0.53', '1.23'), T 0.2: ('0.53', '1.23'), T 0.21: ('0.53', '1.23'), T 0.29: ('0.53', '1.23'), T 0.36: ('0.53', '1.23'), T 0.4: ('0.53', '1.23'), T inf: ('0.53', '1.23')
+    9:1 geo v_fwd exact: T=inf (0.5263600839815475, 1.233364077566905); breakpoint psi 1.6306 (v_td 0.75 lam 5.000 v_fwd 0.5264 beta* 84.00); just below it: (0.527495319455883, 1.233364077566905)
+    9:1 geo v_fwd 2-dec: T=inf ('0.53', '1.23'); breakpoint psi 0.2083 (v_td 1.45 lam 1.500 v_fwd 1.2334 beta* 77.50); just below it: ('0.53', '1.19')
+    9:1 geo v_td set   : T=inf [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5280 beta* 84.00); just below it: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 geo 2-dec span by T: T 0.16: ('0.58', '1.19'), T 0.18: ('0.53', '1.19'), T 0.2: ('0.53', '1.19'), T 0.21: ('0.53', '1.23'), T 0.29: ('0.53', '1.23'), T 0.36: ('0.53', '1.23'), T 0.4: ('0.53', '1.23'), T inf: ('0.53', '1.23')
+    => v_fwd exact: unchanged for every T >= 3.2860 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: False
+    => v_fwd 2-dec: unchanged for every T >= 0.2083 rad/s (set by 9:1 geometric), and T=0.29 equals T=inf: True
+    => v_td set: unchanged for every T >= 0.1622 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+
+  [grid s025]
+    6:1 emp v_fwd exact: T=inf (0.4957143609562998, 0.5778346248171894); breakpoint psi 3.4894 (v_td 0.70 lam 10.000 v_fwd 0.4957 beta* 84.25); just below it: (0.496312800942081, 0.5778346248171894)
+    6:1 emp v_fwd 2-dec: T=inf ('0.50', '0.58'); breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: ('0.53', '0.58')
+    6:1 emp v_td set   : T=inf [0.7, 0.75, 0.8]; breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: [0.75, 0.8]
+    6:1 emp 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.50', '0.58'), T 0.2: ('0.50', '0.58'), T 0.21: ('0.50', '0.58'), T 0.29: ('0.50', '0.58'), T 0.36: ('0.50', '0.58'), T 0.4: ('0.50', '0.58'), T inf: ('0.50', '0.58')
+    6:1 geo v_fwd exact: T=inf (0.4956485853141178, 0.5781202423484353); breakpoint psi 3.4899 (v_td 0.70 lam 10.000 v_fwd 0.4956 beta* 84.25); just below it: (0.49638382813320514, 0.5781202423484353)
+    6:1 geo v_fwd 2-dec: T=inf ('0.50', '0.58'); breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: ('0.53', '0.58')
+    6:1 geo v_td set   : T=inf [0.7, 0.75, 0.8]; breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: [0.75, 0.8]
+    6:1 geo 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.50', '0.58'), T 0.2: ('0.50', '0.58'), T 0.21: ('0.50', '0.58'), T 0.29: ('0.50', '0.58'), T 0.36: ('0.50', '0.58'), T 0.4: ('0.50', '0.58'), T inf: ('0.50', '0.58')
+    9:1 emp v_fwd exact: T=inf (0.4957143609562998, 1.2125874491784432); breakpoint psi 3.4894 (v_td 0.70 lam 10.000 v_fwd 0.4957 beta* 84.25); just below it: (0.496312800942081, 1.2125874491784432)
+    9:1 emp v_fwd 2-dec: T=inf ('0.50', '1.21'); breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: ('0.53', '1.21')
+    9:1 emp v_td set   : T=inf [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 emp 2-dec span by T: T 0.16: ('0.58', '1.21'), T 0.18: ('0.50', '1.21'), T 0.2: ('0.50', '1.21'), T 0.21: ('0.50', '1.21'), T 0.29: ('0.50', '1.21'), T 0.36: ('0.50', '1.21'), T 0.4: ('0.50', '1.21'), T inf: ('0.50', '1.21')
+    9:1 geo v_fwd exact: T=inf (0.4956485853141178, 1.2131422206886164); breakpoint psi 3.4899 (v_td 0.70 lam 10.000 v_fwd 0.4956 beta* 84.25); just below it: (0.49638382813320514, 1.2131422206886164)
+    9:1 geo v_fwd 2-dec: T=inf ('0.50', '1.21'); breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: ('0.53', '1.21')
+    9:1 geo v_td set   : T=inf [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 geo 2-dec span by T: T 0.16: ('0.58', '1.21'), T 0.18: ('0.50', '1.21'), T 0.2: ('0.50', '1.21'), T 0.21: ('0.50', '1.21'), T 0.29: ('0.50', '1.21'), T 0.36: ('0.50', '1.21'), T 0.4: ('0.50', '1.21'), T inf: ('0.50', '1.21')
+    => v_fwd exact: unchanged for every T >= 3.4899 rad/s (set by 6:1 geometric), and T=0.29 equals T=inf: False
+    => v_fwd 2-dec: unchanged for every T >= 0.1722 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+    => v_td set: unchanged for every T >= 0.1722 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+
+  [grid s336]
+    6:1 emp v_fwd exact: T=inf (0.5263977851711793, 0.5778346248171894); breakpoint psi 3.2860 (v_td 0.75 lam 10.000 v_fwd 0.5264 beta* 84.00); just below it: (0.5270234568046822, 0.5778346248171894)
+    6:1 emp v_fwd 2-dec: T=inf ('0.53', '0.58'); breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: ('0.58', '0.58')
+    6:1 emp v_td set   : T=inf [0.75, 0.8]; breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: [0.8]
+    6:1 emp 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.53', '0.58'), T 0.2: ('0.53', '0.58'), T 0.21: ('0.53', '0.58'), T 0.29: ('0.53', '0.58'), T 0.36: ('0.53', '0.58'), T 0.4: ('0.53', '0.58'), T inf: ('0.53', '0.58')
+    6:1 geo v_fwd exact: T=inf (0.5263272468873473, 0.5781202423484353); breakpoint psi 3.2865 (v_td 0.75 lam 10.000 v_fwd 0.5263 beta* 84.00); just below it: (0.5270996350452757, 0.5781202423484353)
+    6:1 geo v_fwd 2-dec: T=inf ('0.53', '0.58'); breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5281 beta* 84.00); just below it: ('0.58', '0.58')
+    6:1 geo v_td set   : T=inf [0.75, 0.8]; breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5281 beta* 84.00); just below it: [0.8]
+    6:1 geo 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.53', '0.58'), T 0.2: ('0.53', '0.58'), T 0.21: ('0.53', '0.58'), T 0.29: ('0.53', '0.58'), T 0.36: ('0.53', '0.58'), T 0.4: ('0.53', '0.58'), T inf: ('0.53', '0.58')
+    9:1 emp v_fwd exact: T=inf (0.5263977851711793, 1.2334030655087103); breakpoint psi 3.2860 (v_td 0.75 lam 10.000 v_fwd 0.5264 beta* 84.00); just below it: (0.5270234568046822, 1.2334030655087103)
+    9:1 emp v_fwd 2-dec: T=inf ('0.53', '1.23'); breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: ('0.58', '1.23')
+    9:1 emp v_td set   : T=inf [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 emp 2-dec span by T: T 0.16: ('0.58', '1.23'), T 0.18: ('0.53', '1.23'), T 0.2: ('0.53', '1.23'), T 0.21: ('0.53', '1.23'), T 0.29: ('0.53', '1.23'), T 0.36: ('0.53', '1.23'), T 0.4: ('0.53', '1.23'), T inf: ('0.53', '1.23')
+    9:1 geo v_fwd exact: T=inf (0.5263272468873473, 1.191802366841886); breakpoint psi 3.2865 (v_td 0.75 lam 10.000 v_fwd 0.5263 beta* 84.00); just below it: (0.5270996350452757, 1.191802366841886)
+    9:1 geo v_fwd 2-dec: T=inf ('0.53', '1.19'); breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5281 beta* 84.00); just below it: ('0.58', '1.19')
+    9:1 geo v_td set   : T=inf [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5281 beta* 84.00); just below it: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 geo 2-dec span by T: T 0.16: ('0.58', '1.19'), T 0.18: ('0.53', '1.19'), T 0.2: ('0.53', '1.19'), T 0.21: ('0.53', '1.19'), T 0.29: ('0.53', '1.19'), T 0.36: ('0.53', '1.19'), T 0.4: ('0.53', '1.19'), T inf: ('0.53', '1.19')
+    => v_fwd exact: unchanged for every T >= 3.2865 rad/s (set by 6:1 geometric), and T=0.29 equals T=inf: False
+    => v_fwd 2-dec: unchanged for every T >= 0.1622 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+    => v_td set: unchanged for every T >= 0.1622 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+
+  [grid+sliver s84]
+    6:1 emp v_fwd exact: T=inf (0.5263977851711793, 0.5778346248171894); breakpoint psi 3.2860 (v_td 0.75 lam 10.000 v_fwd 0.5264 beta* 84.00); just below it: (0.5270234568046822, 0.5778346248171894)
+    6:1 emp v_fwd 2-dec: T=inf ('0.53', '0.58'); breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: ('0.58', '0.58')
+    6:1 emp v_td set   : T=inf [0.75, 0.8]; breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: [0.8]
+    6:1 emp 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.53', '0.58'), T 0.2: ('0.53', '0.58'), T 0.21: ('0.53', '0.58'), T 0.29: ('0.53', '0.58'), T 0.36: ('0.53', '0.58'), T 0.4: ('0.53', '0.58'), T inf: ('0.53', '0.58')
+    6:1 geo v_fwd exact: T=inf (0.5263600839815475, 0.5780438303314226); breakpoint psi 1.6306 (v_td 0.75 lam 5.000 v_fwd 0.5264 beta* 84.00); just below it: (0.527495319455883, 0.5780438303314226)
+    6:1 geo v_fwd 2-dec: T=inf ('0.53', '0.58'); breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5280 beta* 84.00); just below it: ('0.58', '0.58')
+    6:1 geo v_td set   : T=inf [0.75, 0.8]; breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5280 beta* 84.00); just below it: [0.8]
+    6:1 geo 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.53', '0.58'), T 0.2: ('0.53', '0.58'), T 0.21: ('0.53', '0.58'), T 0.29: ('0.53', '0.58'), T 0.36: ('0.53', '0.58'), T 0.4: ('0.53', '0.58'), T inf: ('0.53', '0.58')
+    9:1 emp v_fwd exact: T=inf (0.5263977851711793, 1.2334030655087103); breakpoint psi 3.2860 (v_td 0.75 lam 10.000 v_fwd 0.5264 beta* 84.00); just below it: (0.5270234568046822, 1.2334030655087103)
+    9:1 emp v_fwd 2-dec: T=inf ('0.53', '1.23'); breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: ('0.58', '1.23')
+    9:1 emp v_td set   : T=inf [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1622 (v_td 0.75 lam 0.500 v_fwd 0.5278 beta* 84.00); just below it: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 emp 2-dec span by T: T 0.16: ('0.58', '1.23'), T 0.18: ('0.53', '1.23'), T 0.2: ('0.53', '1.23'), T 0.21: ('0.53', '1.23'), T 0.29: ('0.53', '1.23'), T 0.36: ('0.53', '1.23'), T 0.4: ('0.53', '1.23'), T inf: ('0.53', '1.23')
+    9:1 geo v_fwd exact: T=inf (0.5263600839815475, 1.233364077566905); breakpoint psi 1.6306 (v_td 0.75 lam 5.000 v_fwd 0.5264 beta* 84.00); just below it: (0.527495319455883, 1.233364077566905)
+    9:1 geo v_fwd 2-dec: T=inf ('0.53', '1.23'); breakpoint psi 0.2083 (v_td 1.45 lam 1.500 v_fwd 1.2334 beta* 77.50); just below it: ('0.53', '1.19')
+    9:1 geo v_td set   : T=inf [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1621 (v_td 0.75 lam 0.500 v_fwd 0.5280 beta* 84.00); just below it: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 geo 2-dec span by T: T 0.16: ('0.58', '1.19'), T 0.18: ('0.53', '1.19'), T 0.2: ('0.53', '1.19'), T 0.21: ('0.53', '1.23'), T 0.29: ('0.53', '1.23'), T 0.36: ('0.53', '1.23'), T 0.4: ('0.53', '1.23'), T inf: ('0.53', '1.23')
+    => v_fwd exact: unchanged for every T >= 3.2860 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: False
+    => v_fwd 2-dec: unchanged for every T >= 0.2083 rad/s (set by 9:1 geometric), and T=0.29 equals T=inf: True
+    => v_td set: unchanged for every T >= 0.1622 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+
+  [grid+sliver s025]
+    6:1 emp v_fwd exact: T=inf (0.4957143609562998, 0.5778346248171894); breakpoint psi 3.4894 (v_td 0.70 lam 10.000 v_fwd 0.4957 beta* 84.25); just below it: (0.496312800942081, 0.5778346248171894)
+    6:1 emp v_fwd 2-dec: T=inf ('0.50', '0.58'); breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: ('0.53', '0.58')
+    6:1 emp v_td set   : T=inf [0.7, 0.75, 0.8]; breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: [0.75, 0.8]
+    6:1 emp 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.50', '0.58'), T 0.2: ('0.50', '0.58'), T 0.21: ('0.50', '0.58'), T 0.29: ('0.50', '0.58'), T 0.36: ('0.50', '0.58'), T 0.4: ('0.50', '0.58'), T inf: ('0.50', '0.58')
+    6:1 geo v_fwd exact: T=inf (0.4956485853141178, 0.5781202423484353); breakpoint psi 3.4899 (v_td 0.70 lam 10.000 v_fwd 0.4956 beta* 84.25); just below it: (0.49638382813320514, 0.5781202423484353)
+    6:1 geo v_fwd 2-dec: T=inf ('0.50', '0.58'); breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: ('0.53', '0.58')
+    6:1 geo v_td set   : T=inf [0.7, 0.75, 0.8]; breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: [0.75, 0.8]
+    6:1 geo 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.50', '0.58'), T 0.2: ('0.50', '0.58'), T 0.21: ('0.50', '0.58'), T 0.29: ('0.50', '0.58'), T 0.36: ('0.50', '0.58'), T 0.4: ('0.50', '0.58'), T inf: ('0.50', '0.58')
+    9:1 emp v_fwd exact: T=inf (0.4957143609562998, 1.2125874491784432); breakpoint psi 3.4894 (v_td 0.70 lam 10.000 v_fwd 0.4957 beta* 84.25); just below it: (0.496312800942081, 1.2125874491784432)
+    9:1 emp v_fwd 2-dec: T=inf ('0.50', '1.21'); breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: ('0.53', '1.21')
+    9:1 emp v_td set   : T=inf [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 emp 2-dec span by T: T 0.16: ('0.58', '1.21'), T 0.18: ('0.50', '1.21'), T 0.2: ('0.50', '1.21'), T 0.21: ('0.50', '1.21'), T 0.29: ('0.50', '1.21'), T 0.36: ('0.50', '1.21'), T 0.4: ('0.50', '1.21'), T inf: ('0.50', '1.21')
+    9:1 geo v_fwd exact: T=inf (0.4956485853141178, 1.2131422206886164); breakpoint psi 3.4899 (v_td 0.70 lam 10.000 v_fwd 0.4956 beta* 84.25); just below it: (0.49638382813320514, 1.2131422206886164)
+    9:1 geo v_fwd 2-dec: T=inf ('0.50', '1.21'); breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: ('0.53', '1.21')
+    9:1 geo v_td set   : T=inf [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 geo 2-dec span by T: T 0.16: ('0.58', '1.21'), T 0.18: ('0.50', '1.21'), T 0.2: ('0.50', '1.21'), T 0.21: ('0.50', '1.21'), T 0.29: ('0.50', '1.21'), T 0.36: ('0.50', '1.21'), T 0.4: ('0.50', '1.21'), T inf: ('0.50', '1.21')
+    => v_fwd exact: unchanged for every T >= 3.4899 rad/s (set by 6:1 geometric), and T=0.29 equals T=inf: False
+    => v_fwd 2-dec: unchanged for every T >= 0.1722 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+    => v_td set: unchanged for every T >= 0.1722 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+
+  [grid+sliver s025w]
+    6:1 emp v_fwd exact: T=inf (0.4957143609562998, 0.5778346248171894); breakpoint psi 3.4894 (v_td 0.70 lam 10.000 v_fwd 0.4957 beta* 84.25); just below it: (0.496312800942081, 0.5778346248171894)
+    6:1 emp v_fwd 2-dec: T=inf ('0.50', '0.58'); breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: ('0.53', '0.58')
+    6:1 emp v_td set   : T=inf [0.7, 0.75, 0.8]; breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: [0.75, 0.8]
+    6:1 emp 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.50', '0.58'), T 0.2: ('0.50', '0.58'), T 0.21: ('0.50', '0.58'), T 0.29: ('0.50', '0.58'), T 0.36: ('0.50', '0.58'), T 0.4: ('0.50', '0.58'), T inf: ('0.50', '0.58')
+    6:1 geo v_fwd exact: T=inf (0.4956485853141178, 0.5781202423484353); breakpoint psi 3.4899 (v_td 0.70 lam 10.000 v_fwd 0.4956 beta* 84.25); just below it: (0.49638382813320514, 0.5781202423484353)
+    6:1 geo v_fwd 2-dec: T=inf ('0.50', '0.58'); breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: ('0.53', '0.58')
+    6:1 geo v_td set   : T=inf [0.7, 0.75, 0.8]; breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: [0.75, 0.8]
+    6:1 geo 2-dec span by T: T 0.16: ('0.58', '0.58'), T 0.18: ('0.50', '0.58'), T 0.2: ('0.50', '0.58'), T 0.21: ('0.50', '0.58'), T 0.29: ('0.50', '0.58'), T 0.36: ('0.50', '0.58'), T 0.4: ('0.50', '0.58'), T inf: ('0.50', '0.58')
+    9:1 emp v_fwd exact: T=inf (0.4957143609562998, 1.2125874491784432); breakpoint psi 3.4894 (v_td 0.70 lam 10.000 v_fwd 0.4957 beta* 84.25); just below it: (0.496312800942081, 1.2125874491784432)
+    9:1 emp v_fwd 2-dec: T=inf ('0.50', '1.21'); breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: ('0.53', '1.21')
+    9:1 emp v_td set   : T=inf [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1722 (v_td 0.70 lam 0.500 v_fwd 0.4971 beta* 84.25); just below it: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 emp 2-dec span by T: T 0.16: ('0.58', '1.21'), T 0.18: ('0.50', '1.21'), T 0.2: ('0.50', '1.21'), T 0.21: ('0.50', '1.21'), T 0.29: ('0.50', '1.21'), T 0.36: ('0.50', '1.21'), T 0.4: ('0.50', '1.21'), T inf: ('0.50', '1.21')
+    9:1 geo v_fwd exact: T=inf (0.4956485853141178, 1.2131422206886164); breakpoint psi 3.4899 (v_td 0.70 lam 10.000 v_fwd 0.4956 beta* 84.25); just below it: (0.49638382813320514, 1.2131422206886164)
+    9:1 geo v_fwd 2-dec: T=inf ('0.50', '1.21'); breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: ('0.53', '1.21')
+    9:1 geo v_td set   : T=inf [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]; breakpoint psi 0.1721 (v_td 0.70 lam 0.500 v_fwd 0.4973 beta* 84.25); just below it: [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45]
+    9:1 geo 2-dec span by T: T 0.16: ('0.58', '1.21'), T 0.18: ('0.50', '1.21'), T 0.2: ('0.50', '1.21'), T 0.21: ('0.50', '1.21'), T 0.29: ('0.50', '1.21'), T 0.36: ('0.50', '1.21'), T 0.4: ('0.50', '1.21'), T inf: ('0.50', '1.21')
+    => v_fwd exact: unchanged for every T >= 3.4899 rad/s (set by 6:1 geometric), and T=0.29 equals T=inf: False
+    => v_fwd 2-dec: unchanged for every T >= 0.1722 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+    => v_td set: unchanged for every T >= 0.1722 rad/s (set by 6:1 empirical), and T=0.29 equals T=inf: True
+
+====================================================================================================
+10. make_stage2a_figs.print_sec2d() on each input (the paper script's own Sec. II-D printout)
+====================================================================================================
+
+  >>> s84 (paper inputs, step 0.5)
+
+--- Sec. II-D numbers (leg gates 29.5/44.25 N.m, C4 29.5 N.m at the profile contact) ---
+  6:1 grid       : cambered v_fwd 0.53-0.58 m/s (v_td 0.75-0.80); per-speed R_min 3.25-3.90 m (tightest 3.25 m at v_fwd 0.53)
+  6:1 grid+sliver: cambered v_fwd 0.53-0.58 m/s (v_td 0.75-0.80); per-speed R_min 1.86-2.08 m (tightest 1.86 m at v_fwd 0.53)
+  9:1 grid       : cambered v_fwd 0.53-1.23 m/s (v_td 0.75-1.45); per-speed R_min 2.31-5.02 m (tightest 2.31 m at v_fwd 0.63)
+  9:1 grid+sliver: cambered v_fwd 0.53-1.23 m/s (v_td 0.75-1.45); per-speed R_min 1.86-4.44 m (tightest 1.86 m at v_fwd 0.53)
+  6:1 feasible cells (both laws, grid): C4 max demand 21.5 N.m; largest eroded leg demand 29.2 N.m (emp 29.2, geo 29.1; cambered only 29.2)
+  9:1 feasible cells (both laws, grid): C4 max demand 27.9 N.m; largest eroded leg demand 37.4 N.m (emp 37.2, geo 37.4; cambered only 37.4)
+  E2 at 6:1, measured band v_fwd 0.7-0.85 m/s: 0 feasible cambered cells
+    scrub     : 33 cells, lambda 1.5-30.0 deg
+    leg-torque: 9 cells, lambda 0.0-1.0 deg
+    abad      : 0 cells
+  E4 worst entry slew / flight over steady (feasible) grid cells:
+    stage 35 leg gate, stage 2.56 rad/s (ratio applied twice):  5.92 % (lambda 1.0 deg, flight 115 ms, geo v_td 0.85)
+    stage 35 leg gate, 6:1 no-load 34.6 rad/s                :  0.44 % (lambda 1.0 deg, flight 115 ms, geo v_td 0.85)
+    stage 35 leg gate, 6:1 rated 14.66 rad/s                 :  1.03 % (lambda 1.0 deg, flight 115 ms, geo v_td 0.85)
+    6:1 leg gate, stage 2.56 rad/s (ratio applied twice):  3.17 % (lambda 0.5 deg, flight 107 ms, geo v_td 0.75)
+    6:1 leg gate, 6:1 no-load 34.6 rad/s                :  0.23 % (lambda 0.5 deg, flight 107 ms, geo v_td 0.75)
+    6:1 leg gate, 6:1 rated 14.66 rad/s                 :  0.55 % (lambda 0.5 deg, flight 107 ms, geo v_td 0.75)
+    9:1 leg gate, stage 2.56 rad/s (ratio applied twice):  8.98 % (lambda 2.0 deg, flight 152 ms, emp v_td 1.45)
+    9:1 leg gate, 6:1 no-load 34.6 rad/s                :  0.66 % (lambda 2.0 deg, flight 152 ms, emp v_td 1.45)
+    9:1 leg gate, 6:1 rated 14.66 rad/s                 :  1.57 % (lambda 2.0 deg, flight 152 ms, emp v_td 1.45)
+
+  >>> s025 (step 0.25, R2 extended sliver)
+
+--- Sec. II-D numbers (leg gates 29.5/44.25 N.m, C4 29.5 N.m at the profile contact) ---
+  6:1 grid       : cambered v_fwd 0.50-0.58 m/s (v_td 0.70-0.80); per-speed R_min 2.89-3.90 m (tightest 2.89 m at v_fwd 0.50)
+  6:1 grid+sliver: cambered v_fwd 0.50-0.58 m/s (v_td 0.70-0.80); per-speed R_min 1.77-2.08 m (tightest 1.77 m at v_fwd 0.50)
+  9:1 grid       : cambered v_fwd 0.50-1.21 m/s (v_td 0.70-1.45); per-speed R_min 2.17-5.21 m (tightest 2.17 m at v_fwd 0.61)
+  9:1 grid+sliver: cambered v_fwd 0.50-1.21 m/s (v_td 0.70-1.45); per-speed R_min 1.77-4.20 m (tightest 1.77 m at v_fwd 0.50)
+  6:1 feasible cells (both laws, grid): C4 max demand 21.5 N.m; largest eroded leg demand 29.2 N.m (emp 29.2, geo 29.1; cambered only 29.2)
+  9:1 feasible cells (both laws, grid): C4 max demand 27.2 N.m; largest eroded leg demand 36.5 N.m (emp 36.5, geo 36.5; cambered only 36.5)
+  E2 at 6:1, measured band v_fwd 0.7-0.85 m/s: 0 feasible cambered cells
+    scrub     : 37 cells, lambda 1.5-30.0 deg
+    leg-torque: 9 cells, lambda 0.0-1.0 deg
+    abad      : 0 cells
+  E4 worst entry slew / flight over steady (feasible) grid cells:
+    stage 29.5 leg gate, stage 2.56 rad/s (ratio applied twice):  3.43 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    stage 29.5 leg gate, 6:1 no-load 34.6 rad/s                :  0.25 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    stage 29.5 leg gate, 6:1 rated 14.66 rad/s                 :  0.60 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    6:1 leg gate, stage 2.56 rad/s (ratio applied twice):  3.43 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    6:1 leg gate, 6:1 no-load 34.6 rad/s                :  0.25 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    6:1 leg gate, 6:1 rated 14.66 rad/s                 :  0.60 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    9:1 leg gate, stage 2.56 rad/s (ratio applied twice):  8.59 % (lambda 2.0 deg, flight 159 ms, geo v_td 1.45)
+    9:1 leg gate, 6:1 no-load 34.6 rad/s                :  0.64 % (lambda 2.0 deg, flight 159 ms, geo v_td 1.45)
+    9:1 leg gate, 6:1 rated 14.66 rad/s                 :  1.50 % (lambda 2.0 deg, flight 159 ms, geo v_td 1.45)
+
+  >>> s025w (step 0.25, sliver cut to original windows)
+
+--- Sec. II-D numbers (leg gates 29.5/44.25 N.m, C4 29.5 N.m at the profile contact) ---
+  6:1 grid       : cambered v_fwd 0.50-0.58 m/s (v_td 0.70-0.80); per-speed R_min 2.89-3.90 m (tightest 2.89 m at v_fwd 0.50)
+  6:1 grid+sliver: cambered v_fwd 0.50-0.58 m/s (v_td 0.70-0.80); per-speed R_min 1.77-2.08 m (tightest 1.77 m at v_fwd 0.50)
+  9:1 grid       : cambered v_fwd 0.50-1.21 m/s (v_td 0.70-1.45); per-speed R_min 2.17-5.21 m (tightest 2.17 m at v_fwd 0.61)
+  9:1 grid+sliver: cambered v_fwd 0.50-1.21 m/s (v_td 0.70-1.45); per-speed R_min 1.77-4.29 m (tightest 1.77 m at v_fwd 0.50)
+  6:1 feasible cells (both laws, grid): C4 max demand 21.5 N.m; largest eroded leg demand 29.2 N.m (emp 29.2, geo 29.1; cambered only 29.2)
+  9:1 feasible cells (both laws, grid): C4 max demand 27.2 N.m; largest eroded leg demand 36.5 N.m (emp 36.5, geo 36.5; cambered only 36.5)
+  E2 at 6:1, measured band v_fwd 0.7-0.85 m/s: 0 feasible cambered cells
+    scrub     : 37 cells, lambda 1.5-30.0 deg
+    leg-torque: 9 cells, lambda 0.0-1.0 deg
+    abad      : 0 cells
+  E4 worst entry slew / flight over steady (feasible) grid cells:
+    stage 29.5 leg gate, stage 2.56 rad/s (ratio applied twice):  3.43 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    stage 29.5 leg gate, 6:1 no-load 34.6 rad/s                :  0.25 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    stage 29.5 leg gate, 6:1 rated 14.66 rad/s                 :  0.60 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    6:1 leg gate, stage 2.56 rad/s (ratio applied twice):  3.43 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    6:1 leg gate, 6:1 no-load 34.6 rad/s                :  0.25 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    6:1 leg gate, 6:1 rated 14.66 rad/s                 :  0.60 % (lambda 0.5 deg, flight 99 ms, geo v_td 0.70)
+    9:1 leg gate, stage 2.56 rad/s (ratio applied twice):  8.59 % (lambda 2.0 deg, flight 159 ms, geo v_td 1.45)
+    9:1 leg gate, 6:1 no-load 34.6 rad/s                :  0.64 % (lambda 2.0 deg, flight 159 ms, geo v_td 1.45)
+    9:1 leg gate, 6:1 rated 14.66 rad/s                 :  1.50 % (lambda 2.0 deg, flight 159 ms, geo v_td 1.45)
+
+====================================================================================================
+11. Summary: each II-D statement, paper value, s84 read, step-0.25 reads (empirical law unless noted)
+====================================================================================================
+  statement                                           | paper                      | s84                                | s025                               | s025w
+  6:1 span, grid (II-D p.5)                           | 0.53-0.58 (v_td 0.75-0.80) | 0.53-0.58 (v_td 0.75-0.80)         | 0.50-0.58 (v_td 0.70-0.80)         | 0.50-0.58 (v_td 0.70-0.80)
+  6:1 span, grid+sliver                               | 0.53-0.58 (v_td 0.75-0.80) | 0.53-0.58 (v_td 0.75-0.80)         | 0.50-0.58 (v_td 0.70-0.80)         | 0.50-0.58 (v_td 0.70-0.80)
+  6:1 span, geometric law, grid+sliver                | 0.53-0.58                  | 0.53-0.58                          | 0.50-0.58                          | 0.50-0.58
+  6:1 per-speed R_min, grid+sliver                    | 1.9-2.0 m                  | 1.9-2.1 (1.86-2.08)                | 1.8-2.1 (1.77-2.08)                | 1.8-2.1 (1.77-2.08)
+  band 6:1: no torque-feasible cambered cell          | true                       | true                               | true                               | true
+  band 6:1: scrub above 1 deg, torque below (HEAD)    | true                       | true grid / false +sliver          | true grid / false +sliver          | true grid / false +sliver
+  band 6:1: scrub above phi_max, torque below (WT)    | true                       | true grid / true +sliver           | true grid / true +sliver           | true grid / true +sliver
+  9:1 span, grid+sliver                               | 0.53-1.23                  | 0.53-1.23                          | 0.50-1.21                          | 0.50-1.21
+  9:1 span, geometric law, grid+sliver                | 0.53-1.23                  | 0.53-1.23                          | 0.50-1.21                          | 0.50-1.21
+  9:1 upper edge is the sweep's top                   | true                       | true                               | true                               | true
+  9:1 covers the measured band                        | true                       | true                               | true                               | true
+  9:1 in-band per-speed R_min                         | 2.4-2.9 m                  | 2.4-2.8 (2.43-2.80)                | 2.4-2.8 (2.43-2.76)                | 2.4-2.8 (2.43-2.76)
+  9:1 largest eroded demand (feasible cambered)       | 37.2                       | 37.2 (grid all feasible, both laws 37.4) | 36.5 (grid all feasible, both laws 36.5) | 36.5 (grid all feasible, both laws 36.5)
+  C4 max feasible demand 6:1 (grid, both laws)        | 21.5                       | 21.5                               | 21.5                               | 21.5
+  C4 max feasible demand 9:1 (grid, both laws)        | 27.9                       | 27.9                               | 27.2                               | 27.2
+  C4 never binds (existing cells <= 29.5)             | true                       | true (max 27.9)                    | true (max 27.2)                    | true (max 27.2)
+  E1 (HEAD) band scrub-feasible bank <= 1.0           | 1.0                        | 1.00 grid / 1.36 +sliver           | 1.00 grid / 1.31 +sliver           | 1.00 grid / 1.31 +sliver
+  E1 (HEAD) rising to ~2 deg at the 1.2 m/s edge      | ~2 at 1.2                  | 2.00 at 1.23 m/s                   | 2.04 at 1.21 m/s                   | 2.00 at 1.21 m/s
+  E1 (WT) band bank <= phi_max 1.2-1.4 (< 1.5)        | true                       | true (realised max 1.36)           | true (realised max 1.31)           | true (realised max 1.31)
+  C4 para (WT) feasible cells bank at most 2 deg      | true                       | true (max 2.000)                   | false (max 2.042)                  | true (max 2.000)
+  E2 AB/AD never binds                                | true                       | true                               | true                               | true
+  E3 identical feasible sets; area 0.0 %              | true 0.0 %                 | true 0.0 % grid / n/a +sliver      | true 0.0 % grid / true 0.0 % +sliver | true 0.0 % grid / true 0.0 % +sliver
+  E4 worst slew/flight, 34.6 / 14.66 rad/s            | well inside                | 0.66 % / 1.57 %                    | 0.65 % / 1.53 %                    | 0.64 % / 1.50 %
+  R_min on v/0.29 within resolution (R/line)          | ~1                         | 6:1 1.019-1.042, 9:1 1.004-1.050   | 6:1 1.019-1.042, 9:1 1.004-1.042   | 6:1 1.019-1.042, 9:1 1.004-1.070
+  coarse-grid R_min artifacts (9:1 grid only)         | 2.3-3.3 m                  | 2.3-5.0                            | 2.2-5.2                            | 2.2-5.2
+  added sliver cells                                  | 135                        | 135 emp (135 both laws)            | 216 emp (432 both laws)            | 144 emp (288 both laws)
+  threshold breakpoint, 2-dec v_fwd span, grid        | 0.21                       | 0.2083                             | 0.1722                             | 0.1722
+  threshold breakpoint, 2-dec v_fwd span, grid+sliver | 0.21                       | 0.2083                             | 0.1722                             | 0.1722
+  v_fwd / v_td (existing grid cells)                  | ~0.73                      | mean 0.750 (0.700-0.851)           | mean 0.744 (0.699-0.836)           | mean 0.744 (0.699-0.836)

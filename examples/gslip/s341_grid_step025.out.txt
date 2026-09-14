@@ -1,0 +1,484 @@
+stage2a_turning_envelope selftest: PASS
+paper module imported (run_name != __main__) from /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/make_stage2a_figs.py
+stage run_grid gates (verdicts as solved): {'leg': 29.5, 'abad': 29.5, 'joint_speed': 34.6, 'erosion': 2.330226364846871, 'psi_dot_max': 0.29}
+LegWheel HEAD 9b48ab5
+grid read from /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/stage2a_grid.npz: laws ('empirical', 'geometric'), 21 v_td 0.45..1.45, lambda [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 25.0, 30.0]
+  equals the stage module's V_GRID_FULL / LAM_GRID_DEG: True / True
+
+runtime: step-0.25 tasks 42 ({'fresh': 36, 's340 prefix (lam 0-5) + fresh suffix': 6}); summed task seconds 23649 s (reused s340 prefix time not included), task range 289-1580 s; control tasks [327, 172] s; first/last record end 09-14 13:05:00 / 09-14 14:40:44
+
+--- control: step 0.5 on current code vs the caches ---
+  empirical v_td 0.75 (327 s):
+  [vs s84] cells 13: exist new 9, old 9; existence gained 0, LOST 0
+    beta* changed in 0 of 9 cells existing in both; shift histogram (new - old, deg): {}
+    max |d| over 9 cells (all both-exist): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 3.553e-15 @emp 0.75/5; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+    max |d| over 9 cells (beta* unchanged): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 3.553e-15 @emp 0.75/5; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+    exact reproduction of s84 (exists, beta, alpha, v_fwd, tau_leg, psi, duty, slope): True
+  geometric v_td 1.45 (172 s):
+  [vs s84] cells 13: exist new 13, old 13; existence gained 0, LOST 0
+    beta* changed in 10 of 13 cells existing in both; shift histogram (new - old, deg): {0.5: 8, 1.0: 2}
+    max |d| over 13 cells (all both-exist): beta_deg 1 @geo 1.45/30; alpha_deg 3.097 @geo 1.45/1.5; v_fwd 0.04163 @geo 1.45/1.5; tau_leg 1.879 @geo 1.45/1.5; tau_abad_profile 1.365 @geo 1.45/1.5; psi 0.1331 @geo 1.45/25; R 0.393 @geo 1.45/1.5; duty 0.02143 @geo 1.45/1.5; slope 0.04076 @geo 1.45/30; flight_s 0.01347 @geo 1.45/1.5; scrub 0.057 @geo 1.45/25; lam_out_deg 0.5076 @geo 1.45/30
+    max |d| over 3 cells (beta* unchanged): beta_deg 0; alpha_deg 0.02284 @geo 1.45/1; v_fwd 0.0003268 @geo 1.45/1; tau_leg 0.0143 @geo 1.45/1; tau_abad_profile 0.01043 @geo 1.45/1; psi 3.941e-05 @geo 1.45/1; R 0.004549 @geo 1.45/1; duty 0.0001559 @geo 1.45/1; slope 0.0001952 @geo 1.45/1; flight_s 9.761e-05 @geo 1.45/1; scrub 1.687e-05 @geo 1.45/1; lam_out_deg 8.758e-06 @geo 1.45/1
+    max |d| over 10 cells (beta* changed): beta_deg 1 @geo 1.45/30; alpha_deg 3.097 @geo 1.45/1.5; v_fwd 0.04163 @geo 1.45/1.5; tau_leg 1.879 @geo 1.45/1.5; tau_abad_profile 1.365 @geo 1.45/1.5; psi 0.1331 @geo 1.45/25; R 0.393 @geo 1.45/1.5; duty 0.02143 @geo 1.45/1.5; slope 0.04076 @geo 1.45/30; flight_s 0.01347 @geo 1.45/1.5; scrub 0.057 @geo 1.45/25; lam_out_deg 0.5076 @geo 1.45/30
+    beta*-changed cells:
+      geo v_td 1.45 lam  1.5: beta 77.50 -> 78.00, alpha 30.94 -> 34.03, v_fwd 1.2334 -> 1.1917, tau_leg 35.55 -> 37.43, psi 0.2083 -> 0.2156, R 5.922 -> 5.529, |slope| 1.2825 -> 1.2822
+      geo v_td 1.45 lam  2.0: beta 77.50 -> 78.00, alpha 30.96 -> 34.04, v_fwd 1.2331 -> 1.1917, tau_leg 35.57 -> 37.43, psi 0.2778 -> 0.2875, R 4.438 -> 4.145, |slope| 1.2827 -> 1.2823
+      geo v_td 1.45 lam  2.5: beta 77.50 -> 78.00, alpha 30.98 -> 34.04, v_fwd 1.2328 -> 1.1916, tau_leg 35.59 -> 37.44, psi 0.3474 -> 0.3594, R 3.548 -> 3.315, |slope| 1.2829 -> 1.2824
+      geo v_td 1.45 lam  5.0: beta 77.50 -> 78.00, alpha 31.15 -> 34.08, v_fwd 1.2305 -> 1.1910, tau_leg 35.73 -> 37.50, psi 0.6975 -> 0.7206, R 1.764 -> 1.653, |slope| 1.2845 -> 1.2831
+      geo v_td 1.45 lam  7.5: beta 77.50 -> 78.00, alpha 31.41 -> 34.15, v_fwd 1.2271 -> 1.1900, tau_leg 35.94 -> 37.59, psi 1.0525 -> 1.0853, R 1.166 -> 1.096, |slope| 1.2871 -> 1.2844
+      geo v_td 1.45 lam 10.0: beta 77.50 -> 78.00, alpha 31.74 -> 34.25, v_fwd 1.2226 -> 1.1886, tau_leg 36.23 -> 37.73, psi 1.4149 -> 1.4554, R 0.864 -> 0.817, |slope| 1.2906 -> 1.2862
+      geo v_td 1.45 lam 15.0: beta 77.50 -> 78.00, alpha 32.63 -> 34.52, v_fwd 1.2102 -> 1.1844, tau_leg 37.02 -> 38.11, psi 2.1719 -> 2.2193, R 0.557 -> 0.534, |slope| 1.3008 -> 1.2914
+      geo v_td 1.45 lam 20.0: beta 77.50 -> 78.00, alpha 33.81 -> 34.90, v_fwd 1.1934 -> 1.1786, tau_leg 38.08 -> 38.67, psi 2.9920 -> 3.0295, R 0.399 -> 0.389, |slope| 1.3158 -> 1.2990
+      geo v_td 1.45 lam 25.0: beta 77.00 -> 78.00, alpha 32.36 -> 35.40, v_fwd 1.2122 -> 1.1709, tau_leg 37.70 -> 39.40, psi 3.7736 -> 3.9068, R 0.321 -> 0.300, |slope| 1.3361 -> 1.3092
+      geo v_td 1.45 lam 30.0: beta 77.00 -> 78.00, alpha 34.19 -> 36.01, v_fwd 1.1859 -> 1.1613, tau_leg 39.42 -> 40.35, psi 4.7760 -> 4.8773, R 0.248 -> 0.238, |slope| 1.3634 -> 1.3226
+  [vs s336 (corrected rolling radius)] cells 13: exist new 13, old 13; existence gained 0, LOST 0
+    beta* changed in 0 of 13 cells existing in both; shift histogram (new - old, deg): {}
+    max |d| over 13 cells (all both-exist): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 0; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+    max |d| over 13 cells (beta* unchanged): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 0; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+    exact reproduction of s84 (exists, beta, alpha, v_fwd, tau_leg, psi, duty, slope): False
+    exact reproduction of s336 (same fields + raw tau_abad, both profile lever): True
+
+--- s340 reuse verification (fresh step-0.25 solves vs s340's cells) ---
+  emp v_td 0.60 (0/7 s340 cells exist): 7 cells compared on every field, IDENTICAL
+  geo v_td 0.55 (0/7 s340 cells exist): 7 cells compared on every field, IDENTICAL
+  emp v_td 0.70 (7/7 s340 cells exist): 7 cells compared on every field, IDENTICAL
+  geo v_td 0.70 (7/7 s340 cells exist): 7 cells compared on every field, IDENTICAL
+  emp v_td 0.75 (7/7 s340 cells exist): 7 cells compared on every field, IDENTICAL
+  geo v_td 0.75 (7/7 s340 cells exist): 7 cells compared on every field, IDENTICAL
+  reuse allowed: True; reuse candidates [('emp', 0.5), ('emp', 0.55), ('emp', 0.65), ('geo', 0.5), ('geo', 0.6), ('geo', 0.65)]
+
+assembled 546 cells in the s84 order; keys beyond s84: ['c4_lever']; s84 keys absent: []
+run_grid verdicts at the stage gates: binding {'existence': 142, 'none': 12, 'scrub': 300, 'leg-torque': 92}
+
+=== step 0.25 vs the s84 cache (step 0.5), per law ===
+(tau_abad_profile = the C4 demand at the profile contact, the paper's abad_hold_profile applied to both; R compared on lambda > 0)
+
+empirical:
+  [step0.25 vs s84] cells 273: exist new 202, old 191; existence gained 11, LOST 0
+      gained: emp v_td 0.70 lam  0.0 (beta 84.25, alpha 44.14, v_fwd 0.4971)
+      gained: emp v_td 0.70 lam  0.5 (beta 84.25, alpha 44.14, v_fwd 0.4971)
+      gained: emp v_td 0.70 lam  1.0 (beta 84.25, alpha 44.14, v_fwd 0.4971)
+      gained: emp v_td 0.70 lam  1.5 (beta 84.25, alpha 44.14, v_fwd 0.4970)
+      gained: emp v_td 0.70 lam  2.0 (beta 84.25, alpha 44.14, v_fwd 0.4970)
+      gained: emp v_td 0.70 lam  2.5 (beta 84.25, alpha 44.15, v_fwd 0.4970)
+      gained: emp v_td 0.70 lam  5.0 (beta 84.25, alpha 44.18, v_fwd 0.4967)
+      gained: emp v_td 0.70 lam  7.5 (beta 84.25, alpha 44.22, v_fwd 0.4963)
+      gained: emp v_td 0.70 lam 10.0 (beta 84.25, alpha 44.29, v_fwd 0.4957)
+      gained: emp v_td 0.75 lam 15.0 (beta 83.75, alpha 42.93, v_fwd 0.5432)
+      gained: emp v_td 0.75 lam 20.0 (beta 83.75, alpha 43.21, v_fwd 0.5405)
+    beta* changed in 83 of 191 cells existing in both; shift histogram (new - old, deg): {-0.25: 26, 0.25: 57}
+    max |d| over 191 cells (all both-exist): beta_deg 0.25 @emp 1.45/15; alpha_deg 1.943 @emp 0.85/0; v_fwd 0.02146 @emp 1.15/20; tau_leg 0.969 @emp 1.45/0; tau_abad_profile 0.7474 @emp 1.45/0; psi 0.2935 @emp 0.85/30; R 0.5947 @emp 1.45/0.5; duty 0.01134 @emp 1.45/0; slope 0.003599 @emp 0.85/30; flight_s 0.006942 @emp 1.45/0; scrub 0.2481 @emp 0.85/30; lam_out_deg 0.006573 @emp 1.40/30
+    max |d| over 108 cells (beta* unchanged): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 3.553e-15 @emp 0.90/0.5; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+    max |d| over 83 cells (beta* changed): beta_deg 0.25 @emp 1.45/15; alpha_deg 1.943 @emp 0.85/0; v_fwd 0.02146 @emp 1.15/20; tau_leg 0.969 @emp 1.45/0; tau_abad_profile 0.7474 @emp 1.45/0; psi 0.2935 @emp 0.85/30; R 0.5947 @emp 1.45/0.5; duty 0.01134 @emp 1.45/0; slope 0.003599 @emp 0.85/30; flight_s 0.006942 @emp 1.45/0; scrub 0.2481 @emp 0.85/30; lam_out_deg 0.006573 @emp 1.40/30
+    beta*-changed cells:
+      emp v_td 0.85 lam  0.0: beta 83.00 -> 83.25, alpha 41.70 -> 43.64, v_fwd 0.6284 -> 0.6091, tau_leg 29.70 -> 30.28, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2737 -> 1.2707
+      emp v_td 0.85 lam  0.5: beta 83.00 -> 83.25, alpha 41.70 -> 43.64, v_fwd 0.6284 -> 0.6091, tau_leg 29.70 -> 30.29, psi 0.1362 -> 0.1405, R 4.613 -> 4.334, |slope| 1.2737 -> 1.2707
+      emp v_td 0.85 lam  1.0: beta 83.00 -> 83.25, alpha 41.70 -> 43.64, v_fwd 0.6284 -> 0.6091, tau_leg 29.70 -> 30.29, psi 0.2725 -> 0.2811, R 2.306 -> 2.167, |slope| 1.2737 -> 1.2708
+      emp v_td 0.85 lam  1.5: beta 83.00 -> 83.25, alpha 41.70 -> 43.64, v_fwd 0.6284 -> 0.6091, tau_leg 29.70 -> 30.29, psi 0.4088 -> 0.4217, R 1.537 -> 1.444, |slope| 1.2737 -> 1.2708
+      emp v_td 0.85 lam  2.0: beta 83.00 -> 83.25, alpha 41.70 -> 43.65, v_fwd 0.6283 -> 0.6091, tau_leg 29.71 -> 30.29, psi 0.5452 -> 0.5625, R 1.153 -> 1.083, |slope| 1.2738 -> 1.2709
+      emp v_td 0.85 lam  2.5: beta 83.00 -> 83.25, alpha 41.71 -> 43.65, v_fwd 0.6283 -> 0.6090, tau_leg 29.71 -> 30.30, psi 0.6817 -> 0.7033, R 0.922 -> 0.866, |slope| 1.2739 -> 1.2710
+      emp v_td 0.85 lam  5.0: beta 83.00 -> 83.25, alpha 41.74 -> 43.68, v_fwd 0.6280 -> 0.6087, tau_leg 29.76 -> 30.34, psi 1.3666 -> 1.4099, R 0.460 -> 0.432, |slope| 1.2745 -> 1.2716
+      emp v_td 0.85 lam  7.5: beta 83.00 -> 83.25, alpha 41.78 -> 43.72, v_fwd 0.6275 -> 0.6082, tau_leg 29.83 -> 30.42, psi 2.0582 -> 2.1233, R 0.305 -> 0.286, |slope| 1.2757 -> 1.2727
+      emp v_td 0.85 lam 10.0: beta 83.00 -> 83.25, alpha 41.85 -> 43.78, v_fwd 0.6268 -> 0.6076, tau_leg 29.94 -> 30.52, psi 2.7597 -> 2.8471, R 0.227 -> 0.213, |slope| 1.2772 -> 1.2743
+      emp v_td 0.85 lam 15.0: beta 83.00 -> 83.25, alpha 42.04 -> 43.97, v_fwd 0.6247 -> 0.6055, tau_leg 30.25 -> 30.83, psi 4.2075 -> 4.3408, R 0.148 -> 0.139, |slope| 1.2819 -> 1.2788
+      emp v_td 0.85 lam 20.0: beta 83.00 -> 83.25, alpha 42.32 -> 44.22, v_fwd 0.6218 -> 0.6027, tau_leg 30.70 -> 31.27, psi 5.7424 -> 5.9244, R 0.108 -> 0.102, |slope| 1.2886 -> 1.2854
+      emp v_td 0.85 lam 25.0: beta 83.00 -> 83.25, alpha 42.68 -> 44.56, v_fwd 0.6179 -> 0.5989, tau_leg 31.32 -> 31.86, psi 7.4033 -> 7.6382, R 0.083 -> 0.078, |slope| 1.2978 -> 1.2945
+      emp v_td 0.85 lam 30.0: beta 83.00 -> 83.25, alpha 43.13 -> 44.99, v_fwd 0.6130 -> 0.5941, tau_leg 32.11 -> 32.64, psi 9.2400 -> 9.5335, R 0.066 -> 0.062, |slope| 1.3100 -> 1.3064
+      emp v_td 0.90 lam 30.0: beta 82.50 -> 82.75, alpha 41.80 -> 43.60, v_fwd 0.6631 -> 0.6442, tau_leg 32.66 -> 33.22, psi 8.5408 -> 8.7914, R 0.078 -> 0.073, |slope| 1.3127 -> 1.3092
+      emp v_td 0.95 lam  0.0: beta 82.50 -> 82.75, alpha 42.67 -> 44.47, v_fwd 0.6920 -> 0.6716, tau_leg 31.98 -> 32.58, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2739 -> 1.2725
+      emp v_td 0.95 lam  0.5: beta 82.50 -> 82.75, alpha 42.67 -> 44.47, v_fwd 0.6919 -> 0.6716, tau_leg 31.98 -> 32.58, psi 0.1237 -> 0.1275, R 5.593 -> 5.269, |slope| 1.2739 -> 1.2726
+      emp v_td 0.95 lam  1.0: beta 82.50 -> 82.75, alpha 42.67 -> 44.47, v_fwd 0.6919 -> 0.6716, tau_leg 31.98 -> 32.58, psi 0.2475 -> 0.2550, R 2.796 -> 2.634, |slope| 1.2740 -> 1.2726
+      emp v_td 0.95 lam  1.5: beta 82.50 -> 82.75, alpha 42.67 -> 44.47, v_fwd 0.6919 -> 0.6716, tau_leg 31.98 -> 32.59, psi 0.3713 -> 0.3825, R 1.864 -> 1.756, |slope| 1.2740 -> 1.2726
+      emp v_td 0.95 lam  2.0: beta 82.50 -> 82.75, alpha 42.67 -> 44.47, v_fwd 0.6919 -> 0.6716, tau_leg 31.99 -> 32.59, psi 0.4951 -> 0.5101, R 1.397 -> 1.317, |slope| 1.2741 -> 1.2727
+      emp v_td 0.95 lam  2.5: beta 82.50 -> 82.75, alpha 42.68 -> 44.48, v_fwd 0.6918 -> 0.6715, tau_leg 31.99 -> 32.60, psi 0.6191 -> 0.6378, R 1.118 -> 1.053, |slope| 1.2742 -> 1.2728
+      emp v_td 0.95 lam  5.0: beta 82.50 -> 82.75, alpha 42.70 -> 44.50, v_fwd 0.6915 -> 0.6712, tau_leg 32.04 -> 32.64, psi 1.2411 -> 1.2787, R 0.557 -> 0.525, |slope| 1.2748 -> 1.2734
+      emp v_td 0.95 lam  7.5: beta 82.50 -> 82.75, alpha 42.75 -> 44.54, v_fwd 0.6910 -> 0.6707, tau_leg 32.11 -> 32.71, psi 1.8691 -> 1.9256, R 0.370 -> 0.348, |slope| 1.2759 -> 1.2744
+      emp v_td 0.95 lam 10.0: beta 82.50 -> 82.75, alpha 42.81 -> 44.60, v_fwd 0.6902 -> 0.6700, tau_leg 32.22 -> 32.81, psi 2.5061 -> 2.5818, R 0.275 -> 0.259, |slope| 1.2774 -> 1.2759
+      emp v_td 0.95 lam 15.0: beta 82.50 -> 82.75, alpha 42.99 -> 44.77, v_fwd 0.6880 -> 0.6679, tau_leg 32.52 -> 33.11, psi 3.8204 -> 3.9359, R 0.180 -> 0.170, |slope| 1.2819 -> 1.2803
+      emp v_td 1.00 lam 15.0: beta 82.00 -> 82.25, alpha 41.66 -> 43.39, v_fwd 0.7399 -> 0.7196, tau_leg 33.04 -> 33.67, psi 3.5527 -> 3.6526, R 0.208 -> 0.197, |slope| 1.2842 -> 1.2827
+      emp v_td 1.00 lam 20.0: beta 82.00 -> 82.25, alpha 41.92 -> 43.64, v_fwd 0.7366 -> 0.7164, tau_leg 33.49 -> 34.10, psi 4.8474 -> 4.9837, R 0.152 -> 0.144, |slope| 1.2908 -> 1.2892
+      emp v_td 1.00 lam 25.0: beta 82.00 -> 82.25, alpha 42.27 -> 43.97, v_fwd 0.7322 -> 0.7122, tau_leg 34.10 -> 34.70, psi 6.2475 -> 6.4231, R 0.117 -> 0.111, |slope| 1.2997 -> 1.2979
+      emp v_td 1.00 lam 30.0: beta 82.00 -> 82.25, alpha 42.71 -> 44.38, v_fwd 0.7267 -> 0.7068, tau_leg 34.88 -> 35.47, psi 7.7943 -> 8.0134, R 0.093 -> 0.088, |slope| 1.3114 -> 1.3094
+      emp v_td 1.10 lam  0.0: beta 81.50 -> 81.75, alpha 42.15 -> 43.80, v_fwd 0.8082 -> 0.7869, tau_leg 34.81 -> 35.46, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2783 -> 1.2782
+      emp v_td 1.10 lam  0.5: beta 81.50 -> 81.75, alpha 42.15 -> 43.80, v_fwd 0.8082 -> 0.7869, tau_leg 34.81 -> 35.46, psi 0.1059 -> 0.1088, R 7.630 -> 7.233, |slope| 1.2783 -> 1.2782
+      emp v_td 1.10 lam  1.0: beta 81.50 -> 81.75, alpha 42.16 -> 43.80, v_fwd 0.8082 -> 0.7869, tau_leg 34.81 -> 35.46, psi 0.2119 -> 0.2176, R 3.814 -> 3.616, |slope| 1.2783 -> 1.2782
+      emp v_td 1.10 lam  1.5: beta 81.50 -> 81.75, alpha 42.16 -> 43.80, v_fwd 0.8082 -> 0.7869, tau_leg 34.81 -> 35.46, psi 0.3179 -> 0.3265, R 2.543 -> 2.410, |slope| 1.2784 -> 1.2783
+      emp v_td 1.10 lam  2.0: beta 81.50 -> 81.75, alpha 42.16 -> 43.80, v_fwd 0.8081 -> 0.7869, tau_leg 34.82 -> 35.47, psi 0.4239 -> 0.4354, R 1.906 -> 1.807, |slope| 1.2784 -> 1.2783
+      emp v_td 1.10 lam  2.5: beta 81.50 -> 81.75, alpha 42.16 -> 43.81, v_fwd 0.8081 -> 0.7868, tau_leg 34.82 -> 35.47, psi 0.5300 -> 0.5444, R 1.525 -> 1.445, |slope| 1.2785 -> 1.2784
+      emp v_td 1.10 lam  5.0: beta 81.50 -> 81.75, alpha 42.19 -> 43.83, v_fwd 0.8077 -> 0.7865, tau_leg 34.87 -> 35.52, psi 1.0626 -> 1.0913, R 0.760 -> 0.721, |slope| 1.2791 -> 1.2790
+      emp v_td 1.10 lam  7.5: beta 81.50 -> 81.75, alpha 42.23 -> 43.87, v_fwd 0.8071 -> 0.7859, tau_leg 34.94 -> 35.59, psi 1.6001 -> 1.6434, R 0.504 -> 0.478, |slope| 1.2802 -> 1.2800
+      emp v_td 1.10 lam 10.0: beta 81.50 -> 81.75, alpha 42.29 -> 43.93, v_fwd 0.8063 -> 0.7851, tau_leg 35.04 -> 35.69, psi 2.1453 -> 2.2033, R 0.376 -> 0.356, |slope| 1.2817 -> 1.2815
+      emp v_td 1.10 lam 15.0: beta 81.50 -> 81.75, alpha 42.46 -> 44.09, v_fwd 0.8039 -> 0.7828, tau_leg 35.35 -> 35.98, psi 3.2697 -> 3.3581, R 0.246 -> 0.233, |slope| 1.2860 -> 1.2857
+      emp v_td 1.10 lam 20.0: beta 81.50 -> 81.75, alpha 42.71 -> 44.32, v_fwd 0.8005 -> 0.7794, tau_leg 35.78 -> 36.41, psi 4.4606 -> 4.5810, R 0.179 -> 0.170, |slope| 1.2924 -> 1.2920
+      emp v_td 1.10 lam 25.0: beta 81.50 -> 81.75, alpha 43.04 -> 44.63, v_fwd 0.7959 -> 0.7750, tau_leg 36.38 -> 36.99, psi 5.7476 -> 5.9026, R 0.138 -> 0.131, |slope| 1.3010 -> 1.3004
+      emp v_td 1.15 lam  5.0: beta 81.00 -> 81.25, alpha 40.94 -> 42.55, v_fwd 0.8611 -> 0.8397, tau_leg 35.35 -> 36.03, psi 0.9967 -> 1.0221, R 0.864 -> 0.822, |slope| 1.2808 -> 1.2808
+      emp v_td 1.15 lam  7.5: beta 81.00 -> 81.25, alpha 40.98 -> 42.59, v_fwd 0.8605 -> 0.8391, tau_leg 35.43 -> 36.10, psi 1.5010 -> 1.5391, R 0.573 -> 0.545, |slope| 1.2818 -> 1.2818
+      emp v_td 1.15 lam 10.0: beta 81.00 -> 81.25, alpha 41.04 -> 42.65, v_fwd 0.8596 -> 0.8383, tau_leg 35.53 -> 36.21, psi 2.0123 -> 2.0634, R 0.427 -> 0.406, |slope| 1.2833 -> 1.2833
+      emp v_td 1.15 lam 15.0: beta 81.00 -> 81.25, alpha 41.22 -> 42.82, v_fwd 0.8571 -> 0.8359, tau_leg 35.84 -> 36.51, psi 3.0669 -> 3.1448, R 0.279 -> 0.266, |slope| 1.2877 -> 1.2876
+      emp v_td 1.15 lam 20.0: beta 81.50 -> 81.25, alpha 44.62 -> 43.06, v_fwd 0.8109 -> 0.8323, tau_leg 37.57 -> 36.94, psi 4.4032 -> 4.2897, R 0.184 -> 0.194, |slope| 1.2939 -> 1.2938
+      emp v_td 1.15 lam 30.0: beta 81.00 -> 81.25, alpha 42.23 -> 43.77, v_fwd 0.8426 -> 0.8218, tau_leg 37.67 -> 38.30, psi 6.7221 -> 6.8922, R 0.125 -> 0.119, |slope| 1.3142 -> 1.3135
+      emp v_td 1.20 lam 15.0: beta 80.50 -> 80.75, alpha 40.02 -> 41.59, v_fwd 0.9107 -> 0.8894, tau_leg 36.30 -> 37.00, psi 2.8864 -> 2.9555, R 0.316 -> 0.301, |slope| 1.2891 -> 1.2891
+      emp v_td 1.20 lam 20.0: beta 80.50 -> 80.75, alpha 40.28 -> 41.83, v_fwd 0.9069 -> 0.8857, tau_leg 36.75 -> 37.44, psi 3.9371 -> 4.0312, R 0.230 -> 0.220, |slope| 1.2955 -> 1.2954
+      emp v_td 1.20 lam 25.0: beta 81.00 -> 80.75, alpha 43.68 -> 42.16, v_fwd 0.8595 -> 0.8809, tau_leg 38.69 -> 38.04, psi 5.3225 -> 5.1932, R 0.161 -> 0.170, |slope| 1.3040 -> 1.3039
+      emp v_td 1.25 lam 20.0: beta 80.00 -> 80.25, alpha 39.12 -> 40.65, v_fwd 0.9608 -> 0.9396, tau_leg 37.19 -> 37.91, psi 3.7162 -> 3.8003, R 0.259 -> 0.247, |slope| 1.2966 -> 1.2966
+      emp v_td 1.25 lam 25.0: beta 80.50 -> 80.25, alpha 42.48 -> 40.99, v_fwd 0.9130 -> 0.9345, tau_leg 39.19 -> 38.51, psi 5.0104 -> 4.8953, R 0.182 -> 0.191, |slope| 1.3054 -> 1.3052
+      emp v_td 1.30 lam 25.0: beta 79.50 -> 79.75, alpha 38.35 -> 39.85, v_fwd 1.0097 -> 0.9885, tau_leg 38.22 -> 38.96, psi 4.5307 -> 4.6277, R 0.223 -> 0.214, |slope| 1.3063 -> 1.3062
+      emp v_td 1.30 lam 30.0: beta 80.00 -> 79.75, alpha 41.73 -> 40.28, v_fwd 0.9604 -> 0.9817, tau_leg 40.45 -> 39.76, psi 5.8975 -> 5.7692, R 0.163 -> 0.170, |slope| 1.3177 -> 1.3176
+      emp v_td 1.35 lam  0.0: beta 79.00 -> 78.75, alpha 36.25 -> 34.68, v_fwd 1.0795 -> 1.1007, tau_leg 36.88 -> 36.03, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2831 -> 1.2830
+      emp v_td 1.35 lam  0.5: beta 79.00 -> 78.75, alpha 36.25 -> 34.68, v_fwd 1.0795 -> 1.1007, tau_leg 36.88 -> 36.03, psi 0.0793 -> 0.0778, R 13.613 -> 14.153, |slope| 1.2831 -> 1.2830
+      emp v_td 1.35 lam  1.0: beta 79.00 -> 78.75, alpha 36.25 -> 34.68, v_fwd 1.0795 -> 1.1007, tau_leg 36.88 -> 36.03, psi 0.1586 -> 0.1556, R 6.806 -> 7.076, |slope| 1.2831 -> 1.2830
+      emp v_td 1.35 lam  1.5: beta 79.00 -> 78.75, alpha 36.25 -> 34.69, v_fwd 1.0795 -> 1.1007, tau_leg 36.88 -> 36.03, psi 0.2380 -> 0.2334, R 4.536 -> 4.716, |slope| 1.2832 -> 1.2831
+      emp v_td 1.35 lam  2.0: beta 79.00 -> 78.75, alpha 36.26 -> 34.69, v_fwd 1.0795 -> 1.1006, tau_leg 36.89 -> 36.04, psi 0.3174 -> 0.3112, R 3.401 -> 3.536, |slope| 1.2832 -> 1.2831
+      emp v_td 1.35 lam  2.5: beta 79.00 -> 78.75, alpha 36.26 -> 34.69, v_fwd 1.0794 -> 1.1006, tau_leg 36.89 -> 36.04, psi 0.3968 -> 0.3892, R 2.720 -> 2.828, |slope| 1.2833 -> 1.2832
+      emp v_td 1.35 lam  5.0: beta 79.00 -> 78.75, alpha 36.29 -> 34.72, v_fwd 1.0790 -> 1.1001, tau_leg 36.94 -> 36.09, psi 0.7955 -> 0.7801, R 1.356 -> 1.410, |slope| 1.2840 -> 1.2839
+      emp v_td 1.35 lam  7.5: beta 79.00 -> 78.75, alpha 36.34 -> 34.78, v_fwd 1.0782 -> 1.0994, tau_leg 37.02 -> 36.18, psi 1.1978 -> 1.1748, R 0.900 -> 0.936, |slope| 1.2851 -> 1.2850
+      emp v_td 1.35 lam 30.0: beta 79.00 -> 79.25, alpha 37.73 -> 39.18, v_fwd 1.0570 -> 1.0359, tau_leg 39.43 -> 40.18, psi 5.3584 -> 5.4673, R 0.197 -> 0.189, |slope| 1.3186 -> 1.3184
+      emp v_td 1.40 lam  0.0: beta 78.50 -> 78.25, alpha 35.15 -> 33.59, v_fwd 1.1352 -> 1.1564, tau_leg 37.18 -> 36.29, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2830 -> 1.2827
+      emp v_td 1.40 lam  0.5: beta 78.50 -> 78.25, alpha 35.15 -> 33.59, v_fwd 1.1352 -> 1.1564, tau_leg 37.18 -> 36.29, psi 0.0754 -> 0.0740, R 15.052 -> 15.621, |slope| 1.2830 -> 1.2827
+      emp v_td 1.40 lam  1.0: beta 78.50 -> 78.25, alpha 35.15 -> 33.59, v_fwd 1.1351 -> 1.1564, tau_leg 37.19 -> 36.29, psi 0.1508 -> 0.1481, R 7.525 -> 7.810, |slope| 1.2830 -> 1.2828
+      emp v_td 1.40 lam  1.5: beta 78.50 -> 78.25, alpha 35.15 -> 33.60, v_fwd 1.1351 -> 1.1564, tau_leg 37.19 -> 36.30, psi 0.2263 -> 0.2221, R 5.016 -> 5.206, |slope| 1.2830 -> 1.2828
+      emp v_td 1.40 lam  2.0: beta 78.50 -> 78.25, alpha 35.16 -> 33.60, v_fwd 1.1351 -> 1.1563, tau_leg 37.19 -> 36.30, psi 0.3018 -> 0.2963, R 3.761 -> 3.903, |slope| 1.2831 -> 1.2829
+      emp v_td 1.40 lam  2.5: beta 78.50 -> 78.25, alpha 35.16 -> 33.60, v_fwd 1.1350 -> 1.1563, tau_leg 37.20 -> 36.31, psi 0.3774 -> 0.3704, R 3.008 -> 3.122, |slope| 1.2832 -> 1.2830
+      emp v_td 1.40 lam  5.0: beta 78.50 -> 78.25, alpha 35.19 -> 33.64, v_fwd 1.1346 -> 1.1558, tau_leg 37.25 -> 36.36, psi 0.7565 -> 0.7426, R 1.500 -> 1.557, |slope| 1.2839 -> 1.2836
+      emp v_td 1.40 lam  7.5: beta 78.50 -> 78.25, alpha 35.24 -> 33.69, v_fwd 1.1338 -> 1.1550, tau_leg 37.33 -> 36.44, psi 1.1391 -> 1.1182, R 0.995 -> 1.033, |slope| 1.2850 -> 1.2848
+      emp v_td 1.40 lam 10.0: beta 78.50 -> 78.25, alpha 35.31 -> 33.77, v_fwd 1.1327 -> 1.1539, tau_leg 37.45 -> 36.57, psi 1.5271 -> 1.4990, R 0.742 -> 0.770, |slope| 1.2866 -> 1.2864
+      emp v_td 1.40 lam 15.0: beta 78.50 -> 78.25, alpha 35.52 -> 33.98, v_fwd 1.1296 -> 1.1507, tau_leg 37.79 -> 36.92, psi 2.3270 -> 2.2843, R 0.485 -> 0.504, |slope| 1.2912 -> 1.2912
+      emp v_td 1.40 lam 30.0: beta 78.50 -> 78.75, alpha 36.67 -> 38.11, v_fwd 1.1117 -> 1.0906, tau_leg 39.79 -> 40.58, psi 5.0947 -> 5.1934, R 0.218 -> 0.210, |slope| 1.3189 -> 1.3188
+      emp v_td 1.45 lam  0.0: beta 77.50 -> 77.75, alpha 30.93 -> 32.51, v_fwd 1.2334 -> 1.2126, tau_leg 35.54 -> 36.51, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2824 -> 1.2821
+      emp v_td 1.45 lam  0.5: beta 77.50 -> 77.75, alpha 30.93 -> 32.52, v_fwd 1.2334 -> 1.2126, tau_leg 35.54 -> 36.51, psi 0.0694 -> 0.0706, R 17.770 -> 17.175, |slope| 1.2824 -> 1.2821
+      emp v_td 1.45 lam  1.0: beta 77.50 -> 77.75, alpha 30.93 -> 32.52, v_fwd 1.2334 -> 1.2126, tau_leg 35.55 -> 36.52, psi 0.1388 -> 0.1412, R 8.884 -> 8.587, |slope| 1.2825 -> 1.2821
+      emp v_td 1.45 lam  1.5: beta 77.50 -> 77.75, alpha 30.94 -> 32.52, v_fwd 1.2334 -> 1.2125, tau_leg 35.55 -> 36.52, psi 0.2083 -> 0.2119, R 5.922 -> 5.723, |slope| 1.2825 -> 1.2821
+      emp v_td 1.45 lam  2.0: beta 77.50 -> 77.75, alpha 30.94 -> 32.52, v_fwd 1.2333 -> 1.2125, tau_leg 35.56 -> 36.52, psi 0.2778 -> 0.2825, R 4.440 -> 4.291, |slope| 1.2826 -> 1.2822
+      emp v_td 1.45 lam  2.5: beta 77.50 -> 77.75, alpha 30.94 -> 32.53, v_fwd 1.2332 -> 1.2124, tau_leg 35.56 -> 36.53, psi 0.3473 -> 0.3533, R 3.551 -> 3.432, |slope| 1.2827 -> 1.2823
+      emp v_td 1.45 lam  5.0: beta 78.00 -> 77.75, alpha 34.11 -> 32.56, v_fwd 1.1906 -> 1.2119, tau_leg 37.51 -> 36.58, psi 0.7209 -> 0.7082, R 1.652 -> 1.711, |slope| 1.2833 -> 1.2830
+      emp v_td 1.45 lam  7.5: beta 78.00 -> 77.75, alpha 34.16 -> 32.61, v_fwd 1.1898 -> 1.2111, tau_leg 37.60 -> 36.67, psi 1.0855 -> 1.0664, R 1.096 -> 1.136, |slope| 1.2845 -> 1.2842
+      emp v_td 1.45 lam 10.0: beta 78.00 -> 77.75, alpha 34.24 -> 32.69, v_fwd 1.1887 -> 1.2100, tau_leg 37.72 -> 36.80, psi 1.4552 -> 1.4296, R 0.817 -> 0.846, |slope| 1.2861 -> 1.2858
+      emp v_td 1.45 lam 15.0: beta 78.00 -> 77.75, alpha 34.45 -> 32.92, v_fwd 1.1855 -> 1.2067, tau_leg 38.07 -> 37.16, psi 2.2173 -> 2.1784, R 0.535 -> 0.554, |slope| 1.2908 -> 1.2906
+  s84 vs s336 for reference (step 0.5 both):
+  [s336 vs s84] cells 273: exist new 191, old 191; existence gained 0, LOST 0
+    beta* changed in 0 of 191 cells existing in both; shift histogram (new - old, deg): {}
+    max |d| over 191 cells (all both-exist): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 0; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+    max |d| over 191 cells (beta* unchanged): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 0; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+
+geometric:
+  [step0.25 vs s84] cells 273: exist new 202, old 192; existence gained 10, LOST 0
+      gained: geo v_td 0.70 lam  0.0 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  0.5 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  1.0 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  1.5 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  2.0 (beta 84.25, alpha 44.12, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  2.5 (beta 84.25, alpha 44.12, v_fwd 0.4972)
+      gained: geo v_td 0.70 lam  5.0 (beta 84.25, alpha 44.16, v_fwd 0.4969)
+      gained: geo v_td 0.70 lam  7.5 (beta 84.25, alpha 44.21, v_fwd 0.4964)
+      gained: geo v_td 0.70 lam 10.0 (beta 84.25, alpha 44.30, v_fwd 0.4956)
+      gained: geo v_td 0.75 lam 20.0 (beta 83.75, alpha 43.33, v_fwd 0.5395)
+    beta* changed in 113 of 192 cells existing in both; shift histogram (new - old, deg): {-0.25: 18, 0.25: 57, 0.5: 23, 0.75: 8, 1.0: 5, 1.25: 2}
+    max |d| over 192 cells (all both-exist): beta_deg 1.25 @geo 1.35/30; alpha_deg 3.922 @geo 0.75/7.5; v_fwd 0.05093 @geo 1.30/30; tau_leg 1.743 @geo 1.30/30; tau_abad_profile 1.166 @geo 1.30/30; psi 0.4019 @geo 0.85/25; R 0.6036 @geo 1.45/0.5; duty 0.02107 @geo 0.75/7.5; slope 0.04893 @geo 0.90/30; flight_s 0.01179 @geo 1.45/25; scrub 0.3344 @geo 0.85/25; lam_out_deg 0.5112 @geo 1.35/30
+    max |d| over 79 cells (beta* unchanged): beta_deg 0; alpha_deg 1.427 @geo 0.95/20; v_fwd 0.01667 @geo 0.95/20; tau_leg 0.4905 @geo 1.25/15; tau_abad_profile 0.3424 @geo 1.25/15; psi 0.1305 @geo 0.95/20; R 0.01005 @geo 1.25/15; duty 0.007498 @geo 0.95/20; slope 0.01739 @geo 0.95/20; flight_s 0.00327 @geo 1.25/15; scrub 0.09862 @geo 0.95/20; lam_out_deg 0.1351 @geo 0.95/20
+    max |d| over 113 cells (beta* changed): beta_deg 1.25 @geo 1.35/30; alpha_deg 3.922 @geo 0.75/7.5; v_fwd 0.05093 @geo 1.30/30; tau_leg 1.743 @geo 1.30/30; tau_abad_profile 1.166 @geo 1.30/30; psi 0.4019 @geo 0.85/25; R 0.6036 @geo 1.45/0.5; duty 0.02107 @geo 0.75/7.5; slope 0.04893 @geo 0.90/30; flight_s 0.01179 @geo 1.45/25; scrub 0.3344 @geo 0.85/25; lam_out_deg 0.5112 @geo 1.35/30
+    beta*-changed cells:
+      geo v_td 0.75 lam  7.5: beta 83.50 -> 84.00, alpha 40.83 -> 44.75, v_fwd 0.5614 -> 0.5271, tau_leg 27.69 -> 28.71, psi 2.3004 -> 2.4502, R 0.244 -> 0.215, |slope| 1.2809 -> 1.2695
+      geo v_td 0.75 lam 10.0: beta 83.50 -> 84.00, alpha 41.09 -> 44.83, v_fwd 0.5592 -> 0.5263, tau_leg 27.85 -> 28.81, psi 3.0935 -> 3.2865, R 0.181 -> 0.160, |slope| 1.2843 -> 1.2713
+      geo v_td 0.75 lam 15.0: beta 83.50 -> 83.75, alpha 41.79 -> 42.99, v_fwd 0.5529 -> 0.5427, tau_leg 28.30 -> 28.60, psi 4.7540 -> 4.8434, R 0.116 -> 0.112, |slope| 1.2939 -> 1.2804
+      geo v_td 0.80 lam 20.0: beta 83.00 -> 83.50, alpha 41.40 -> 43.87, v_fwd 0.5930 -> 0.5705, tau_leg 29.51 -> 30.18, psi 6.0209 -> 6.2590, R 0.098 -> 0.091, |slope| 1.3109 -> 1.2870
+      geo v_td 0.80 lam 25.0: beta 83.00 -> 83.50, alpha 42.60 -> 44.30, v_fwd 0.5815 -> 0.5660, tau_leg 30.36 -> 30.80, psi 7.8673 -> 8.0817, R 0.074 -> 0.070, |slope| 1.3305 -> 1.2971
+      geo v_td 0.80 lam 30.0: beta 83.00 -> 83.50, alpha 44.01 -> 44.83, v_fwd 0.5674 -> 0.5605, tau_leg 31.43 -> 31.62, psi 9.9825 -> 10.1053, R 0.057 -> 0.055, |slope| 1.3571 -> 1.3105
+      geo v_td 0.85 lam  0.0: beta 83.00 -> 83.25, alpha 41.67 -> 43.61, v_fwd 0.6287 -> 0.6094, tau_leg 29.69 -> 30.28, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2734 -> 1.2704
+      geo v_td 0.85 lam  0.5: beta 83.00 -> 83.25, alpha 41.68 -> 43.61, v_fwd 0.6286 -> 0.6094, tau_leg 29.69 -> 30.28, psi 0.1362 -> 0.1405, R 4.616 -> 4.338, |slope| 1.2734 -> 1.2704
+      geo v_td 0.85 lam  1.0: beta 83.00 -> 83.25, alpha 41.69 -> 43.61, v_fwd 0.6285 -> 0.6094, tau_leg 29.70 -> 30.28, psi 0.2724 -> 0.2810, R 2.307 -> 2.169, |slope| 1.2736 -> 1.2705
+      geo v_td 0.85 lam  1.5: beta 83.00 -> 83.25, alpha 41.70 -> 43.61, v_fwd 0.6284 -> 0.6094, tau_leg 29.70 -> 30.28, psi 0.4088 -> 0.4215, R 1.537 -> 1.446, |slope| 1.2737 -> 1.2705
+      geo v_td 0.85 lam  2.0: beta 83.00 -> 83.25, alpha 41.72 -> 43.62, v_fwd 0.6282 -> 0.6094, tau_leg 29.71 -> 30.29, psi 0.5453 -> 0.5622, R 1.152 -> 1.084, |slope| 1.2739 -> 1.2706
+      geo v_td 0.85 lam  2.5: beta 83.00 -> 83.25, alpha 41.73 -> 43.62, v_fwd 0.6280 -> 0.6093, tau_leg 29.72 -> 30.29, psi 0.6820 -> 0.7029, R 0.921 -> 0.867, |slope| 1.2741 -> 1.2707
+      geo v_td 0.85 lam  5.0: beta 83.00 -> 83.25, alpha 41.86 -> 43.66, v_fwd 0.6267 -> 0.6089, tau_leg 29.80 -> 30.34, psi 1.3694 -> 1.4094, R 0.458 -> 0.432, |slope| 1.2758 -> 1.2714
+      geo v_td 0.85 lam  7.5: beta 83.00 -> 83.25, alpha 42.05 -> 43.71, v_fwd 0.6248 -> 0.6083, tau_leg 29.92 -> 30.41, psi 2.0671 -> 2.1230, R 0.302 -> 0.287, |slope| 1.2783 -> 1.2726
+      geo v_td 0.85 lam 10.0: beta 83.00 -> 83.25, alpha 42.30 -> 43.79, v_fwd 0.6222 -> 0.6075, tau_leg 30.08 -> 30.52, psi 2.7799 -> 2.8475, R 0.224 -> 0.213, |slope| 1.2817 -> 1.2743
+      geo v_td 0.85 lam 15.0: beta 83.00 -> 83.25, alpha 42.98 -> 44.02, v_fwd 0.6152 -> 0.6050, tau_leg 30.54 -> 30.84, psi 4.2725 -> 4.3449, R 0.144 -> 0.139, |slope| 1.2916 -> 1.2794
+      geo v_td 0.85 lam 20.0: beta 83.00 -> 83.25, alpha 43.88 -> 44.34, v_fwd 0.6057 -> 0.6015, tau_leg 31.18 -> 31.30, psi 5.8948 -> 5.9364, R 0.103 -> 0.101, |slope| 1.3060 -> 1.2867
+      geo v_td 0.85 lam 25.0: beta 82.50 -> 83.25, alpha 41.38 -> 44.76, v_fwd 0.6299 -> 0.5968, tau_leg 30.95 -> 31.92, psi 7.2626 -> 7.6645, R 0.087 -> 0.078, |slope| 1.3330 -> 1.2968
+      geo v_td 0.85 lam 30.0: beta 82.50 -> 83.00, alpha 42.84 -> 43.43, v_fwd 0.6148 -> 0.6099, tau_leg 32.06 -> 32.20, psi 9.2119 -> 9.2866, R 0.067 -> 0.066, |slope| 1.3595 -> 1.3134
+      geo v_td 0.90 lam 15.0: beta 82.50 -> 83.00, alpha 41.65 -> 44.44, v_fwd 0.6655 -> 0.6361, tau_leg 31.10 -> 31.98, psi 3.9499 -> 4.1323, R 0.168 -> 0.154, |slope| 1.2942 -> 1.2799
+      geo v_td 0.90 lam 20.0: beta 82.50 -> 83.00, alpha 42.58 -> 44.76, v_fwd 0.6553 -> 0.6325, tau_leg 31.77 -> 32.44, psi 5.4485 -> 5.6455, R 0.120 -> 0.112, |slope| 1.3087 -> 1.2872
+      geo v_td 0.90 lam 25.0: beta 82.50 -> 82.75, alpha 43.74 -> 43.36, v_fwd 0.6425 -> 0.6471, tau_leg 32.64 -> 32.50, psi 7.1203 -> 7.0687, R 0.090 -> 0.092, |slope| 1.3286 -> 1.2995
+      geo v_td 0.90 lam 30.0: beta 82.00 -> 82.75, alpha 41.71 -> 43.89, v_fwd 0.6629 -> 0.6410, tau_leg 32.67 -> 33.31, psi 8.5445 -> 8.8362, R 0.078 -> 0.073, |slope| 1.3617 -> 1.3127
+      geo v_td 0.95 lam  0.0: beta 82.50 -> 82.75, alpha 42.64 -> 44.44, v_fwd 0.6923 -> 0.6720, tau_leg 31.97 -> 32.57, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2736 -> 1.2722
+      geo v_td 0.95 lam  0.5: beta 82.50 -> 82.75, alpha 42.65 -> 44.44, v_fwd 0.6922 -> 0.6720, tau_leg 31.97 -> 32.57, psi 0.1237 -> 0.1274, R 5.597 -> 5.275, |slope| 1.2737 -> 1.2722
+      geo v_td 0.95 lam  1.0: beta 82.50 -> 82.75, alpha 42.66 -> 44.44, v_fwd 0.6921 -> 0.6720, tau_leg 31.98 -> 32.57, psi 0.2474 -> 0.2548, R 2.797 -> 2.637, |slope| 1.2738 -> 1.2723
+      geo v_td 0.95 lam  1.5: beta 82.50 -> 82.75, alpha 42.67 -> 44.44, v_fwd 0.6919 -> 0.6719, tau_leg 31.98 -> 32.58, psi 0.3713 -> 0.3823, R 1.864 -> 1.758, |slope| 1.2740 -> 1.2723
+      geo v_td 0.95 lam  2.0: beta 82.50 -> 82.75, alpha 42.69 -> 44.44, v_fwd 0.6917 -> 0.6719, tau_leg 31.99 -> 32.58, psi 0.4952 -> 0.5099, R 1.397 -> 1.318, |slope| 1.2742 -> 1.2724
+      geo v_td 0.95 lam  2.5: beta 82.50 -> 82.75, alpha 42.71 -> 44.45, v_fwd 0.6915 -> 0.6719, tau_leg 32.00 -> 32.59, psi 0.6194 -> 0.6375, R 1.117 -> 1.054, |slope| 1.2744 -> 1.2724
+      geo v_td 0.95 lam  5.0: beta 82.50 -> 82.75, alpha 42.83 -> 44.48, v_fwd 0.6901 -> 0.6715, tau_leg 32.08 -> 32.63, psi 1.2437 -> 1.2782, R 0.555 -> 0.525, |slope| 1.2761 -> 1.2732
+      geo v_td 0.95 lam  7.5: beta 82.50 -> 82.75, alpha 43.02 -> 44.53, v_fwd 0.6879 -> 0.6708, tau_leg 32.20 -> 32.71, psi 1.8774 -> 1.9253, R 0.366 -> 0.348, |slope| 1.2787 -> 1.2743
+      geo v_td 0.95 lam 10.0: beta 82.50 -> 82.75, alpha 43.26 -> 44.61, v_fwd 0.6851 -> 0.6699, tau_leg 32.37 -> 32.82, psi 2.5248 -> 2.5822, R 0.271 -> 0.259, |slope| 1.2823 -> 1.2760
+      geo v_td 0.95 lam 15.0: beta 82.50 -> 82.75, alpha 43.92 -> 44.82, v_fwd 0.6774 -> 0.6672, tau_leg 32.84 -> 33.13, psi 3.8805 -> 3.9396, R 0.175 -> 0.169, |slope| 1.2924 -> 1.2809
+      geo v_td 0.95 lam 25.0: beta 82.00 -> 82.50, alpha 42.53 -> 43.79, v_fwd 0.6918 -> 0.6785, tau_leg 33.24 -> 33.63, psi 6.6123 -> 6.7425, R 0.105 -> 0.101, |slope| 1.3310 -> 1.2997
+      geo v_td 0.95 lam 30.0: beta 82.00 -> 82.50, alpha 43.94 -> 44.31, v_fwd 0.6752 -> 0.6721, tau_leg 34.36 -> 34.44, psi 8.3882 -> 8.4275, R 0.080 -> 0.080, |slope| 1.3580 -> 1.3127
+      geo v_td 1.00 lam  7.5: beta 82.00 -> 82.50, alpha 41.68 -> 44.88, v_fwd 0.7397 -> 0.7020, tau_leg 32.73 -> 33.87, psi 1.7459 -> 1.8397, R 0.424 -> 0.382, |slope| 1.2810 -> 1.2759
+      geo v_td 1.00 lam 10.0: beta 82.00 -> 82.50, alpha 41.94 -> 44.95, v_fwd 0.7367 -> 0.7011, tau_leg 32.91 -> 33.97, psi 2.3478 -> 2.4673, R 0.314 -> 0.284, |slope| 1.2846 -> 1.2776
+      geo v_td 1.00 lam 15.0: beta 82.00 -> 82.25, alpha 42.62 -> 43.45, v_fwd 0.7285 -> 0.7190, tau_leg 33.40 -> 33.69, psi 3.6080 -> 3.6560, R 0.202 -> 0.197, |slope| 1.2947 -> 1.2834
+      geo v_td 1.00 lam 20.0: beta 82.00 -> 82.25, alpha 43.52 -> 43.76, v_fwd 0.7174 -> 0.7150, tau_leg 34.08 -> 34.15, psi 4.9772 -> 4.9939, R 0.144 -> 0.143, |slope| 1.3095 -> 1.2906
+      geo v_td 1.00 lam 25.0: beta 82.00 -> 82.25, alpha 44.65 -> 44.17, v_fwd 0.7033 -> 0.7097, tau_leg 34.96 -> 34.77, psi 6.5045 -> 6.4453, R 0.108 -> 0.110, |slope| 1.3299 -> 1.3004
+      geo v_td 1.00 lam 30.0: beta 81.50 -> 82.25, alpha 42.82 -> 44.68, v_fwd 0.7241 -> 0.7032, tau_leg 34.97 -> 35.57, psi 7.8218 -> 8.0549, R 0.093 -> 0.087, |slope| 1.3600 -> 1.3132
+      geo v_td 1.05 lam 20.0: beta 81.50 -> 82.00, alpha 42.31 -> 44.12, v_fwd 0.7684 -> 0.7464, tau_leg 34.65 -> 35.30, psi 4.6468 -> 4.7836, R 0.165 -> 0.156, |slope| 1.3116 -> 1.2918
+      geo v_td 1.05 lam 25.0: beta 81.50 -> 82.00, alpha 43.47 -> 44.51, v_fwd 0.7535 -> 0.7410, tau_leg 35.57 -> 35.92, psi 6.0713 -> 6.1732, R 0.124 -> 0.120, |slope| 1.3320 -> 1.3015
+      geo v_td 1.05 lam 30.0: beta 81.50 -> 81.75, alpha 44.83 -> 43.40, v_fwd 0.7354 -> 0.7545, tau_leg 36.70 -> 36.13, psi 7.7018 -> 7.5065, R 0.095 -> 0.101, |slope| 1.3595 -> 1.3155
+      geo v_td 1.10 lam  0.0: beta 81.50 -> 81.75, alpha 42.12 -> 43.77, v_fwd 0.8086 -> 0.7873, tau_leg 34.79 -> 35.45, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2780 -> 1.2778
+      geo v_td 1.10 lam  0.5: beta 81.50 -> 81.75, alpha 42.13 -> 43.77, v_fwd 0.8085 -> 0.7873, tau_leg 34.80 -> 35.45, psi 0.1059 -> 0.1087, R 7.635 -> 7.241, |slope| 1.2781 -> 1.2778
+      geo v_td 1.10 lam  1.0: beta 81.50 -> 81.75, alpha 42.14 -> 43.77, v_fwd 0.8084 -> 0.7873, tau_leg 34.81 -> 35.45, psi 0.2118 -> 0.2175, R 3.816 -> 3.620, |slope| 1.2782 -> 1.2779
+      geo v_td 1.10 lam  1.5: beta 81.50 -> 81.75, alpha 42.16 -> 43.77, v_fwd 0.8082 -> 0.7873, tau_leg 34.81 -> 35.45, psi 0.3179 -> 0.3263, R 2.543 -> 2.413, |slope| 1.2784 -> 1.2779
+      geo v_td 1.10 lam  2.0: beta 81.50 -> 81.75, alpha 42.17 -> 43.77, v_fwd 0.8080 -> 0.7872, tau_leg 34.82 -> 35.46, psi 0.4240 -> 0.4352, R 1.906 -> 1.809, |slope| 1.2786 -> 1.2780
+      geo v_td 1.10 lam  2.5: beta 81.50 -> 81.75, alpha 42.19 -> 43.78, v_fwd 0.8077 -> 0.7872, tau_leg 34.83 -> 35.46, psi 0.5303 -> 0.5441, R 1.523 -> 1.447, |slope| 1.2788 -> 1.2781
+      geo v_td 1.10 lam  5.0: beta 81.50 -> 81.75, alpha 42.32 -> 43.81, v_fwd 0.8060 -> 0.7867, tau_leg 34.92 -> 35.51, psi 1.0648 -> 1.0909, R 0.757 -> 0.721, |slope| 1.2806 -> 1.2788
+      geo v_td 1.10 lam  7.5: beta 81.50 -> 81.75, alpha 42.51 -> 43.86, v_fwd 0.8036 -> 0.7860, tau_leg 35.05 -> 35.58, psi 1.6072 -> 1.6431, R 0.500 -> 0.478, |slope| 1.2833 -> 1.2799
+      geo v_td 1.10 lam 10.0: beta 81.50 -> 81.75, alpha 42.75 -> 43.93, v_fwd 0.8003 -> 0.7850, tau_leg 35.23 -> 35.69, psi 2.1614 -> 2.2036, R 0.370 -> 0.356, |slope| 1.2869 -> 1.2816
+      geo v_td 1.10 lam 15.0: beta 81.50 -> 81.75, alpha 43.41 -> 44.14, v_fwd 0.7914 -> 0.7820, tau_leg 35.74 -> 36.01, psi 3.3216 -> 3.3612, R 0.238 -> 0.233, |slope| 1.2974 -> 1.2864
+      geo v_td 1.10 lam 20.0: beta 81.50 -> 81.75, alpha 44.30 -> 44.44, v_fwd 0.7792 -> 0.7778, tau_leg 36.43 -> 36.46, psi 4.5821 -> 4.5905, R 0.170 -> 0.169, |slope| 1.3125 -> 1.2935
+      geo v_td 1.10 lam 25.0: beta 81.00 -> 81.75, alpha 42.33 -> 44.83, v_fwd 0.8041 -> 0.7723, tau_leg 36.15 -> 37.07, psi 5.6887 -> 5.9233, R 0.141 -> 0.130, |slope| 1.3338 -> 1.3030
+      geo v_td 1.10 lam 30.0: beta 81.00 -> 81.50, alpha 43.74 -> 43.75, v_fwd 0.7850 -> 0.7860, tau_leg 37.32 -> 37.27, psi 7.2146 -> 7.2056, R 0.109 -> 0.109, |slope| 1.3614 -> 1.3163
+      geo v_td 1.15 lam  5.0: beta 81.00 -> 81.25, alpha 41.07 -> 42.53, v_fwd 0.8593 -> 0.8400, tau_leg 35.41 -> 36.02, psi 0.9988 -> 1.0217, R 0.860 -> 0.822, |slope| 1.2822 -> 1.2805
+      geo v_td 1.15 lam  7.5: beta 81.00 -> 81.25, alpha 41.26 -> 42.58, v_fwd 0.8567 -> 0.8393, tau_leg 35.55 -> 36.10, psi 1.5076 -> 1.5389, R 0.568 -> 0.545, |slope| 1.2849 -> 1.2817
+      geo v_td 1.15 lam 10.0: beta 81.00 -> 81.25, alpha 41.52 -> 42.66, v_fwd 0.8532 -> 0.8382, tau_leg 35.74 -> 36.21, psi 2.0273 -> 2.0637, R 0.421 -> 0.406, |slope| 1.2886 -> 1.2834
+      geo v_td 1.15 lam 15.0: beta 81.00 -> 81.25, alpha 42.20 -> 42.87, v_fwd 0.8438 -> 0.8351, tau_leg 36.27 -> 36.53, psi 3.1152 -> 3.1477, R 0.271 -> 0.265, |slope| 1.2991 -> 1.2882
+      geo v_td 1.15 lam 20.0: beta 81.00 -> 81.25, alpha 43.11 -> 43.18, v_fwd 0.8310 -> 0.8306, tau_leg 37.00 -> 36.99, psi 4.2965 -> 4.2985, R 0.193 -> 0.193, |slope| 1.3143 -> 1.2953
+      geo v_td 1.15 lam 25.0: beta 81.00 -> 81.25, alpha 44.24 -> 43.58, v_fwd 0.8149 -> 0.8248, tau_leg 37.93 -> 37.62, psi 5.6136 -> 5.5460, R 0.145 -> 0.149, |slope| 1.3352 -> 1.3049
+      geo v_td 1.15 lam 30.0: beta 80.50 -> 81.25, alpha 42.68 -> 44.07, v_fwd 0.8352 -> 0.8175, tau_leg 37.93 -> 38.42, psi 6.7815 -> 6.9281, R 0.123 -> 0.118, |slope| 1.3630 -> 1.3176
+      geo v_td 1.20 lam 20.0: beta 80.50 -> 80.75, alpha 41.97 -> 41.96, v_fwd 0.8833 -> 0.8839, tau_leg 37.54 -> 37.50, psi 4.0424 -> 4.0394, R 0.219 -> 0.219, |slope| 1.3158 -> 1.2969
+      geo v_td 1.20 lam 25.0: beta 80.00 -> 80.75, alpha 40.18 -> 42.37, v_fwd 0.9069 -> 0.8778, tau_leg 37.22 -> 38.13, psi 5.0441 -> 5.2111, R 0.180 -> 0.168, |slope| 1.3365 -> 1.3066
+      geo v_td 1.20 lam 30.0: beta 80.00 -> 81.00, alpha 41.66 -> 44.36, v_fwd 0.8858 -> 0.8490, tau_leg 38.50 -> 39.58, psi 6.3940 -> 6.6712, R 0.139 -> 0.127, |slope| 1.3643 -> 1.3192
+      geo v_td 1.25 lam 20.0: beta 79.50 -> 80.00, alpha 37.85 -> 39.25, v_fwd 0.9772 -> 0.9589, tau_leg 36.62 -> 37.25, psi 3.6539 -> 3.7236, R 0.267 -> 0.258, |slope| 1.3166 -> 1.2981
+      geo v_td 1.25 lam 25.0: beta 79.50 -> 80.25, alpha 39.15 -> 41.21, v_fwd 0.9590 -> 0.9313, tau_leg 37.72 -> 38.62, psi 4.7702 -> 4.9120, R 0.201 -> 0.190, |slope| 1.3373 -> 1.3079
+      geo v_td 1.25 lam 30.0: beta 79.50 -> 80.25, alpha 40.68 -> 41.73, v_fwd 0.9369 -> 0.9233, tau_leg 39.06 -> 39.45, psi 6.0454 -> 6.1346, R 0.155 -> 0.150, |slope| 1.3652 -> 1.3206
+      geo v_td 1.30 lam 15.0: beta 79.00 -> 79.50, alpha 35.73 -> 37.78, v_fwd 1.0455 -> 1.0183, tau_leg 36.13 -> 37.15, psi 2.5142 -> 2.5812, R 0.416 -> 0.395, |slope| 1.3021 -> 1.2915
+      geo v_td 1.30 lam 20.0: beta 79.00 -> 79.50, alpha 36.81 -> 38.13, v_fwd 1.0305 -> 1.0132, tau_leg 37.04 -> 37.66, psi 3.4648 -> 3.5242, R 0.297 -> 0.287, |slope| 1.3170 -> 1.2988
+      geo v_td 1.30 lam 25.0: beta 79.00 -> 79.50, alpha 38.15 -> 38.59, v_fwd 1.0115 -> 1.0063, tau_leg 38.19 -> 38.34, psi 4.5224 -> 4.5457, R 0.224 -> 0.221, |slope| 1.3378 -> 1.3088
+      geo v_td 1.30 lam 30.0: beta 78.50 -> 79.75, alpha 36.88 -> 40.61, v_fwd 1.0277 -> 0.9768, tau_leg 38.18 -> 39.93, psi 5.5111 -> 5.7984, R 0.186 -> 0.168, |slope| 1.3657 -> 1.3217
+      geo v_td 1.35 lam  0.0: beta 79.00 -> 78.75, alpha 36.21 -> 34.64, v_fwd 1.0801 -> 1.1013, tau_leg 36.86 -> 36.00, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2827 -> 1.2827
+      geo v_td 1.35 lam  0.5: beta 79.00 -> 78.75, alpha 36.22 -> 34.64, v_fwd 1.0799 -> 1.1013, tau_leg 36.86 -> 36.00, psi 0.0793 -> 0.0777, R 13.622 -> 14.166, |slope| 1.2828 -> 1.2827
+      geo v_td 1.35 lam  1.0: beta 79.00 -> 78.75, alpha 36.24 -> 34.65, v_fwd 1.0797 -> 1.1012, tau_leg 36.87 -> 36.01, psi 0.1586 -> 0.1555, R 6.808 -> 7.082, |slope| 1.2830 -> 1.2827
+      geo v_td 1.35 lam  1.5: beta 79.00 -> 78.75, alpha 36.25 -> 34.65, v_fwd 1.0795 -> 1.1012, tau_leg 36.88 -> 36.01, psi 0.2380 -> 0.2333, R 4.536 -> 4.720, |slope| 1.2832 -> 1.2828
+      geo v_td 1.35 lam  2.0: beta 79.00 -> 78.75, alpha 36.27 -> 34.65, v_fwd 1.0792 -> 1.1011, tau_leg 36.90 -> 36.02, psi 0.3174 -> 0.3111, R 3.400 -> 3.539, |slope| 1.2834 -> 1.2828
+      geo v_td 1.35 lam  2.5: beta 79.00 -> 78.75, alpha 36.29 -> 34.66, v_fwd 1.0789 -> 1.1011, tau_leg 36.91 -> 36.02, psi 0.3970 -> 0.3890, R 2.718 -> 2.831, |slope| 1.2836 -> 1.2829
+      geo v_td 1.35 lam  5.0: beta 79.00 -> 78.75, alpha 36.44 -> 34.70, v_fwd 1.0768 -> 1.1005, tau_leg 37.03 -> 36.08, psi 0.7971 -> 0.7799, R 1.351 -> 1.411, |slope| 1.2854 -> 1.2837
+      geo v_td 1.35 lam  7.5: beta 79.00 -> 78.75, alpha 36.66 -> 34.77, v_fwd 1.0737 -> 1.0995, tau_leg 37.21 -> 36.17, psi 1.2029 -> 1.1746, R 0.893 -> 0.936, |slope| 1.2881 -> 1.2849
+      geo v_td 1.35 lam 10.0: beta 78.50 -> 78.75, alpha 33.84 -> 34.86, v_fwd 1.1114 -> 1.0982, tau_leg 35.75 -> 36.30, psi 1.5564 -> 1.5751, R 0.714 -> 0.697, |slope| 1.2918 -> 1.2867
+      geo v_td 1.35 lam 15.0: beta 78.50 -> 79.00, alpha 34.68 -> 36.67, v_fwd 1.1000 -> 1.0733, tau_leg 36.46 -> 37.51, psi 2.3897 -> 2.4492, R 0.460 -> 0.438, |slope| 1.3020 -> 1.2918
+      geo v_td 1.35 lam 20.0: beta 78.50 -> 79.00, alpha 35.80 -> 37.03, v_fwd 1.0844 -> 1.0678, tau_leg 37.42 -> 38.03, psi 3.2928 -> 3.3437, R 0.329 -> 0.319, |slope| 1.3170 -> 1.2993
+      geo v_td 1.35 lam 25.0: beta 78.50 -> 79.00, alpha 37.17 -> 37.50, v_fwd 1.0645 -> 1.0607, tau_leg 38.63 -> 38.73, psi 4.2972 -> 4.3125, R 0.248 -> 0.246, |slope| 1.3378 -> 1.3093
+      geo v_td 1.35 lam 30.0: beta 78.00 -> 79.25, alpha 35.97 -> 39.53, v_fwd 1.0800 -> 1.0308, tau_leg 38.63 -> 40.37, psi 5.2444 -> 5.4948, R 0.206 -> 0.188, |slope| 1.3654 -> 1.3224
+      geo v_td 1.40 lam  0.0: beta 78.50 -> 78.25, alpha 35.11 -> 33.55, v_fwd 1.1357 -> 1.1570, tau_leg 37.16 -> 36.27, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2826 -> 1.2824
+      geo v_td 1.40 lam  0.5: beta 78.50 -> 78.25, alpha 35.12 -> 33.55, v_fwd 1.1356 -> 1.1570, tau_leg 37.17 -> 36.27, psi 0.0754 -> 0.0740, R 15.062 -> 15.636, |slope| 1.2827 -> 1.2824
+      geo v_td 1.40 lam  1.0: beta 78.50 -> 78.25, alpha 35.14 -> 33.56, v_fwd 1.1354 -> 1.1569, tau_leg 37.18 -> 36.27, psi 0.1508 -> 0.1480, R 7.528 -> 7.817, |slope| 1.2829 -> 1.2825
+      geo v_td 1.40 lam  1.5: beta 78.50 -> 78.25, alpha 35.15 -> 33.56, v_fwd 1.1351 -> 1.1569, tau_leg 37.19 -> 36.27, psi 0.2263 -> 0.2220, R 5.016 -> 5.210, |slope| 1.2830 -> 1.2825
+      geo v_td 1.40 lam  2.0: beta 78.50 -> 78.25, alpha 35.17 -> 33.56, v_fwd 1.1348 -> 1.1568, tau_leg 37.20 -> 36.28, psi 0.3019 -> 0.2961, R 3.759 -> 3.907, |slope| 1.2832 -> 1.2826
+      geo v_td 1.40 lam  2.5: beta 78.50 -> 78.25, alpha 35.20 -> 33.57, v_fwd 1.1345 -> 1.1568, tau_leg 37.22 -> 36.29, psi 0.3775 -> 0.3703, R 3.005 -> 3.124, |slope| 1.2835 -> 1.2827
+      geo v_td 1.40 lam  5.0: beta 78.50 -> 78.25, alpha 35.35 -> 33.61, v_fwd 1.1323 -> 1.1562, tau_leg 37.34 -> 36.34, psi 0.7580 -> 0.7423, R 1.494 -> 1.558, |slope| 1.2853 -> 1.2834
+      geo v_td 1.40 lam  7.5: beta 78.00 -> 78.25, alpha 32.47 -> 33.68, v_fwd 1.1711 -> 1.1552, tau_leg 35.74 -> 36.44, psi 1.1028 -> 1.1180, R 1.062 -> 1.033, |slope| 1.2879 -> 1.2847
+      geo v_td 1.40 lam 10.0: beta 78.00 -> 78.25, alpha 32.79 -> 33.78, v_fwd 1.1667 -> 1.1538, tau_leg 36.01 -> 36.57, psi 1.4826 -> 1.4992, R 0.787 -> 0.770, |slope| 1.2914 -> 1.2865
+      geo v_td 1.40 lam 15.0: beta 78.00 -> 78.25, alpha 33.65 -> 34.05, v_fwd 1.1549 -> 1.1498, tau_leg 36.76 -> 36.96, psi 2.2761 -> 2.2862, R 0.507 -> 0.503, |slope| 1.3016 -> 1.2917
+      geo v_td 1.40 lam 20.0: beta 78.00 -> 78.50, alpha 34.80 -> 35.96, v_fwd 1.1386 -> 1.1230, tau_leg 37.77 -> 38.37, psi 3.1358 -> 3.1795, R 0.363 -> 0.353, |slope| 1.3166 -> 1.2993
+      geo v_td 1.40 lam 25.0: beta 77.50 -> 78.50, alpha 33.29 -> 36.44, v_fwd 1.1580 -> 1.1156, tau_leg 37.40 -> 39.08, psi 3.9502 -> 4.1004, R 0.293 -> 0.272, |slope| 1.3374 -> 1.3095
+      geo v_td 1.40 lam 30.0: beta 77.50 -> 78.50, alpha 35.07 -> 37.04, v_fwd 1.1327 -> 1.1063, tau_leg 39.04 -> 40.00, psi 5.0003 -> 5.1195, R 0.227 -> 0.216, |slope| 1.3646 -> 1.3227
+      geo v_td 1.45 lam  0.0: beta 78.00 -> 77.75, alpha 34.03 -> 32.47, v_fwd 1.1918 -> 1.2132, tau_leg 37.42 -> 36.49, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2821 -> 1.2818
+      geo v_td 1.45 lam  0.5: beta 78.00 -> 77.75, alpha 34.04 -> 32.47, v_fwd 1.1917 -> 1.2131, tau_leg 37.43 -> 36.49, psi 0.0718 -> 0.0706, R 16.587 -> 17.191, |slope| 1.2822 -> 1.2818
+      geo v_td 1.45 lam  1.0: beta 78.00 -> 77.75, alpha 34.05 -> 32.48, v_fwd 1.1915 -> 1.2131, tau_leg 37.44 -> 36.49, psi 0.1437 -> 0.1412, R 8.290 -> 8.594, |slope| 1.2823 -> 1.2818
+      geo v_td 1.45 lam  1.5: beta 77.50 -> 77.75, alpha 30.94 -> 32.48, v_fwd 1.2334 -> 1.2131, tau_leg 35.55 -> 36.49, psi 0.2083 -> 0.2118, R 5.922 -> 5.728, |slope| 1.2825 -> 1.2818
+      geo v_td 1.45 lam  2.0: beta 77.50 -> 77.75, alpha 30.96 -> 32.48, v_fwd 1.2331 -> 1.2130, tau_leg 35.57 -> 36.50, psi 0.2778 -> 0.2824, R 4.438 -> 4.295, |slope| 1.2827 -> 1.2819
+      geo v_td 1.45 lam  2.5: beta 77.50 -> 77.75, alpha 30.98 -> 32.49, v_fwd 1.2328 -> 1.2129, tau_leg 35.59 -> 36.51, psi 0.3474 -> 0.3531, R 3.548 -> 3.435, |slope| 1.2829 -> 1.2820
+      geo v_td 1.45 lam  5.0: beta 77.50 -> 77.75, alpha 31.15 -> 32.53, v_fwd 1.2305 -> 1.2123, tau_leg 35.73 -> 36.57, psi 0.6975 -> 0.7079, R 1.764 -> 1.712, |slope| 1.2845 -> 1.2828
+      geo v_td 1.45 lam  7.5: beta 77.50 -> 77.75, alpha 31.41 -> 32.60, v_fwd 1.2271 -> 1.2113, tau_leg 35.94 -> 36.66, psi 1.0525 -> 1.0662, R 1.166 -> 1.136, |slope| 1.2871 -> 1.2841
+      geo v_td 1.45 lam 10.0: beta 77.50 -> 77.75, alpha 31.74 -> 32.70, v_fwd 1.2226 -> 1.2098, tau_leg 36.23 -> 36.80, psi 1.4149 -> 1.4298, R 0.864 -> 0.846, |slope| 1.2906 -> 1.2859
+      geo v_td 1.45 lam 15.0: beta 77.50 -> 77.75, alpha 32.63 -> 32.99, v_fwd 1.2102 -> 1.2057, tau_leg 37.02 -> 37.20, psi 2.1719 -> 2.1802, R 0.557 -> 0.553, |slope| 1.3008 -> 1.2912
+      geo v_td 1.45 lam 20.0: beta 77.50 -> 77.75, alpha 33.81 -> 33.40, v_fwd 1.1934 -> 1.1997, tau_leg 38.08 -> 37.78, psi 2.9920 -> 2.9762, R 0.399 -> 0.403, |slope| 1.3158 -> 1.2989
+      geo v_td 1.45 lam 25.0: beta 77.00 -> 78.00, alpha 32.36 -> 35.40, v_fwd 1.2122 -> 1.1709, tau_leg 37.70 -> 39.40, psi 3.7736 -> 3.9068, R 0.321 -> 0.300, |slope| 1.3361 -> 1.3092
+      geo v_td 1.45 lam 30.0: beta 77.00 -> 78.00, alpha 34.19 -> 36.01, v_fwd 1.1859 -> 1.1613, tau_leg 39.42 -> 40.35, psi 4.7760 -> 4.8773, R 0.248 -> 0.238, |slope| 1.3634 -> 1.3226
+  (the s84 geometric arm predates the s336 rolling-radius fix; s336 is the same step 0.5 on the current law, so this isolates the step)
+  [step0.25 vs s336] cells 273: exist new 202, old 191; existence gained 11, LOST 0
+      gained: geo v_td 0.70 lam  0.0 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  0.5 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  1.0 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  1.5 (beta 84.25, alpha 44.11, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  2.0 (beta 84.25, alpha 44.12, v_fwd 0.4973)
+      gained: geo v_td 0.70 lam  2.5 (beta 84.25, alpha 44.12, v_fwd 0.4972)
+      gained: geo v_td 0.70 lam  5.0 (beta 84.25, alpha 44.16, v_fwd 0.4969)
+      gained: geo v_td 0.70 lam  7.5 (beta 84.25, alpha 44.21, v_fwd 0.4964)
+      gained: geo v_td 0.70 lam 10.0 (beta 84.25, alpha 44.30, v_fwd 0.4956)
+      gained: geo v_td 0.75 lam 15.0 (beta 83.75, alpha 42.99, v_fwd 0.5427)
+      gained: geo v_td 0.75 lam 20.0 (beta 83.75, alpha 43.33, v_fwd 0.5395)
+    beta* changed in 84 of 191 cells existing in both; shift histogram (new - old, deg): {-0.25: 33, 0.25: 51}
+    max |d| over 191 cells (all both-exist): beta_deg 0.25 @geo 1.45/20; alpha_deg 1.944 @geo 0.85/0; v_fwd 0.02144 @geo 1.15/20; tau_leg 0.9351 @geo 1.45/0; tau_abad_profile 0.7224 @geo 1.45/0; psi 0.2529 @geo 0.90/30; R 0.5995 @geo 1.45/0.5; duty 0.01041 @geo 0.85/0; slope 0.003399 @geo 0.90/30; flight_s 0.006707 @geo 1.45/0; scrub 0.1988 @geo 0.85/25; lam_out_deg 0.006282 @geo 1.35/30
+    max |d| over 107 cells (beta* unchanged): beta_deg 0; alpha_deg 0; v_fwd 0; tau_leg 0; tau_abad_profile 0; psi 0; R 0; duty 0; slope 0; flight_s 0; scrub 0; lam_out_deg 0
+    max |d| over 84 cells (beta* changed): beta_deg 0.25 @geo 1.45/20; alpha_deg 1.944 @geo 0.85/0; v_fwd 0.02144 @geo 1.15/20; tau_leg 0.9351 @geo 1.45/0; tau_abad_profile 0.7224 @geo 1.45/0; psi 0.2529 @geo 0.90/30; R 0.5995 @geo 1.45/0.5; duty 0.01041 @geo 0.85/0; slope 0.003399 @geo 0.90/30; flight_s 0.006707 @geo 1.45/0; scrub 0.1988 @geo 0.85/25; lam_out_deg 0.006282 @geo 1.35/30
+    beta*-changed cells:
+      geo v_td 0.85 lam  0.0: beta 83.00 -> 83.25, alpha 41.67 -> 43.61, v_fwd 0.6287 -> 0.6094, tau_leg 29.69 -> 30.28, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2734 -> 1.2704
+      geo v_td 0.85 lam  0.5: beta 83.00 -> 83.25, alpha 41.67 -> 43.61, v_fwd 0.6287 -> 0.6094, tau_leg 29.69 -> 30.28, psi 0.1362 -> 0.1405, R 4.617 -> 4.338, |slope| 1.2734 -> 1.2704
+      geo v_td 0.85 lam  1.0: beta 83.00 -> 83.25, alpha 41.67 -> 43.61, v_fwd 0.6287 -> 0.6094, tau_leg 29.69 -> 30.28, psi 0.2724 -> 0.2810, R 2.308 -> 2.169, |slope| 1.2734 -> 1.2705
+      geo v_td 0.85 lam  1.5: beta 83.00 -> 83.25, alpha 41.67 -> 43.61, v_fwd 0.6287 -> 0.6094, tau_leg 29.70 -> 30.28, psi 0.4086 -> 0.4215, R 1.539 -> 1.446, |slope| 1.2734 -> 1.2705
+      geo v_td 0.85 lam  2.0: beta 83.00 -> 83.25, alpha 41.67 -> 43.62, v_fwd 0.6286 -> 0.6094, tau_leg 29.70 -> 30.29, psi 0.5449 -> 0.5622, R 1.154 -> 1.084, |slope| 1.2735 -> 1.2706
+      geo v_td 0.85 lam  2.5: beta 83.00 -> 83.25, alpha 41.68 -> 43.62, v_fwd 0.6286 -> 0.6093, tau_leg 29.71 -> 30.29, psi 0.6814 -> 0.7029, R 0.923 -> 0.867, |slope| 1.2736 -> 1.2707
+      geo v_td 0.85 lam  5.0: beta 83.00 -> 83.25, alpha 41.71 -> 43.66, v_fwd 0.6282 -> 0.6089, tau_leg 29.75 -> 30.34, psi 1.3662 -> 1.4094, R 0.460 -> 0.432, |slope| 1.2743 -> 1.2714
+      geo v_td 0.85 lam  7.5: beta 83.00 -> 83.25, alpha 41.77 -> 43.71, v_fwd 0.6276 -> 0.6083, tau_leg 29.83 -> 30.41, psi 2.0579 -> 2.1230, R 0.305 -> 0.287, |slope| 1.2756 -> 1.2726
+      geo v_td 0.85 lam 10.0: beta 83.00 -> 83.25, alpha 41.86 -> 43.79, v_fwd 0.6267 -> 0.6075, tau_leg 29.94 -> 30.52, psi 2.7601 -> 2.8475, R 0.227 -> 0.213, |slope| 1.2773 -> 1.2743
+      geo v_td 0.85 lam 15.0: beta 83.00 -> 83.25, alpha 42.10 -> 44.02, v_fwd 0.6242 -> 0.6050, tau_leg 30.27 -> 30.84, psi 4.2113 -> 4.3449, R 0.148 -> 0.139, |slope| 1.2824 -> 1.2794
+      geo v_td 0.85 lam 20.0: beta 83.00 -> 83.25, alpha 42.44 -> 44.34, v_fwd 0.6206 -> 0.6015, tau_leg 30.74 -> 31.30, psi 5.7538 -> 5.9364, R 0.108 -> 0.101, |slope| 1.2899 -> 1.2867
+      geo v_td 0.85 lam 25.0: beta 83.00 -> 83.25, alpha 42.88 -> 44.76, v_fwd 0.6158 -> 0.5968, tau_leg 31.38 -> 31.92, psi 7.4282 -> 7.6645, R 0.083 -> 0.078, |slope| 1.3000 -> 1.2968
+      geo v_td 0.90 lam 25.0: beta 82.50 -> 82.75, alpha 41.54 -> 43.36, v_fwd 0.6662 -> 0.6471, tau_leg 31.92 -> 32.50, psi 6.8669 -> 7.0687, R 0.097 -> 0.092, |slope| 1.3028 -> 1.2995
+      geo v_td 0.90 lam 30.0: beta 82.50 -> 82.75, alpha 42.10 -> 43.89, v_fwd 0.6599 -> 0.6410, tau_leg 32.76 -> 33.31, psi 8.5833 -> 8.8362, R 0.077 -> 0.073, |slope| 1.3161 -> 1.3127
+      geo v_td 0.95 lam  0.0: beta 82.50 -> 82.75, alpha 42.64 -> 44.44, v_fwd 0.6923 -> 0.6720, tau_leg 31.97 -> 32.57, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2736 -> 1.2722
+      geo v_td 0.95 lam  0.5: beta 82.50 -> 82.75, alpha 42.64 -> 44.44, v_fwd 0.6923 -> 0.6720, tau_leg 31.97 -> 32.57, psi 0.1237 -> 0.1274, R 5.598 -> 5.275, |slope| 1.2736 -> 1.2722
+      geo v_td 0.95 lam  1.0: beta 82.50 -> 82.75, alpha 42.64 -> 44.44, v_fwd 0.6923 -> 0.6720, tau_leg 31.97 -> 32.57, psi 0.2473 -> 0.2548, R 2.799 -> 2.637, |slope| 1.2737 -> 1.2723
+      geo v_td 0.95 lam  1.5: beta 82.50 -> 82.75, alpha 42.64 -> 44.44, v_fwd 0.6923 -> 0.6719, tau_leg 31.97 -> 32.58, psi 0.3711 -> 0.3823, R 1.865 -> 1.758, |slope| 1.2737 -> 1.2723
+      geo v_td 0.95 lam  2.0: beta 82.50 -> 82.75, alpha 42.65 -> 44.44, v_fwd 0.6922 -> 0.6719, tau_leg 31.98 -> 32.58, psi 0.4949 -> 0.5099, R 1.399 -> 1.318, |slope| 1.2738 -> 1.2724
+      geo v_td 0.95 lam  2.5: beta 82.50 -> 82.75, alpha 42.65 -> 44.45, v_fwd 0.6922 -> 0.6719, tau_leg 31.98 -> 32.59, psi 0.6188 -> 0.6375, R 1.119 -> 1.054, |slope| 1.2739 -> 1.2724
+      geo v_td 0.95 lam  5.0: beta 82.50 -> 82.75, alpha 42.68 -> 44.48, v_fwd 0.6918 -> 0.6715, tau_leg 32.03 -> 32.63, psi 1.2407 -> 1.2782, R 0.558 -> 0.525, |slope| 1.2746 -> 1.2732
+      geo v_td 0.95 lam  7.5: beta 82.50 -> 82.75, alpha 42.74 -> 44.53, v_fwd 0.6911 -> 0.6708, tau_leg 32.11 -> 32.71, psi 1.8688 -> 1.9253, R 0.370 -> 0.348, |slope| 1.2758 -> 1.2743
+      geo v_td 0.95 lam 10.0: beta 82.50 -> 82.75, alpha 42.82 -> 44.61, v_fwd 0.6901 -> 0.6699, tau_leg 32.22 -> 32.82, psi 2.5064 -> 2.5822, R 0.275 -> 0.259, |slope| 1.2775 -> 1.2760
+      geo v_td 0.95 lam 15.0: beta 82.50 -> 82.75, alpha 43.05 -> 44.82, v_fwd 0.6874 -> 0.6672, tau_leg 32.54 -> 33.13, psi 3.8239 -> 3.9396, R 0.180 -> 0.169, |slope| 1.2825 -> 1.2809
+      geo v_td 1.00 lam 15.0: beta 82.00 -> 82.25, alpha 41.72 -> 43.45, v_fwd 0.7392 -> 0.7190, tau_leg 33.07 -> 33.69, psi 3.5559 -> 3.6560, R 0.208 -> 0.197, |slope| 1.2848 -> 1.2834
+      geo v_td 1.00 lam 20.0: beta 82.00 -> 82.25, alpha 42.05 -> 43.76, v_fwd 0.7351 -> 0.7150, tau_leg 33.54 -> 34.15, psi 4.8571 -> 4.9939, R 0.151 -> 0.143, |slope| 1.2921 -> 1.2906
+      geo v_td 1.00 lam 25.0: beta 82.00 -> 82.25, alpha 42.48 -> 44.17, v_fwd 0.7297 -> 0.7097, tau_leg 34.17 -> 34.77, psi 6.2686 -> 6.4453, R 0.116 -> 0.110, |slope| 1.3021 -> 1.3004
+      geo v_td 1.00 lam 30.0: beta 82.00 -> 82.25, alpha 43.01 -> 44.68, v_fwd 0.7230 -> 0.7032, tau_leg 34.99 -> 35.57, psi 7.8338 -> 8.0549, R 0.092 -> 0.087, |slope| 1.3151 -> 1.3132
+      geo v_td 1.05 lam 30.0: beta 81.50 -> 81.75, alpha 41.77 -> 43.40, v_fwd 0.7744 -> 0.7545, tau_leg 35.53 -> 36.13, psi 7.3137 -> 7.5065, R 0.106 -> 0.101, |slope| 1.3173 -> 1.3155
+      geo v_td 1.10 lam  0.0: beta 81.50 -> 81.75, alpha 42.12 -> 43.77, v_fwd 0.8086 -> 0.7873, tau_leg 34.79 -> 35.45, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2780 -> 1.2778
+      geo v_td 1.10 lam  0.5: beta 81.50 -> 81.75, alpha 42.12 -> 43.77, v_fwd 0.8086 -> 0.7873, tau_leg 34.80 -> 35.45, psi 0.1059 -> 0.1087, R 7.637 -> 7.241, |slope| 1.2780 -> 1.2778
+      geo v_td 1.10 lam  1.0: beta 81.50 -> 81.75, alpha 42.12 -> 43.77, v_fwd 0.8086 -> 0.7873, tau_leg 34.80 -> 35.45, psi 0.2118 -> 0.2175, R 3.818 -> 3.620, |slope| 1.2780 -> 1.2779
+      geo v_td 1.10 lam  1.5: beta 81.50 -> 81.75, alpha 42.13 -> 43.77, v_fwd 0.8086 -> 0.7873, tau_leg 34.80 -> 35.45, psi 0.3177 -> 0.3263, R 2.545 -> 2.413, |slope| 1.2780 -> 1.2779
+      geo v_td 1.10 lam  2.0: beta 81.50 -> 81.75, alpha 42.13 -> 43.77, v_fwd 0.8085 -> 0.7872, tau_leg 34.80 -> 35.46, psi 0.4237 -> 0.4352, R 1.908 -> 1.809, |slope| 1.2781 -> 1.2780
+      geo v_td 1.10 lam  2.5: beta 81.50 -> 81.75, alpha 42.13 -> 43.78, v_fwd 0.8085 -> 0.7872, tau_leg 34.81 -> 35.46, psi 0.5298 -> 0.5441, R 1.526 -> 1.447, |slope| 1.2782 -> 1.2781
+      geo v_td 1.10 lam  5.0: beta 81.50 -> 81.75, alpha 42.17 -> 43.81, v_fwd 0.8080 -> 0.7867, tau_leg 34.86 -> 35.51, psi 1.0622 -> 1.0909, R 0.761 -> 0.721, |slope| 1.2789 -> 1.2788
+      geo v_td 1.10 lam  7.5: beta 81.50 -> 81.75, alpha 42.22 -> 43.86, v_fwd 0.8073 -> 0.7860, tau_leg 34.94 -> 35.58, psi 1.5999 -> 1.6431, R 0.505 -> 0.478, |slope| 1.2801 -> 1.2799
+      geo v_td 1.10 lam 10.0: beta 81.50 -> 81.75, alpha 42.30 -> 43.93, v_fwd 0.8062 -> 0.7850, tau_leg 35.05 -> 35.69, psi 2.1456 -> 2.2036, R 0.376 -> 0.356, |slope| 1.2818 -> 1.2816
+      geo v_td 1.10 lam 15.0: beta 81.50 -> 81.75, alpha 42.52 -> 44.14, v_fwd 0.8032 -> 0.7820, tau_leg 35.37 -> 36.01, psi 3.2728 -> 3.3612, R 0.245 -> 0.233, |slope| 1.2867 -> 1.2864
+      geo v_td 1.10 lam 20.0: beta 81.50 -> 81.75, alpha 42.83 -> 44.44, v_fwd 0.7988 -> 0.7778, tau_leg 35.84 -> 36.46, psi 4.4696 -> 4.5905, R 0.179 -> 0.169, |slope| 1.2938 -> 1.2935
+      geo v_td 1.10 lam 25.0: beta 81.50 -> 81.75, alpha 43.24 -> 44.83, v_fwd 0.7932 -> 0.7723, tau_leg 36.46 -> 37.07, psi 5.7674 -> 5.9233, R 0.138 -> 0.130, |slope| 1.3036 -> 1.3030
+      geo v_td 1.15 lam  5.0: beta 81.00 -> 81.25, alpha 40.91 -> 42.53, v_fwd 0.8614 -> 0.8400, tau_leg 35.34 -> 36.02, psi 0.9964 -> 1.0217, R 0.864 -> 0.822, |slope| 1.2805 -> 1.2805
+      geo v_td 1.15 lam  7.5: beta 81.00 -> 81.25, alpha 40.97 -> 42.58, v_fwd 0.8606 -> 0.8393, tau_leg 35.42 -> 36.10, psi 1.5007 -> 1.5389, R 0.573 -> 0.545, |slope| 1.2817 -> 1.2817
+      geo v_td 1.15 lam 10.0: beta 81.00 -> 81.25, alpha 41.05 -> 42.66, v_fwd 0.8595 -> 0.8382, tau_leg 35.53 -> 36.21, psi 2.0126 -> 2.0637, R 0.427 -> 0.406, |slope| 1.2834 -> 1.2834
+      geo v_td 1.15 lam 15.0: beta 81.00 -> 81.25, alpha 41.28 -> 42.87, v_fwd 0.8563 -> 0.8351, tau_leg 35.86 -> 36.53, psi 3.0698 -> 3.1477, R 0.279 -> 0.265, |slope| 1.2884 -> 1.2882
+      geo v_td 1.15 lam 20.0: beta 81.50 -> 81.25, alpha 44.73 -> 43.18, v_fwd 0.8092 -> 0.8306, tau_leg 37.62 -> 36.99, psi 4.4124 -> 4.2985, R 0.183 -> 0.193, |slope| 1.2954 -> 1.2953
+      geo v_td 1.15 lam 25.0: beta 81.00 -> 81.25, alpha 42.02 -> 43.58, v_fwd 0.8458 -> 0.8248, tau_leg 36.98 -> 37.62, psi 5.4086 -> 5.5460, R 0.156 -> 0.149, |slope| 1.3053 -> 1.3049
+      geo v_td 1.15 lam 30.0: beta 81.00 -> 81.25, alpha 42.54 -> 44.07, v_fwd 0.8383 -> 0.8175, tau_leg 37.80 -> 38.42, psi 6.7564 -> 6.9281, R 0.124 -> 0.118, |slope| 1.3182 -> 1.3176
+      geo v_td 1.20 lam 20.0: beta 80.50 -> 80.75, alpha 40.41 -> 41.96, v_fwd 0.9051 -> 0.8839, tau_leg 36.81 -> 37.50, psi 3.9449 -> 4.0394, R 0.229 -> 0.219, |slope| 1.2970 -> 1.2969
+      geo v_td 1.20 lam 25.0: beta 81.00 -> 80.75, alpha 43.88 -> 42.37, v_fwd 0.8565 -> 0.8778, tau_leg 38.78 -> 38.13, psi 5.3411 -> 5.2111, R 0.160 -> 0.168, |slope| 1.3067 -> 1.3066
+      geo v_td 1.25 lam 25.0: beta 80.00 -> 80.25, alpha 39.70 -> 41.21, v_fwd 0.9524 -> 0.9313, tau_leg 37.92 -> 38.62, psi 4.8033 -> 4.9120, R 0.198 -> 0.190, |slope| 1.3080 -> 1.3079
+      geo v_td 1.25 lam 30.0: beta 80.50 -> 80.25, alpha 43.19 -> 41.73, v_fwd 0.9020 -> 0.9233, tau_leg 40.11 -> 39.45, psi 6.2791 -> 6.1346, R 0.144 -> 0.150, |slope| 1.3207 -> 1.3206
+      geo v_td 1.30 lam 30.0: beta 79.50 -> 79.75, alpha 39.15 -> 40.61, v_fwd 0.9978 -> 0.9768, tau_leg 39.22 -> 39.93, psi 5.6765 -> 5.7984, R 0.176 -> 0.168, |slope| 1.3219 -> 1.3217
+      geo v_td 1.35 lam  0.0: beta 79.00 -> 78.75, alpha 36.21 -> 34.64, v_fwd 1.0801 -> 1.1013, tau_leg 36.86 -> 36.00, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2827 -> 1.2827
+      geo v_td 1.35 lam  0.5: beta 79.00 -> 78.75, alpha 36.21 -> 34.64, v_fwd 1.0801 -> 1.1013, tau_leg 36.86 -> 36.00, psi 0.0793 -> 0.0777, R 13.626 -> 14.166, |slope| 1.2827 -> 1.2827
+      geo v_td 1.35 lam  1.0: beta 79.00 -> 78.75, alpha 36.22 -> 34.65, v_fwd 1.0800 -> 1.1012, tau_leg 36.86 -> 36.01, psi 0.1585 -> 0.1555, R 6.812 -> 7.082, |slope| 1.2828 -> 1.2827
+      geo v_td 1.35 lam  1.5: beta 79.00 -> 78.75, alpha 36.22 -> 34.65, v_fwd 1.0800 -> 1.1012, tau_leg 36.86 -> 36.01, psi 0.2379 -> 0.2333, R 4.541 -> 4.720, |slope| 1.2828 -> 1.2828
+      geo v_td 1.35 lam  2.0: beta 79.00 -> 78.75, alpha 36.22 -> 34.65, v_fwd 1.0799 -> 1.1011, tau_leg 36.87 -> 36.02, psi 0.3172 -> 0.3111, R 3.404 -> 3.539, |slope| 1.2829 -> 1.2828
+      geo v_td 1.35 lam  2.5: beta 79.00 -> 78.75, alpha 36.23 -> 34.66, v_fwd 1.0799 -> 1.1011, tau_leg 36.88 -> 36.02, psi 0.3966 -> 0.3890, R 2.723 -> 2.831, |slope| 1.2830 -> 1.2829
+      geo v_td 1.35 lam  5.0: beta 79.00 -> 78.75, alpha 36.26 -> 34.70, v_fwd 1.0793 -> 1.1005, tau_leg 36.93 -> 36.08, psi 0.7952 -> 0.7799, R 1.357 -> 1.411, |slope| 1.2837 -> 1.2837
+      geo v_td 1.35 lam  7.5: beta 79.00 -> 78.75, alpha 36.33 -> 34.77, v_fwd 1.0784 -> 1.0995, tau_leg 37.02 -> 36.17, psi 1.1976 -> 1.1746, R 0.900 -> 0.936, |slope| 1.2850 -> 1.2849
+      geo v_td 1.35 lam 10.0: beta 79.00 -> 78.75, alpha 36.42 -> 34.86, v_fwd 1.0771 -> 1.0982, tau_leg 37.14 -> 36.30, psi 1.6060 -> 1.5751, R 0.671 -> 0.697, |slope| 1.2867 -> 1.2867
+      geo v_td 1.35 lam 30.0: beta 79.00 -> 79.25, alpha 38.08 -> 39.53, v_fwd 1.0518 -> 1.0308, tau_leg 39.63 -> 40.37, psi 5.3848 -> 5.4948, R 0.195 -> 0.188, |slope| 1.3225 -> 1.3224
+      geo v_td 1.40 lam  0.0: beta 78.50 -> 78.25, alpha 35.11 -> 33.55, v_fwd 1.1357 -> 1.1570, tau_leg 37.16 -> 36.27, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2826 -> 1.2824
+      geo v_td 1.40 lam  0.5: beta 78.50 -> 78.25, alpha 35.11 -> 33.55, v_fwd 1.1357 -> 1.1570, tau_leg 37.16 -> 36.27, psi 0.0754 -> 0.0740, R 15.066 -> 15.636, |slope| 1.2826 -> 1.2824
+      geo v_td 1.40 lam  1.0: beta 78.50 -> 78.25, alpha 35.11 -> 33.56, v_fwd 1.1357 -> 1.1569, tau_leg 37.16 -> 36.27, psi 0.1508 -> 0.1480, R 7.532 -> 7.817, |slope| 1.2827 -> 1.2825
+      geo v_td 1.40 lam  1.5: beta 78.50 -> 78.25, alpha 35.12 -> 33.56, v_fwd 1.1356 -> 1.1569, tau_leg 37.17 -> 36.27, psi 0.2262 -> 0.2220, R 5.020 -> 5.210, |slope| 1.2827 -> 1.2825
+      geo v_td 1.40 lam  2.0: beta 78.50 -> 78.25, alpha 35.12 -> 33.56, v_fwd 1.1356 -> 1.1568, tau_leg 37.17 -> 36.28, psi 0.3017 -> 0.2961, R 3.764 -> 3.907, |slope| 1.2828 -> 1.2826
+      geo v_td 1.40 lam  2.5: beta 78.50 -> 78.25, alpha 35.13 -> 33.57, v_fwd 1.1355 -> 1.1568, tau_leg 37.18 -> 36.29, psi 0.3772 -> 0.3703, R 3.010 -> 3.124, |slope| 1.2829 -> 1.2827
+      geo v_td 1.40 lam  5.0: beta 78.50 -> 78.25, alpha 35.17 -> 33.61, v_fwd 1.1349 -> 1.1562, tau_leg 37.23 -> 36.34, psi 0.7562 -> 0.7423, R 1.501 -> 1.558, |slope| 1.2836 -> 1.2834
+      geo v_td 1.40 lam  7.5: beta 78.50 -> 78.25, alpha 35.23 -> 33.68, v_fwd 1.1340 -> 1.1552, tau_leg 37.32 -> 36.44, psi 1.1389 -> 1.1180, R 0.996 -> 1.033, |slope| 1.2849 -> 1.2847
+      geo v_td 1.40 lam 10.0: beta 78.50 -> 78.25, alpha 35.32 -> 33.78, v_fwd 1.1326 -> 1.1538, tau_leg 37.45 -> 36.57, psi 1.5273 -> 1.4992, R 0.742 -> 0.770, |slope| 1.2866 -> 1.2865
+      geo v_td 1.40 lam 15.0: beta 78.50 -> 78.25, alpha 35.59 -> 34.05, v_fwd 1.1286 -> 1.1498, tau_leg 37.83 -> 36.96, psi 2.3290 -> 2.2862, R 0.485 -> 0.503, |slope| 1.2918 -> 1.2917
+      geo v_td 1.45 lam  0.0: beta 78.00 -> 77.75, alpha 34.03 -> 32.47, v_fwd 1.1918 -> 1.2132, tau_leg 37.42 -> 36.49, psi 0.0000 -> 0.0000, R inf -> inf, |slope| 1.2821 -> 1.2818
+      geo v_td 1.45 lam  0.5: beta 78.00 -> 77.75, alpha 34.03 -> 32.47, v_fwd 1.1918 -> 1.2131, tau_leg 37.42 -> 36.49, psi 0.0718 -> 0.0706, R 16.591 -> 17.191, |slope| 1.2821 -> 1.2818
+      geo v_td 1.45 lam  1.0: beta 78.00 -> 77.75, alpha 34.03 -> 32.48, v_fwd 1.1918 -> 1.2131, tau_leg 37.42 -> 36.49, psi 0.1437 -> 0.1412, R 8.295 -> 8.594, |slope| 1.2821 -> 1.2818
+      geo v_td 1.45 lam  1.5: beta 78.00 -> 77.75, alpha 34.03 -> 32.48, v_fwd 1.1917 -> 1.2131, tau_leg 37.43 -> 36.49, psi 0.2156 -> 0.2118, R 5.529 -> 5.728, |slope| 1.2822 -> 1.2818
+      geo v_td 1.45 lam  2.0: beta 78.00 -> 77.75, alpha 34.04 -> 32.48, v_fwd 1.1917 -> 1.2130, tau_leg 37.43 -> 36.50, psi 0.2875 -> 0.2824, R 4.145 -> 4.295, |slope| 1.2823 -> 1.2819
+      geo v_td 1.45 lam  2.5: beta 78.00 -> 77.75, alpha 34.04 -> 32.49, v_fwd 1.1916 -> 1.2129, tau_leg 37.44 -> 36.51, psi 0.3594 -> 0.3531, R 3.315 -> 3.435, |slope| 1.2824 -> 1.2820
+      geo v_td 1.45 lam  5.0: beta 78.00 -> 77.75, alpha 34.08 -> 32.53, v_fwd 1.1910 -> 1.2123, tau_leg 37.50 -> 36.57, psi 0.7206 -> 0.7079, R 1.653 -> 1.712, |slope| 1.2831 -> 1.2828
+      geo v_td 1.45 lam  7.5: beta 78.00 -> 77.75, alpha 34.15 -> 32.60, v_fwd 1.1900 -> 1.2113, tau_leg 37.59 -> 36.66, psi 1.0853 -> 1.0662, R 1.096 -> 1.136, |slope| 1.2844 -> 1.2841
+      geo v_td 1.45 lam 10.0: beta 78.00 -> 77.75, alpha 34.25 -> 32.70, v_fwd 1.1886 -> 1.2098, tau_leg 37.73 -> 36.80, psi 1.4554 -> 1.4298, R 0.817 -> 0.846, |slope| 1.2862 -> 1.2859
+      geo v_td 1.45 lam 15.0: beta 78.00 -> 77.75, alpha 34.52 -> 32.99, v_fwd 1.1844 -> 1.2057, tau_leg 38.11 -> 37.20, psi 2.2193 -> 2.1802, R 0.534 -> 0.553, |slope| 1.2914 -> 1.2912
+      geo v_td 1.45 lam 20.0: beta 78.00 -> 77.75, alpha 34.90 -> 33.40, v_fwd 1.1786 -> 1.1997, tau_leg 38.67 -> 37.78, psi 3.0295 -> 2.9762, R 0.389 -> 0.403, |slope| 1.2990 -> 1.2989
+  s84 vs s336 for reference (step 0.5 both):
+  [s336 vs s84] cells 273: exist new 191, old 192; existence gained 0, LOST 1
+      LOST: geo v_td 0.75 lam 15.0 (beta 83.50, alpha 41.79, v_fwd 0.5529)
+    beta* changed in 51 of 191 cells existing in both; shift histogram (new - old, deg): {0.5: 42, 1.0: 9}
+    max |d| over 191 cells (all both-exist): beta_deg 1 @geo 1.45/30; alpha_deg 3.922 @geo 0.75/7.5; v_fwd 0.05043 @geo 1.20/25; tau_leg 1.879 @geo 1.45/1.5; tau_abad_profile 1.365 @geo 1.45/1.5; psi 0.3882 @geo 1.05/30; R 0.393 @geo 1.45/1.5; duty 0.02143 @geo 1.45/1.5; slope 0.04652 @geo 0.80/30; flight_s 0.01347 @geo 1.45/1.5; scrub 0.2624 @geo 1.05/30; lam_out_deg 0.5076 @geo 1.45/30
+    max |d| over 140 cells (beta* unchanged): beta_deg 0; alpha_deg 3.061 @geo 1.05/30; v_fwd 0.03903 @geo 1.05/30; tau_leg 1.173 @geo 1.05/30; tau_abad_profile 0.7816 @geo 1.05/30; psi 0.3882 @geo 1.05/30; R 0.01121 @geo 1.15/25; duty 0.01647 @geo 1.05/30; slope 0.04226 @geo 1.05/30; flight_s 0.007207 @geo 1.05/30; scrub 0.2624 @geo 1.05/30; lam_out_deg 0.4775 @geo 1.05/30
+    max |d| over 51 cells (beta* changed): beta_deg 1 @geo 1.45/30; alpha_deg 3.922 @geo 0.75/7.5; v_fwd 0.05043 @geo 1.20/25; tau_leg 1.879 @geo 1.45/1.5; tau_abad_profile 1.365 @geo 1.45/1.5; psi 0.297 @geo 1.20/25; R 0.393 @geo 1.45/1.5; duty 0.02143 @geo 1.45/1.5; slope 0.04652 @geo 0.80/30; flight_s 0.01347 @geo 1.45/1.5; scrub 0.2088 @geo 0.80/20; lam_out_deg 0.5076 @geo 1.45/30
+
+=== warm-start diagnostics ===
+  empirical step 0.25:
+    edge: 0
+    fallback_found: 0
+    fallback_failed: 6  emp 0.70/15; emp 0.70/20; emp 0.70/25; emp 0.70/30; emp 0.75/25; emp 0.75/30
+    holes: 0
+    beta_bound: 0
+    alpha_bound: 4  emp 0.85/30 (44.99); emp 0.90/25 (44.97); emp 1.00/10 (44.95); emp 1.15/25 (44.91)
+    reversal: 1  emp 1.15/30 (81.50 -> 81.25)
+  empirical s84 step 0.5:
+    edge: 0
+    fallback_found: 0
+    fallback_failed: 4  emp 0.75/15; emp 0.75/20; emp 0.75/25; emp 0.75/30
+    holes: 0
+    beta_bound: 0
+    alpha_bound: 3  emp 0.90/25 (44.97); emp 1.00/10 (44.95); emp 1.15/25 (44.91)
+    reversal: 1  emp 1.15/30 (81.50 -> 81.00)
+  geometric step 0.25:
+    edge: 0
+    fallback_found: 0
+    fallback_failed: 6  geo 0.70/15; geo 0.70/20; geo 0.70/25; geo 0.70/30; geo 0.75/25; geo 0.75/30
+    holes: 0
+    beta_bound: 0
+    alpha_bound: 1  geo 1.00/10 (44.95)
+    reversal: 0
+  geometric s84 step 0.5:
+    edge: 0
+    fallback_found: 0
+    fallback_failed: 3  geo 0.75/20; geo 0.75/25; geo 0.75/30
+    holes: 0
+    beta_bound: 0
+    alpha_bound: 1  geo 1.00/5 (44.97)
+    reversal: 0
+
+=== beta* along lambda per speed (step 0.25; '--' no fixed point; '|' marks a cell whose beta* differs from s84) ===
+  empirical
+    0.45    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.50    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.55    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.60    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.65    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.70 84.25| 84.25| 84.25| 84.25| 84.25| 84.25| 84.25| 84.25| 84.25|    --     --     --     -- 
+    0.75 84.00  84.00  84.00  84.00  84.00  84.00  84.00  84.00  84.00  83.75| 83.75|    --     -- 
+    0.80 83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50 
+    0.85 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25|
+    0.90 83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00  82.75|
+    0.95 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.50  82.50  82.50 
+    1.00 82.50  82.50  82.50  82.50  82.50  82.50  82.50  82.50  82.50  82.25| 82.25| 82.25| 82.25|
+    1.05 82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00 
+    1.10 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.50 
+    1.15 81.00  81.00  81.00  81.00  81.00  81.00  81.25| 81.25| 81.25| 81.25| 81.25| 81.50  81.25|
+    1.20 80.50  80.50  80.50  80.50  80.50  80.50  80.50  80.50  80.50  80.75| 80.75| 80.75| 81.00 
+    1.25 80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.25| 80.25| 80.50 
+    1.30 79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.75| 79.75|
+    1.35 78.75| 78.75| 78.75| 78.75| 78.75| 78.75| 78.75| 78.75| 79.00  79.00  79.00  79.00  79.25|
+    1.40 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.50  78.50  78.75|
+    1.45 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 78.00  78.00  78.00 
+  geometric
+    0.45    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.50    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.55    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.60    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.65    --     --     --     --     --     --     --     --     --     --     --     --     -- 
+    0.70 84.25| 84.25| 84.25| 84.25| 84.25| 84.25| 84.25| 84.25| 84.25|    --     --     --     -- 
+    0.75 84.00  84.00  84.00  84.00  84.00  84.00  84.00  84.00| 84.00| 83.75| 83.75|    --     -- 
+    0.80 83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50  83.50| 83.50| 83.50|
+    0.85 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.25| 83.00|
+    0.90 83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00  83.00| 83.00| 82.75| 82.75|
+    0.95 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.75| 82.50  82.50| 82.50|
+    1.00 82.50  82.50  82.50  82.50  82.50  82.50  82.50  82.50| 82.50| 82.25| 82.25| 82.25| 82.25|
+    1.05 82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00  82.00| 82.00| 81.75|
+    1.10 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.75| 81.50|
+    1.15 81.00  81.00  81.00  81.00  81.00  81.00  81.25| 81.25| 81.25| 81.25| 81.25| 81.25| 81.25|
+    1.20 80.50  80.50  80.50  80.50  80.50  80.50  80.50  80.50  80.50  80.50  80.75| 80.75| 81.00|
+    1.25 80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.00  80.00| 80.25| 80.25|
+    1.30 79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.50  79.50| 79.50| 79.50| 79.75|
+    1.35 78.75| 78.75| 78.75| 78.75| 78.75| 78.75| 78.75| 78.75| 78.75| 79.00| 79.00| 79.00| 79.25|
+    1.40 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.25| 78.50| 78.50| 78.50|
+    1.45 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 77.75| 78.00| 78.00|
+  ('*' after -- marks a cell that exists in s84 but not at step 0.25)
+
+wrote /mnt/c/Users/alexc/code/LegWheel/examples/gslip/stage2a_figs/stage2a_grid_step025.npz
