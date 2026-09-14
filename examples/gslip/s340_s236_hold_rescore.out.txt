@@ -1,0 +1,145 @@
+Log s340 (unregistered post-hoc re-analysis, 2026-09-14): the s236 theta = 100 deg static holds re-scored with the in-plane leg's own swing.
+Unregistered post-hoc re-analysis; no fitted parameter.
+
+MEAS reproduced from the CSVs by contact_lateral.measure: max |diff| 0.0000 mm
+L = |O_r|: theta 17 -> 0.000000 m, theta 100 -> 0.148115 m
+
+achieved (tail median) per module: cmd gamma / achieved gamma / achieved theta / L(theta) mm; body roll (odom) deg
+  lam  0: A  +0.00/ -0.697/ 97.59/143.5  B  +0.00/ -0.363/ 97.87/144.1  C  +0.00/ -0.695/ 97.60/143.6  D  +0.00/ -0.361/ 97.87/144.1  roll -0.000
+  lam  8: A  +8.00/ +8.059/ 97.77/143.9  B  -8.00/ -8.828/ 97.70/143.7  C  -8.00/ -9.169/ 97.45/143.3  D  +8.00/ +8.377/ 98.04/144.4  roll -3.603
+  lam  9: A  +9.00/ +9.148/ 97.80/143.9  B  -9.00/ -9.909/ 97.68/143.7  C  -9.00/-10.242/ 97.42/143.2  D  +9.00/ +9.473/ 98.08/144.5  roll -4.053
+  lam 10: A +10.00/+10.273/ 97.84/144.0  B -10.00/-10.954/ 97.66/143.7  C -10.00/-11.289/ 97.40/143.2  D +10.00/+10.599/ 98.11/144.5  roll -4.507
+  lam 11: A +11.00/+11.400/ 97.87/144.1  B -11.00/-11.997/ 97.63/143.6  C -11.00/-12.343/ 97.38/143.1  D +11.00/+11.712/ 98.14/144.6  roll -4.961
+  lam 12: A +12.00/+12.519/ 97.91/144.1  B -12.00/-13.058/ 97.60/143.5  C -12.00/-13.399/ 97.36/143.1  D +12.00/+12.810/ 98.17/144.6  roll -5.415
+  lam 13: A +13.00/+13.615/ 97.93/144.2  B -13.00/-14.116/ 97.58/143.5  C -13.00/-14.452/ 97.33/143.0  D +13.00/+13.920/ 98.20/144.7  roll -5.867
+  lam 14: A +14.00/+14.729/ 97.95/144.2  B -14.00/-15.154/ 97.55/143.5  C -14.00/-15.490/ 97.30/143.0  D +14.00/+15.045/ 98.23/144.7  roll -6.323
+  lam 15: A +15.00/+15.847/ 97.97/144.3  B -15.00/-16.182/ 97.53/143.4  C -15.00/-16.511/ 97.27/142.9  D +15.00/+16.186/ 98.26/144.8  roll -6.780
+  achieved theta 97.27..98.26 deg -> L 0.1429..0.1448 m
+  achieved gamma span 8->15 per leg (deg): A 7.788  B 7.353  C 7.342  D 7.809
+
+local slope of the migration at |phi| = 12 deg (mm/deg): phi>0 1.905, phi<0 2.570; difference 0.665 = 2 D sin|phi| (w_c cancels; L sin(phi) adds L cos(phi) to both sides)
+
+######## PROFILE contact, Eq. (4) as implemented (contact_profile)
+
+== PROFILE contact, Eq. (4) as implemented (contact_profile); L = 0
+  lambda-0 reference mean|res|  max|res|  mean(pred-meas)  worst  sign!=  level split B,C-A,D pred/meas at 8 | 15 | mean 8..15 (mm)
+  exact          33.15     44.75           -33.15   D@15      0   +3.83/+5.20 | +7.99/+7.90 | +5.76/+6.31
+  hybrid         33.15     44.75           -33.15   D@15      0   +3.83/+5.20 | +7.99/+7.90 | +5.76/+6.31
+  band           33.15     46.23           -33.15   C@15      0   +1.14/+5.20 | +5.30/+7.90 | +3.07/+6.31
+  shoulder       33.15     48.93           -33.15   D@15      0   +11.42/+5.20 | +15.58/+7.90 | +13.35/+6.31
+  8->15 secants (reference-independent), mm/deg, pred / meas:
+    per commanded deg: A 2.12/4.93  B 2.71/5.33  C 2.71/5.31  D 2.11/4.94
+    per achieved deg:  A 1.90/4.43  B 2.58/5.07  C 2.59/5.07  D 1.89/4.43
+    side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.594 pred / +0.386 meas; per achieved deg +0.683 pred / +0.639 meas
+
+== PROFILE contact, Eq. (4) as implemented (contact_profile); L = 0.1481 m (theta = 100 deg)
+  lambda-0 reference mean|res|  max|res|  mean(pred-meas)  worst  sign!=  level split B,C-A,D pred/meas at 8 | 15 | mean 8..15 (mm)
+  exact           1.65      4.00            -1.37   D@11      0   +5.83/+5.20 | +8.81/+7.90 | +7.24/+6.31
+  hybrid          2.13      4.69            -1.37   C@10      0   +3.09/+5.20 | +6.07/+7.90 | +4.51/+6.31
+  band            3.00      6.45            -1.37   C@10      0   +0.40/+5.20 | +3.39/+7.90 | +1.82/+6.31
+  shoulder        3.24      7.24            -1.37   D@11      0   +10.68/+5.20 | +13.66/+7.90 | +12.09/+6.31
+  8->15 secants (reference-independent), mm/deg, pred / meas:
+    per commanded deg: A 4.93/4.93  B 5.36/5.33  C 5.35/5.31  D 4.93/4.94
+    per achieved deg:  A 4.43/4.43  B 5.10/5.07  C 5.10/5.07  D 4.42/4.43
+    side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.426 pred / +0.386 meas; per achieved deg +0.678 pred / +0.639 meas
+
+== PROFILE contact, Eq. (4) as implemented (contact_profile); L at achieved theta
+  lambda-0 reference mean|res|  max|res|  mean(pred-meas)  worst  sign!=  level split B,C-A,D pred/meas at 8 | 15 | mean 8..15 (mm)
+  exact           2.30      4.72            -2.29   D@11      0   +5.67/+5.20 | +8.41/+7.90 | +6.97/+6.31
+  hybrid          2.59      5.60            -2.29   C@10      0   +3.02/+5.20 | +5.75/+7.90 | +4.32/+6.31
+  band            3.48      7.36            -2.29   C@10      0   +0.33/+5.20 | +3.06/+7.90 | +1.63/+6.31
+  shoulder        3.68      7.99            -2.29   D@11      0   +10.61/+5.20 | +13.34/+7.90 | +11.91/+6.31
+  8->15 secants (reference-independent), mm/deg, pred / meas:
+    per commanded deg: A 4.87/4.93  B 5.27/5.33  C 5.25/5.31  D 4.87/4.94
+    per achieved deg:  A 4.37/4.43  B 5.01/5.07  C 5.01/5.07  D 4.37/4.43
+    side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.390 pred / +0.386 meas; per achieved deg +0.640 pred / +0.639 meas
+
+legacy - profile identities hold at all 32 scored leans. Body-frame excess SY*(legacy - profile), mm, at lam 8 / 15:
+  A 7.05/8.91  B 7.24/8.98  C 7.33/9.06  D 7.13/8.98
+
+######## LEGACY form D cos + 0.145 sin
+
+== LEGACY form D cos + 0.145 sin; L = 0
+  lambda-0 reference mean|res|  max|res|  mean(pred-meas)  worst  sign!=  level split B,C-A,D pred/meas at 8 | 15 | mean 8..15 (mm)
+  own            25.05     37.18           -25.05   C@15      0   +1.34/+5.20 | +5.38/+7.90 | +3.21/+6.31
+  exact          25.05     35.76           -25.05   D@15      0   +4.02/+5.20 | +8.07/+7.90 | +5.90/+6.31
+  hybrid         25.05     35.76           -25.05   D@15      0   +4.02/+5.20 | +8.07/+7.90 | +5.90/+6.31
+  8->15 secants (reference-independent), mm/deg, pred / meas:
+    per commanded deg: A 2.38/4.93  B 2.96/5.33  C 2.96/5.31  D 2.38/4.94
+    per achieved deg:  A 2.14/4.43  B 2.82/5.07  C 2.82/5.07  D 2.13/4.43
+    side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.578 pred / +0.386 meas; per achieved deg +0.681 pred / +0.639 meas
+
+== LEGACY form D cos + 0.145 sin; L = 0.1481 m (theta = 100 deg)
+  lambda-0 reference mean|res|  max|res|  mean(pred-meas)  worst  sign!=  level split B,C-A,D pred/meas at 8 | 15 | mean 8..15 (mm)
+  own             6.73     12.33            +6.73   A@15      0   +0.60/+5.20 | +3.46/+7.90 | +1.96/+6.31
+  exact           6.73      9.57            +6.73   B@15      0   +6.02/+5.20 | +8.88/+7.90 | +7.38/+6.31
+  hybrid          6.73     10.56            +6.73   A@15      0   +3.28/+5.20 | +6.15/+7.90 | +4.64/+6.31
+  8->15 secants (reference-independent), mm/deg, pred / meas:
+    per commanded deg: A 5.20/4.93  B 5.61/5.33  C 5.60/5.31  D 5.19/4.94
+    per achieved deg:  A 4.67/4.43  B 5.34/5.07  C 5.34/5.07  D 4.65/4.43
+    side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.409 pred / +0.386 meas; per achieved deg +0.676 pred / +0.639 meas
+
+== LEGACY form D cos + 0.145 sin; L at achieved theta
+  lambda-0 reference mean|res|  max|res|  mean(pred-meas)  worst  sign!=  level split B,C-A,D pred/meas at 8 | 15 | mean 8..15 (mm)
+  own             5.81     11.26            +5.81   A@13      0   +0.52/+5.20 | +3.14/+7.90 | +1.77/+6.31
+  exact           5.81      8.36            +5.81   B@12      0   +5.86/+5.20 | +8.48/+7.90 | +7.11/+6.31
+  hybrid          5.81      9.49            +5.81   A@13      0   +3.21/+5.20 | +5.82/+7.90 | +4.46/+6.31
+  8->15 secants (reference-independent), mm/deg, pred / meas:
+    per commanded deg: A 5.13/4.93  B 5.52/5.33  C 5.50/5.31  D 5.14/4.94
+    per achieved deg:  A 4.61/4.43  B 5.25/5.07  C 5.24/5.07  D 4.61/4.43
+    side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.374 pred / +0.386 meas; per achieved deg +0.639 pred / +0.639 meas
+
+######## CONTEXT: static body roll, not modelled in any row above
+  A roll rho about body +x (rho < 0 lowers the +y side) leans a module's leg
+  plane phi + SY*rho from the world vertical; on level ground that is the lean
+  that selects the tread point. Roll about x keeps the in-plane lowest point
+  directly below the rim centre within the leg plane, so only the profile's
+  (w, rho) selection changes.
+
+  roll (deg): measured (odom tail median) vs predicted from the four contact heights
+  (side means, each side one front and one rear module; L at achieved theta; all four
+  AB/AD anchors at body z 0.057166 in the proto; tread point selected at phi + SY*rho,
+  iterated to a fixed point; no fitted parameter)
+    lam  0: measured -0.000  predicted -0.000
+    lam  8: measured -3.603  predicted -3.606
+    lam  9: measured -4.053  predicted -4.058
+    lam 10: measured -4.507  predicted -4.512
+    lam 11: measured -4.961  predicted -4.966
+    lam 12: measured -5.415  predicted -5.419
+    lam 13: measured -5.867  predicted -5.872
+    lam 14: measured -6.323  predicted -6.328
+    lam 15: measured -6.780  predicted -6.786
+
+  SENSITIVITY (not a row of record): tread point selected at phi + SY*rho with the
+  measured roll of each hold; exact reference y0 = D.
+  L = 0.1481 m (theta = 100 deg): mean|res| 1.47  max 2.70  mean(pred-meas) -0.01 mm  (unrolled exact row: 1.65 / 4.00 / -1.37)
+    8->15 secants (reference-independent), mm/deg, pred / meas:
+      per commanded deg: A 5.05/4.93  B 5.48/5.33  C 5.47/5.31  D 5.05/4.94
+      per achieved deg:  A 4.54/4.43  B 5.21/5.07  C 5.22/5.07  D 4.52/4.43
+      side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.426 pred / +0.386 meas; per achieved deg +0.684 pred / +0.639 meas
+  L at achieved theta: mean|res| 1.52  max 3.42  mean(pred-meas) -0.93 mm  (unrolled exact row: 2.30 / 4.72 / -2.29)
+    8->15 secants (reference-independent), mm/deg, pred / meas:
+      per commanded deg: A 4.98/4.93  B 5.39/5.33  C 5.37/5.31  D 4.99/4.94
+      per achieved deg:  A 4.48/4.43  B 5.13/5.07  C 5.12/5.07  D 4.48/4.43
+      side split phi<0 (B,C) - phi>0 (A,D): per commanded deg +0.390 pred / +0.386 meas; per achieved deg +0.647 pred / +0.639 meas
+
+######## SUMMARY: mean|res| / max|res| over 32 leg-points (mm)
+  PROFILE contact, Eq. (4) as implemented (contact_profile)
+                                           exact        hybrid          band      shoulder
+    L = 0                            33.15/44.75   33.15/44.75   33.15/46.23   33.15/48.93
+    L = 0.1481 m (theta = 100 deg)    1.65/ 4.00    2.13/ 4.69    3.00/ 6.45    3.24/ 7.24
+    L at achieved theta               2.30/ 4.72    2.59/ 5.60    3.48/ 7.36    3.68/ 7.99
+    8->15 secants, mm/deg           per cmd deg A B C D     per ach deg A B C D
+    L = 0                           2.12 2.71 2.71 2.11     1.90 2.58 2.59 1.89
+    L = 0.1481 m (theta = 100 deg)  4.93 5.36 5.35 4.93     4.43 5.10 5.10 4.42
+    L at achieved theta             4.87 5.27 5.25 4.87     4.37 5.01 5.01 4.37
+  LEGACY form D cos + 0.145 sin
+                                             own         exact        hybrid
+    L = 0                            25.05/37.18   25.05/35.76   25.05/35.76
+    L = 0.1481 m (theta = 100 deg)    6.73/12.33    6.73/ 9.57    6.73/10.56
+    L at achieved theta               5.81/11.26    5.81/ 8.36    5.81/ 9.49
+    8->15 secants, mm/deg           per cmd deg A B C D     per ach deg A B C D
+    L = 0                           2.38 2.96 2.96 2.38     2.14 2.82 2.82 2.13
+    L = 0.1481 m (theta = 100 deg)  5.20 5.61 5.60 5.19     4.67 5.34 5.34 4.65
+    L at achieved theta             5.13 5.52 5.50 5.14     4.61 5.25 5.24 4.61
+  measured                          4.93 5.33 5.31 4.94     4.43 5.07 5.07 4.43

@@ -1,0 +1,149 @@
+stage2a_turning_envelope selftest: PASS
+paper regate imported from /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/make_stage2a_figs.py
+  gates: C2 psi <= 0.29, C3 leg <= 29.5 (6:1) / 44.25 (9:1), C4 profile contact <= 29.5
+  stage run_grid gates (verdicts as solved): {'leg': 29.5, 'abad': 29.5, 'joint_speed': 34.6, 'erosion': 2.330226364846871, 'psi_dot_max': 0.29}
+LegWheel HEAD 80b033d
+step 0.25: 84 cells, task time 264-1296 s (summed task wall time / cells = 102.8 s, with tasks sharing the machine)
+step 0.5: 84 cells, task time 142-869 s (summed task wall time / cells = 86.1 s, with tasks sharing the machine)
+cache of record: /mnt/c/Users/alexc/code/corgi-abad-icra2027/figures/stage2a_grid.npz (546 cells; 84 in this block)
+sanity: step 0.25 run_grid verdicts vs paper regate @6:1 (gates identical: True): 0 binding mismatches
+sanity: step 0.5 run_grid verdicts vs paper regate @6:1 (gates identical: True): 0 binding mismatches
+
+--- control: step 0.5, current code, vs the s84 cache (same block) ---
+existence differs in 0 of 84 cells []
+  max |d v_fwd| over 14 cells existing in both: 0.001289
+  max |d beta_deg| over 14 cells existing in both: 0
+  max |d alpha_deg| over 14 cells existing in both: 0.1382
+  max |d tau_leg| over 14 cells existing in both: 0.03594
+  max |d tau_abad| (profile contact, both regated): 0.02548
+  binding mismatches after regate @6:1: 0
+  binding mismatches after regate @9:1: 0
+
+--- step 0.25 block, regated (binding = paper's first-failing gate; fails = every failing gate) ---
+law v_td  lam |  cache   s0.5 |  beta alpha  duty  slope  v_fwd   psi      R  tauL  tauA |   bind 6:1 fails |   bind 9:1 fails |  cache 6:1  cache 9:1
+emp 0.50  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.50  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.50  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.50  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.50  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.50  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.50  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.55  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.55  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.55  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.55  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.55  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.55  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.55  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.60  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.60  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.60  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.60  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.60  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.60  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.60  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.65  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.65  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.65  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.65  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.65  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.65  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.65  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+emp 0.70  0.0 |     --     -- | 84.25 44.14 0.545 +1.268  0.497 0.000    inf 27.46 20.22 |       none     - |       none     - |  existence  existence
+emp 0.70  0.5 |     --     -- | 84.25 44.14 0.545 +1.268  0.497 0.172   2.89 27.46 19.09 |       none     - |       none     - |  existence  existence
+emp 0.70  1.0 |     --     -- | 84.25 44.14 0.545 +1.268  0.497 0.344   1.44 27.46 19.07 |      scrub    C2 |      scrub    C2 |  existence  existence
+emp 0.70  1.5 |     --     -- | 84.25 44.14 0.545 +1.268  0.497 0.517   0.96 27.46 19.04 |      scrub    C2 |      scrub    C2 |  existence  existence
+emp 0.70  2.0 |     --     -- | 84.25 44.14 0.546 +1.268  0.497 0.689   0.72 27.47 19.01 |      scrub    C2 |      scrub    C2 |  existence  existence
+emp 0.70  2.5 |     --     -- | 84.25 44.15 0.546 +1.268  0.497 0.862   0.58 27.47 18.99 |      scrub    C2 |      scrub    C2 |  existence  existence
+emp 0.70  5.0 |     --     -- | 84.25 44.18 0.546 +1.269  0.497 1.728   0.29 27.52 18.88 |      scrub    C2 |      scrub    C2 |  existence  existence
+emp 0.75  0.0 |  0.528  0.528 | 84.00 44.68 0.522 +1.268  0.528 0.000    inf 28.58 21.07 |       none     - |       none     - |       none       none
+emp 0.75  0.5 |  0.528  0.528 | 84.00 44.68 0.522 +1.268  0.528 0.162   3.25 28.58 19.89 |       none     - |       none     - |       none       none
+emp 0.75  1.0 |  0.528  0.528 | 84.00 44.68 0.522 +1.268  0.528 0.324   1.63 28.58 19.86 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+emp 0.75  1.5 |  0.528  0.528 | 84.00 44.68 0.522 +1.268  0.528 0.487   1.08 28.58 19.84 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+emp 0.75  2.0 |  0.528  0.528 | 84.00 44.69 0.522 +1.268  0.528 0.649   0.81 28.58 19.81 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+emp 0.75  2.5 |  0.528  0.528 | 84.00 44.69 0.522 +1.268  0.528 0.812   0.65 28.59 19.78 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+emp 0.75  5.0 |  0.527  0.527 | 84.00 44.72 0.523 +1.268  0.527 1.627   0.32 28.63 19.66 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+geo 0.50  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.50  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.50  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.50  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.50  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.50  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.50  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.55  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.55  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.55  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.55  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.55  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.55  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.55  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.60  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.60  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.60  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.60  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.60  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.60  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.60  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.65  0.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.65  0.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.65  1.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.65  1.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.65  2.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.65  2.5 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.65  5.0 |     --     -- |                                                no fixed point |  existence    C1 |  existence    C1 |  existence  existence
+geo 0.70  0.0 |     --     -- | 84.25 44.11 0.546 +1.268  0.497 0.000    inf 27.45 20.22 |       none     - |       none     - |  existence  existence
+geo 0.70  0.5 |     --     -- | 84.25 44.11 0.546 +1.268  0.497 0.172   2.89 27.45 19.09 |       none     - |       none     - |  existence  existence
+geo 0.70  1.0 |     --     -- | 84.25 44.11 0.546 +1.268  0.497 0.344   1.44 27.46 19.06 |      scrub    C2 |      scrub    C2 |  existence  existence
+geo 0.70  1.5 |     --     -- | 84.25 44.11 0.546 +1.268  0.497 0.517   0.96 27.46 19.03 |      scrub    C2 |      scrub    C2 |  existence  existence
+geo 0.70  2.0 |     --     -- | 84.25 44.12 0.546 +1.268  0.497 0.689   0.72 27.46 19.01 |      scrub    C2 |      scrub    C2 |  existence  existence
+geo 0.70  2.5 |     --     -- | 84.25 44.12 0.546 +1.268  0.497 0.861   0.58 27.47 18.98 |      scrub    C2 |      scrub    C2 |  existence  existence
+geo 0.70  5.0 |     --     -- | 84.25 44.16 0.546 +1.269  0.497 1.727   0.29 27.51 18.87 |      scrub    C2 |      scrub    C2 |  existence  existence
+geo 0.75  0.0 |  0.528  0.528 | 84.00 44.65 0.522 +1.267  0.528 0.000    inf 28.57 21.07 |       none     - |       none     - |       none       none
+geo 0.75  0.5 |  0.528  0.528 | 84.00 44.65 0.522 +1.267  0.528 0.162   3.26 28.57 19.89 |       none     - |       none     - |       none       none
+geo 0.75  1.0 |  0.528  0.528 | 84.00 44.65 0.522 +1.267  0.528 0.324   1.63 28.57 19.86 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+geo 0.75  1.5 |  0.528  0.528 | 84.00 44.66 0.522 +1.267  0.528 0.486   1.09 28.57 19.83 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+geo 0.75  2.0 |  0.528  0.528 | 84.00 44.66 0.522 +1.267  0.528 0.649   0.81 28.58 19.80 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+geo 0.75  2.5 |  0.527  0.528 | 84.00 44.66 0.522 +1.268  0.528 0.811   0.65 28.58 19.78 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+geo 0.75  5.0 |  0.526  0.528 | 84.00 44.70 0.523 +1.268  0.528 1.627   0.32 28.63 19.66 |      scrub    C2 |      scrub    C2 |      scrub      scrub
+
+--- cells that exist at step 0.25 but not in the cache ---
+  emp v_td 0.70 lam 0.0: v_fwd 0.497, beta 84.25, alpha 44.14; 6:1 none (fails -), 9:1 none (fails -); psi 0.000, tau_leg 27.46, tau_abad 20.22; exists at step 0.5 on current code: False
+  emp v_td 0.70 lam 0.5: v_fwd 0.497, beta 84.25, alpha 44.14; 6:1 none (fails -), 9:1 none (fails -); psi 0.172, tau_leg 27.46, tau_abad 19.09; exists at step 0.5 on current code: False
+  emp v_td 0.70 lam 1.0: v_fwd 0.497, beta 84.25, alpha 44.14; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.344, tau_leg 27.46, tau_abad 19.07; exists at step 0.5 on current code: False
+  emp v_td 0.70 lam 1.5: v_fwd 0.497, beta 84.25, alpha 44.14; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.517, tau_leg 27.46, tau_abad 19.04; exists at step 0.5 on current code: False
+  emp v_td 0.70 lam 2.0: v_fwd 0.497, beta 84.25, alpha 44.14; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.689, tau_leg 27.47, tau_abad 19.01; exists at step 0.5 on current code: False
+  emp v_td 0.70 lam 2.5: v_fwd 0.497, beta 84.25, alpha 44.15; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.862, tau_leg 27.47, tau_abad 18.99; exists at step 0.5 on current code: False
+  emp v_td 0.70 lam 5.0: v_fwd 0.497, beta 84.25, alpha 44.18; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 1.728, tau_leg 27.52, tau_abad 18.88; exists at step 0.5 on current code: False
+  geo v_td 0.70 lam 0.0: v_fwd 0.497, beta 84.25, alpha 44.11; 6:1 none (fails -), 9:1 none (fails -); psi 0.000, tau_leg 27.45, tau_abad 20.22; exists at step 0.5 on current code: False
+  geo v_td 0.70 lam 0.5: v_fwd 0.497, beta 84.25, alpha 44.11; 6:1 none (fails -), 9:1 none (fails -); psi 0.172, tau_leg 27.45, tau_abad 19.09; exists at step 0.5 on current code: False
+  geo v_td 0.70 lam 1.0: v_fwd 0.497, beta 84.25, alpha 44.11; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.344, tau_leg 27.46, tau_abad 19.06; exists at step 0.5 on current code: False
+  geo v_td 0.70 lam 1.5: v_fwd 0.497, beta 84.25, alpha 44.11; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.517, tau_leg 27.46, tau_abad 19.03; exists at step 0.5 on current code: False
+  geo v_td 0.70 lam 2.0: v_fwd 0.497, beta 84.25, alpha 44.12; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.689, tau_leg 27.46, tau_abad 19.01; exists at step 0.5 on current code: False
+  geo v_td 0.70 lam 2.5: v_fwd 0.497, beta 84.25, alpha 44.12; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 0.861, tau_leg 27.47, tau_abad 18.98; exists at step 0.5 on current code: False
+  geo v_td 0.70 lam 5.0: v_fwd 0.497, beta 84.25, alpha 44.16; 6:1 scrub (fails C2), 9:1 scrub (fails C2); psi 1.727, tau_leg 27.51, tau_abad 18.87; exists at step 0.5 on current code: False
+  total 14
+cells in the cache that do not exist at step 0.25: 0 []
+cells existing in both whose selected beta* changed: 0
+
+--- QUESTION: any feasible cambered (lam > 0) cell below v_fwd 0.526 m/s? ---
+  6:1 empirical: YES -- 2 feasible cambered cells in the block, lowest v_fwd 0.4971
+      v_td 0.70 lam 0.5: v_fwd 0.4971, psi 0.172, tau_leg 27.46, tau_abad 19.09, R 2.89
+  6:1 geometric: YES -- 2 feasible cambered cells in the block, lowest v_fwd 0.4973
+      v_td 0.70 lam 0.5: v_fwd 0.4973, psi 0.172, tau_leg 27.45, tau_abad 19.09, R 2.89
+  9:1 empirical: YES -- 2 feasible cambered cells in the block, lowest v_fwd 0.4971
+      v_td 0.70 lam 0.5: v_fwd 0.4971, psi 0.172, tau_leg 27.46, tau_abad 19.09, R 2.89
+  9:1 geometric: YES -- 2 feasible cambered cells in the block, lowest v_fwd 0.4973
+      v_td 0.70 lam 0.5: v_fwd 0.4973, psi 0.172, tau_leg 27.45, tau_abad 19.09, R 2.89
+
+--- the paper's II-D grid numbers: cache vs cache with this block at step 0.25 ---
+(the block replaces its 84 cells; v_td >= 0.80 stays the s84 step-0.5 cache, so the second row is a mixed-step, mixed-code grid; R_min here is the grid's own -- the paper's R_min values also merge the 0.05-deg fine sliver, which has no cell below v_td 0.75)
+  cache (paper)      6:1 empirical: cambered v_fwd 0.5278-0.5778 m/s (v_td 0.75-0.80), 2 cells, per-speed R_min 3.25-3.90 m
+  cache (paper)      6:1 geometric: cambered v_fwd 0.5280-0.5780 m/s (v_td 0.75-0.80), 2 cells, per-speed R_min 3.26-3.90 m
+  cache (paper)      9:1 empirical: cambered v_fwd 0.5278-1.2334 m/s (v_td 0.75-1.45), 35 cells, per-speed R_min 2.31-5.02 m
+  cache (paper)      9:1 geometric: cambered v_fwd 0.5280-1.2334 m/s (v_td 0.75-1.45), 35 cells, per-speed R_min 2.31-5.02 m
+  cache + block@0.25 6:1 empirical: cambered v_fwd 0.4971-0.5778 m/s (v_td 0.70-0.80), 3 cells, per-speed R_min 2.89-3.90 m
+  cache + block@0.25 6:1 geometric: cambered v_fwd 0.4973-0.5780 m/s (v_td 0.70-0.80), 3 cells, per-speed R_min 2.89-3.90 m
+  cache + block@0.25 9:1 empirical: cambered v_fwd 0.4971-1.2334 m/s (v_td 0.70-1.45), 36 cells, per-speed R_min 2.31-5.02 m
+  cache + block@0.25 9:1 geometric: cambered v_fwd 0.4973-1.2334 m/s (v_td 0.70-1.45), 36 cells, per-speed R_min 2.31-5.02 m
+
+wrote /mnt/c/Users/alexc/code/LegWheel/examples/gslip/stage2a_figs/stage2a_lowspeed_step025.npz
