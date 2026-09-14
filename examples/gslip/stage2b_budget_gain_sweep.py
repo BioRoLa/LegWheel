@@ -5,7 +5,16 @@ boundary, and a budget-constrained gain design. Its gains (kp 400, kd 31,
 clamp 40) were a first guess -- kd critical against J_roll, clamp sized from
 the 44.25 N.m ceiling -- and the gate run demanded 42.6-53.3 N.m near the
 orbit against ~40 practical, with FAR cells starving the clamp so badly that
-two corners did WORSE than passive. This script answers, in order:
+two corners did WORSE than passive.
+
+CORRECTION 2026-09-14 (log s326): the 44.25 N.m ceiling assumed a 9:1 ABAD
+gearbox that was never installed. The installed stock 6:1 stalls at 29.5 N.m
+per joint, and the same sizing arithmetic (2 joints/side * ceiling * 0.45,
+cambered_return_map.RollPD) gives 26.55 N.m, not 40. RollPD's 40.0 default
+and this sweep's TAU_VALS are unchanged so recorded results reproduce; 40 is
+not the installed hardware budget.
+
+This script answers, in order:
 
 1. SWEEP: (kp, kd/kd_crit, tau_max) over a merged perturbation grid, PD +
    apex deadbeat (section 45: the deadbeat is what closes the loop; PD alone

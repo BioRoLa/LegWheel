@@ -39,9 +39,12 @@ def test_lambda0_existence_matches_pronk_operating_point():
     assert fp_env is not None and fp_pop is not None
     assert abs(np.rad2deg(fp_env.beta) - np.rad2deg(fp_pop.beta)) < 0.01
     assert abs(np.rad2deg(fp_env.alpha) - np.rad2deg(fp_pop.alpha)) < 0.01
-    # the model's forward speed at v~0.70 is ~0.87 -- faster than the
-    # robot's measured 0.726 (the section-27 speed shortfall); pin the
-    # model-side value so a silent change to the mapping is caught
+    # the model's forward speed at v~0.70 is ~0.87 at this beta step (1.0);
+    # the shipped v070 template (beta step 0.25) runs 0.892 (log s30, s133),
+    # and the simulated robot ran v~0.70 at 0.44 m/s (s27). The 0.726 once
+    # quoted here was s26's pre-s30-bug model speed, not a robot measurement
+    # (s339 s5m). Pin the step-1.0 model-side value so a silent change to the
+    # mapping is caught
     assert abs(fp_env.mean_speed - 0.870) < 0.01
 
 

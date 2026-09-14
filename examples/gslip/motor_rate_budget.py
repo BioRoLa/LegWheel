@@ -6,9 +6,11 @@ reduction and concluded "the gearbox escape is closed". That conclusion answers
 no, there is not. It does NOT answer "could the ratio be changed?", which is a
 different question and the one this script exists to price.
 
-The precedent is already on the robot: the ABAD was moved 6:1 -> 9:1 for exactly
-this reason (see the Banking Turns note). Doing the same to the leg gives, from
-S32's own scaling table:
+This docstring used to cite a precedent on the robot, "the ABAD was moved
+6:1 -> 9:1" (citing the Banking Turns note). Corrected 2026-09-14: a 9:1 ABAD
+upgrade was planned and never installed; the ABAD runs the stock 6:1 (log
+S326). The 9:1 and 12:1 rows here are what-if options. A 9:1 on the leg would
+give, from S32's own scaling table:
 
     leg 6:1 (stock)  stall 29.5 N.m,  ~25 N.m usable at running speed,  330 rpm
     leg 9:1          stall 44.25 N.m, ~37 N.m usable at running speed,  220 rpm

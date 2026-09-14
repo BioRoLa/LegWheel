@@ -8,10 +8,12 @@ imposed by the algebraic coordinated-turn balance tan(lambda) = v^2/(g R)
 existing reduction + 1-D Poincare machinery unchanged, and everything else is
 a per-cell constraint check.
 
-SPEED AXES -- the trap section 27 already documented: the solver's v is the
+SPEED AXES -- the trap section 26 already documented: the solver's v is the
 TOUCHDOWN speed; the measured 0.70-0.85 m/s band, the scrub bound, and the
 coordinated-turn balance all live on MEAN FORWARD speed (stride/period).
-v~0.70 is touchdown 1.19 m/s but forward 0.726. The grid therefore sweeps
+v~0.70 is touchdown 1.19 m/s but forward 0.892 (the shipped v070 template,
+beta step 0.25; log s30, s133 -- this read 0.726 until 2026-09-14, s26's
+pre-s30-bug model speed, s339 s5m). The grid therefore sweeps
 touchdown speed (what the Poincare machinery needs), and every turning
 quantity -- psi_dot, R, scrub -- is evaluated at THAT CELL'S OWN
 fp.mean_speed. Cells with no fixed point get no turning numbers (they are
@@ -119,7 +121,10 @@ TORQUE_EROSION = 35.0 / 15.02              # measured lower bound; trot_fixed_po
 MIN_APEX_MM = 10.0                         # grazing filter
 MAX_DUTY = 0.55                            # grazing filter
 MEASURED_V = (0.70, 0.85)                  # measured operating band
-V_OPERATING = 0.726                        # v~0.70, section 27
+# v~0.70's shipped template (v070, beta step 0.25) runs 0.892 m/s forward (log
+# s30, s133). Was 0.726 until 2026-09-14: s26's pre-s30-bug model speed, not a
+# robot measurement (s339 s5m). Used only as a TABLE_V_FWD row target.
+V_OPERATING = 0.892                        # m/s forward, v~0.70 template
 V_DESIGN = 2.035                           # v~1.20 design point (annotation)
 
 PSI_DOT_MAX = 0.29                         # rad/s, hard bound (Phase 5, OI#6)
@@ -296,10 +301,12 @@ def _selftest() -> None:
     fp = solve_existence(p, v_td, slip_rf.stride, step=1.0)
     assert fp is not None, "lambda=0 existence at v~0.70 failed -- REFUSING"
     assert 79.0 <= np.rad2deg(fp.beta) <= 83.0, np.rad2deg(fp.beta)
-    # NOTE the model's v~0.70 fixed point runs ~0.87 m/s forward while the
-    # ROBOT measures 0.726 at the same template -- the section-27/29 speed
-    # shortfall. The model curve and the measured band are different
-    # objects; the figure shows both and never equates them.
+    # NOTE this solve (beta step 1.0) puts the v~0.70 fixed point at ~0.87 m/s
+    # forward; the shipped v070 template (beta step 0.25) runs 0.892 (log s30,
+    # s133). The 0.726 quoted here before 2026-09-14 was s26's pre-s30-bug
+    # model speed, not a robot measurement: the simulated robot ran v~0.70 at
+    # 0.44 m/s (s27; s339 s5m). The model curve and the measured band are
+    # different objects; the figure shows both and never equates them.
     assert 0.7 < fp.mean_speed < 1.0, fp.mean_speed
 
 
