@@ -1,0 +1,234 @@
+........................................................................ [  6%]
+........................................................................ [ 12%]
+........................................................................ [ 18%]
+........................................................................ [ 24%]
+........................................................................ [ 30%]
+........................................................................ [ 37%]
+........................................................................ [ 43%]
+........................................................................ [ 49%]
+........................................................................ [ 55%]
+........................................................................ [ 61%]
+........................................................................ [ 68%]
+........................................F.........FFFFF................. [ 74%]
+.....F.................................................................. [ 80%]
+........................................................................ [ 86%]
+........................................................................ [ 92%]
+.......................................................................F [ 99%]
+F.........                                                               [100%]
+=================================== FAILURES ===================================
+______________ test_flat_walk_hardware_csv_matches_step0_fixture _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-chang/pytest-1/test_flat_walk_hardware_csv_ma0')
+
+    def test_flat_walk_hardware_csv_matches_step0_fixture(tmp_path):
+        fixture = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+        parameters = fixture["parameters"]
+        expected = fixture["expected"]
+        generator = _load_generator_module()
+    
+        # Keep the regression output quiet while still executing the same function
+        # used by the CLI and CSV UI.
+        with contextlib.redirect_stdout(io.StringIO()):
+            csv_path = Path(
+                generator.generate_hardware_csv(
+                    twist=parameters["twist"],
+                    gait_type=parameters["gait_type"],
+                    stand_height=parameters["stand_height"],
+                    step_height=parameters["step_height"],
+                    period=parameters["period"],
+                    dt=parameters["dt"],
+                    n_cycles=parameters["n_cycles"],
+                    output_dir=str(tmp_path),
+                    with_launch=parameters["with_launch"],
+                    stability_margin=parameters["stability_margin"],
+                    stance_duty=parameters["stance_duty"],
+                )
+            )
+    
+        phase_path = csv_path.with_name(f"{csv_path.stem}_phase.csv")
+        commands = np.loadtxt(csv_path, delimiter=",")
+        phase = np.loadtxt(phase_path, delimiter=",", skiprows=1)
+    
+        assert csv_path.name == fixture["expected_filename"]
+        assert list(commands.shape) == expected["command_shape"]
+        assert list(phase.shape) == expected["phase_shape"]
+        assert phase_path.read_text(encoding="utf-8").splitlines()[0] == (
+            "FL_Phase,FR_Phase,RR_Phase,RL_Phase"
+        )
+        assert set(np.unique(phase)) <= {0.0, 1.0}
+    
+        np.testing.assert_allclose(commands[0], expected["first_command"], atol=5e-7, rtol=0.0)
+        np.testing.assert_allclose(
+            commands[fixture["prep"]["rows"] - 1],
+            expected["prep_last_command"],
+            atol=5e-7,
+            rtol=0.0,
+        )
+        np.testing.assert_allclose(
+            commands[fixture["prep"]["rows"]],
+            expected["steady_first_command"],
+            atol=5e-7,
+            rtol=0.0,
+        )
+>       np.testing.assert_allclose(commands[-1], expected["last_command"], atol=5e-7, rtol=0.0)
+E       AssertionError: 
+E       Not equal to tolerance rtol=0, atol=5e-07
+E       
+E       Mismatched elements: 3 / 12 (25%)
+E       Max absolute difference among violations: 0.001219
+E       Max relative difference among violations: 0.00219457
+E        ACTUAL: array([ 1.877025e+00,  5.887500e-02,  1.874918e+00, -2.213900e-02,
+E               1.928355e+00, -3.098800e-02,  1.936630e+00, -1.074930e-01,
+E               0.000000e+00,  1.000000e-06,  5.663000e-02,  5.662700e-02])
+E        DESIRED: array([ 1.877025e+00,  5.887500e-02,  1.874918e+00, -2.213900e-02,
+E               1.928355e+00, -3.098800e-02,  1.935411e+00, -1.075190e-01,
+E               0.000000e+00,  1.000000e-06,  5.663000e-02,  5.650300e-02])
+
+tests/test_flat_walk_baseline_regression.py:101: AssertionError
+_______________ test_each_tui_mode_exposes_generate_button_field _______________
+
+    def test_each_tui_mode_exposes_generate_button_field():
+        for fields_fn in (
+            generate_csv_tui._gait_fields,
+            generate_csv_tui._lean_fields,
+            generate_csv_tui._transform_fields,
+        ):
+            fields = fields_fn()
+    
+>           assert fields[-1].key == generate_csv_tui.GENERATE_ACTION_KEY
+E           AttributeError: module 'generate_csv_tui' has no attribute 'GENERATE_ACTION_KEY'
+
+tests/test_generate_csv_tui.py:37: AttributeError
+________________ test_focused_generate_button_starts_generation ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x76c3d79d7370>
+
+    def test_focused_generate_button_starts_generation(monkeypatch):
+        tui = generate_csv_tui.CSVGeneratorTUI()
+        tui.focus_idx = len(tui._fields()) - 1
+        calls = []
+    
+>       monkeypatch.setattr(
+            tui,
+            "_start_generation",
+            lambda app: calls.append(app),
+        )
+E       AttributeError: <generate_csv_tui.CSVGeneratorTUI object at 0x76c3d79d4040> has no attribute '_start_generation'
+
+tests/test_generate_csv_tui.py:47: AttributeError
+_______________ test_generation_progress_bar_renders_percentage ________________
+
+    def test_generation_progress_bar_renders_percentage():
+        tui = generate_csv_tui.CSVGeneratorTUI()
+        tui.generation_progress = 0.5
+    
+>       rendered = "".join(text for _, text in tui._render_progress_bar(width=10))
+E       AttributeError: 'CSVGeneratorTUI' object has no attribute '_render_progress_bar'
+
+tests/test_generate_csv_tui.py:64: AttributeError
+_________ test_generation_output_advances_progress_without_regressing __________
+
+    def test_generation_output_advances_progress_without_regressing():
+        tui = generate_csv_tui.CSVGeneratorTUI()
+        tui.generation_progress = 0.8
+    
+>       assert not tui._update_progress_from_output("Generating 2 steady cycles of Trot...")
+E       AttributeError: 'CSVGeneratorTUI' object has no attribute '_update_progress_from_output'
+
+tests/test_generate_csv_tui.py:75: AttributeError
+_________ test_tui_consumes_machine_readable_progress_without_logging __________
+
+    def test_tui_consumes_machine_readable_progress_without_logging():
+        tui = generate_csv_tui.CSVGeneratorTUI()
+    
+>       tui._handle_output_line("::progress::37")
+E       AttributeError: 'CSVGeneratorTUI' object has no attribute '_handle_output_line'
+
+tests/test_generate_csv_tui.py:88: AttributeError
+___________________ test_touchdown_is_level_across_all_legs ____________________
+
+    def test_touchdown_is_level_across_all_legs():
+        """Every leg's IK touchdown foot must sit at the same height (no body roll)."""
+        vy = 0.05
+        zs = []
+        for i in range(4):
+            p = _planner(i, vy)
+            zs.append(_foot(p.kin, p._level_touchdown_q())[2])
+        spread = (max(zs) - min(zs)) * 1000.0
+        assert spread < 1.0, f"touchdown foot Z spread {spread:.2f} mm -> body roll"
+        # And it should be at the commanded stand height.
+>       assert abs(np.mean(zs) + STAND_H) < 2e-3
+E       assert np.float64(0.004984805719622898) < 0.002
+E        +  where np.float64(0.004984805719622898) = abs((np.float64(-0.2549848057196229) + 0.25))
+E        +    where np.float64(-0.2549848057196229) = <function mean at 0x76c434773bf0>([np.float64(-0.2549119072712509), np.float64(-0.25505770416799484), np.float64(-0.25505770416799484), np.float64(-0.2549119072712509)])
+E        +      where <function mean at 0x76c434773bf0> = np.mean
+
+tests/test_lateral_stance_symmetry.py:59: AssertionError
+____________ test_cli_lateral_guard_matches_one_sided_planner_limit ____________
+
+    def test_cli_lateral_guard_matches_one_sided_planner_limit():
+        """CLI check must warn above the one-sided lateral guard used by GaitGenerator3D."""
+        args = argparse.Namespace(
+            gait="Trot", height=0.30, vx=0.0, vy=0.45, wz=0.0, period=1.0, step=0.04
+        )
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            cmd_check(args)
+        output = buf.getvalue()
+    
+>       assert "Velocity Guard (Y)" in output
+E       AssertionError: assert 'Velocity Guard (Y)' in '=======================================\n Corgi LegWheel Parameter Checker\n=======================================\n...️ WARNING: Swing Velocity Guard: Scaling liftoff/touchdown velocities to 80.5% while preserving step_height=0.040 m.\n'
+
+tests/test_toroidal_contact_and_checker.py:52: AssertionError
+______ test_legacy_checker_lateral_guard_matches_one_sided_planner_limit _______
+
+    def test_legacy_checker_lateral_guard_matches_one_sided_planner_limit():
+        """Legacy example checker should report the same one-sided lateral guard warning."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                "examples/kinematics/check_parameters.py",
+                "--gait",
+                "Trot",
+                "--height",
+                "0.30",
+                "--vx",
+                "0.0",
+                "--vy",
+                "0.45",
+                "--period",
+                "1.0",
+                "--step",
+                "0.04",
+            ],
+            cwd=".",
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    
+        assert result.returncode == 0, result.stderr
+>       assert "Velocity Guard (Y)" in result.stdout
+E       AssertionError: assert 'Velocity Guard (Y)' in '=======================================\n Corgi LegWheel Parameter Checker\n=======================================\n...d: Heavy lateral/sagittal usage. Scaling liftoff/touchdown velocities to 80.5% while preserving step_height=0.040 m.\n'
+E        +  where '=======================================\n Corgi LegWheel Parameter Checker\n=======================================\n...d: Heavy lateral/sagittal usage. Scaling liftoff/touchdown velocities to 80.5% while preserving step_height=0.040 m.\n' = CompletedProcess(args=['/home/chang/corgi_ws/icra hybrid/LegWheel/.venv/bin/python3', 'examples/kinematics/check_param...eral/sagittal usage. Scaling liftoff/touchdown velocities to 80.5% while preserving step_height=0.040 m.\n', stderr='').stdout
+
+tests/test_toroidal_contact_and_checker.py:82: AssertionError
+=============================== warnings summary ===============================
+tests/test_cartesian_swing_showcase_2d.py::test_a_refused_step_can_still_be_watched
+tests/test_cartesian_swing_showcase_2d.py::test_the_animation_title_states_the_verdict
+tests/test_cartesian_swing_showcase_2d.py::test_a_descent_can_be_watched_too
+  /home/chang/corgi_ws/icra hybrid/LegWheel/.venv/lib/python3.10/site-packages/matplotlib/animation.py:908: UserWarning: Animation was deleted without rendering anything. This is most likely not intended. To prevent deletion, assign the Animation to a variable, e.g. `anim`, that exists until you output the Animation using `plt.show()` or `anim.save()`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_flat_walk_baseline_regression.py::test_flat_walk_hardware_csv_matches_step0_fixture
+FAILED tests/test_generate_csv_tui.py::test_each_tui_mode_exposes_generate_button_field
+FAILED tests/test_generate_csv_tui.py::test_focused_generate_button_starts_generation
+FAILED tests/test_generate_csv_tui.py::test_generation_progress_bar_renders_percentage
+FAILED tests/test_generate_csv_tui.py::test_generation_output_advances_progress_without_regressing
+FAILED tests/test_generate_csv_tui.py::test_tui_consumes_machine_readable_progress_without_logging
+FAILED tests/test_lateral_stance_symmetry.py::test_touchdown_is_level_across_all_legs
+FAILED tests/test_toroidal_contact_and_checker.py::test_cli_lateral_guard_matches_one_sided_planner_limit
+FAILED tests/test_toroidal_contact_and_checker.py::test_legacy_checker_lateral_guard_matches_one_sided_planner_limit
+9 failed, 1153 passed, 3 warnings in 6704.84s (1:51:44)

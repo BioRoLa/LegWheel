@@ -146,6 +146,24 @@ class SegmentKind(str, Enum):
     #: Rolling on along whichever rim a swing just landed on, limited by the
     #: arc that remains before the rim runs out.
     POST_TOUCHDOWN_ROLL = "POST_TOUCHDOWN_ROLL"
+    #: Day 13: the whole machine stands still.  Every leg holds the contact it
+    #: already has and the body does not advance -- start and end contact are
+    #: the same pose, so this segment costs time and **no** rim arc.
+    #:
+    #: It exists because ``at_most_one_airborne`` fails for a reason that is
+    #: neither geometric nor a matter of where the legs land: the two legs of a
+    #: pair share a ``mount_x``, so position-derived scheduling gives them
+    #: identical times and they always swing together.  Waiting for the earlier
+    #: leg to come down fixes it, and waiting is a thing the schedule had no
+    #: way to say (log 20-22).
+    #:
+    #: **A hold is not a terrain transition**, which is why
+    #: :attr:`is_terrain_transition` excludes it explicitly rather than by
+    #: falling through: the paper metrics count terrain-transition segments,
+    #: and a pause is not one.  It is also not nominal locomotion -- the gait
+    #: does not pause when nothing is in the way -- so it belongs to neither
+    #: bucket, which is the honest answer rather than a convenient one.
+    BODY_HOLD = "BODY_HOLD"
 
     @property
     def is_swing(self) -> bool:
@@ -202,7 +220,12 @@ class SegmentKind(str, Enum):
         being re-derived by each consumer from a list of names.
         """
 
-        return not (self.is_nominal_locomotion or self is SegmentKind.WHEEL_ROLL)
+        return not (self.is_nominal_locomotion
+                    or self is SegmentKind.WHEEL_ROLL
+                    # A pause is not something the terrain forced the leg to
+                    # do; counting it as a transition would inflate every
+                    # terrain-transition metric with standing still.
+                    or self is SegmentKind.BODY_HOLD)
 
 
 class RollingMode(str, Enum):
@@ -696,7 +719,27 @@ class MotionSegment2D:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "kind", SegmentKind(self.kind))
-        if self.kind is SegmentKind.RECOVERY_SWING:
+        if self.kind is SegmentKind.BODY_HOLD:
+            # A hold moves nothing, so it carries neither a roll descriptor nor
+            # swing shaping -- requiring either would mean inventing a motion
+            # to describe standing still.  What it must do is hold: the two
+            # ends are the same contact, and that is checkable.
+            if self.rolling is not None or self.swing_shaping is not None:
+                raise ValueError(
+                    "a BODY_HOLD moves nothing; it carries no rolling "
+                    "descriptor and no swing shaping."
+                )
+            if not isinstance(self.start_contact, PointContact2D):
+                raise TypeError("a hold holds one definite contact point.")
+            if not isinstance(self.end_contact, PointContact2D):
+                raise TypeError("a hold ends on the contact it started from.")
+            if not np.allclose(self.start_contact.hip_xz_m,
+                               self.end_contact.hip_xz_m, atol=1e-12):
+                raise ValueError(
+                    "a BODY_HOLD must not move the hip; start and end hip "
+                    "positions differ, so this is not a hold."
+                )
+        elif self.kind is SegmentKind.RECOVERY_SWING:
             # A recovery is airborne, but it is generated the way a rolling
             # stage is -- stepped in theta and beta until a condition fires --
             # so it takes RollSampling2D, not Day 8--9's time-sampled spec.

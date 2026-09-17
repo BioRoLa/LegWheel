@@ -50,6 +50,8 @@ from hybrid_note.scripts.experiments.cartesian_swing_planner_2d import (
     generate_swing_2d,
 )
 from hybrid_note.scripts.experiments.day10_11_decision_map_2d import (
+    DEFAULT_BODY_TOLERANCE_M,
+    DEFAULT_ORDER,
     BLOCKED_PAIRS,
     REFUTATIONS,
     Availability,
@@ -495,6 +497,7 @@ def compose_swing_swing_2d(
     descent_duration_scale: float = 1.0,
     landing_distance_m: float = SWING_LANDING_DISTANCE_M,
     theta_deg: float = 60.0,
+    nominal_ascent: bool = False,
 ) -> ComposedSequence2D:
     """Two swings over one obstacle, with whatever the top leaves between them.
 
@@ -505,6 +508,19 @@ def compose_swing_swing_2d(
     engine that would roll the leg forward there needs a stop condition the
     research plan lists for Day 15--16.  That gap is measured and reported
     rather than papered over.
+
+    **``nominal_ascent``** (Day 13 B5) replaces the Cartesian ascent with the
+    flat-ground locomotion swing, which is what the project owner asked for:
+    "the nominal locomotion swing, the flat-ground one -- but Day 8--9 is not
+    thrown away, because you still need the start and end positions."  Only
+    the ascent's *generator* changes; ``start_scene`` and ``top_scene`` still
+    say where it begins and ends, and the descent is untouched.
+
+    It is **off by default**, so every frozen Day 10--11 and Day 12 number is
+    reproduced exactly.  The two differ in what provides obstacle clearance:
+    the Cartesian swing lifts the foot over on a hip trajectory (theta 60 ->
+    36.6 -> 58.7, longest near the leading edge), the nominal swing retracts to
+    theta 17 and keeps it there through the rotation.
     """
 
     started = time.perf_counter()
@@ -522,6 +538,7 @@ def compose_swing_swing_2d(
         ("ascent_liftoff_rise_m", float(ascent_liftoff_rise_m)),
         ("descent_touchdown_drop_m", float(descent_touchdown_drop_m)),
         ("descent_duration_scale", float(descent_duration_scale)),
+        ("nominal_ascent", bool(nominal_ascent)),
     )
 
     def refuse(reason: str) -> ComposedSequence2D:
@@ -564,13 +581,55 @@ def compose_swing_swing_2d(
             up_request,
             swing_duration_s=up_request.swing_duration_s * float(ascent_duration_scale),
         )
-    up_plan = generate_swing_2d(
-        up_request, arc_samples=SWING_COLLISION_ARC_SAMPLES,
-        liftoff_rise_m=float(ascent_liftoff_rise_m),
-        touchdown_drop_m=float(ascent_touchdown_drop_m),
-    )
-    if not up_plan.valid:
-        return refuse(f"the ascent failed: {up_plan.failure.name}")
+    # Day 13 B5: the ascent's generator is the one thing the flag switches.
+    # The Cartesian planner is not merely ignored but never run, so a nominal
+    # ascent cannot be refused for a Cartesian reason it does not have.
+    up_ascent = None
+    up_plan = None
+    if nominal_ascent:
+        # Imported here, not at module scope: day12_transition_mapping_2d
+        # imports ComposedSequence2D from THIS module, so a module-level import
+        # of anything under day12 closes a cycle and breaks every existing
+        # caller.  The B5 path is opt-in, so it pays the import cost only when
+        # it is actually used.
+        from hybrid_note.scripts.experiments.day12_nominal_cycle_2d import (
+            RecoveryConfig2D, run_nominal_cycles_2d,
+        )
+        from hybrid_note.scripts.experiments.day12_support_margin_scan_2d import (
+            hybrid_posture_2d, hybrid_timing_2d,
+        )
+        from hybrid_note.scripts.experiments.day12_world_registration_2d import (
+            swing_hip_advance_m,
+        )
+        from hybrid_note.scripts.experiments.day13_b5_nominal_ascent_2d import (
+            run_nominal_ascent_2d, segment_from_nominal_ascent_2d,
+        )
+
+        ascent_posture = hybrid_posture_2d()
+        ascent_config = RecoveryConfig2D(
+            hip_advance_m=swing_hip_advance_m(hybrid_timing_2d(), ascent_posture)
+        )
+        reference = run_nominal_cycles_2d(1, ascent_posture, ascent_config)[0]
+        takeoff_frame = reference.stroke.end
+        landing_frame = reference.recovery.frames[-1]
+        up_ascent = run_nominal_ascent_2d(
+            spec, ascent_posture, ascent_config,
+            approach_hip_x_m=float(approach_hip_x),
+            landing_hip_x_m=float(landing_hip_x),
+            beta_takeoff_rad=float(takeoff_frame.beta_rad),
+            beta_landing_rad=float(landing_frame.beta_rad),
+            theta_takeoff_rad=float(takeoff_frame.theta_rad),
+        )
+        if not up_ascent.success:
+            return refuse(f"the nominal ascent failed: {up_ascent.refusal}")
+    else:
+        up_plan = generate_swing_2d(
+            up_request, arc_samples=SWING_COLLISION_ARC_SAMPLES,
+            liftoff_rise_m=float(ascent_liftoff_rise_m),
+            touchdown_drop_m=float(ascent_touchdown_drop_m),
+        )
+        if not up_plan.valid:
+            return refuse(f"the ascent failed: {up_plan.failure.name}")
 
     # -- descent ---------------------------------------------------------
     takeoff_scene = standing_scene_2d(
@@ -612,15 +671,27 @@ def compose_swing_swing_2d(
     source_id = (
         f"step7_swing_swing_h{height_m * 1e3:.0f}_L{top_length_m * 1e3:.0f}"
     )
-    up_segment = segment_from_swing_plan_2d(
-        up_plan, up_request, kind=SegmentKind.SWING_UP, source_id=source_id,
-        arc_samples=SWING_ARC_SAMPLES,
-        leg_arc_samples=SWING_COLLISION_ARC_SAMPLES,
-        apex_clearance_m=SWING_APEX_CLEARANCE_M,
-        liftoff_rise_m=float(ascent_liftoff_rise_m),
-        touchdown_drop_m=float(ascent_touchdown_drop_m),
-        duration_scale=float(ascent_duration_scale),
-    )
+    if up_ascent is not None:
+        from hybrid_note.scripts.experiments.day13_b5_nominal_ascent_2d import (
+            segment_from_nominal_ascent_2d,
+        )
+
+        up_segment = segment_from_nominal_ascent_2d(
+            up_ascent, source_id=source_id,
+            duration_s=SWING_DURATION_S * float(ascent_duration_scale),
+            arc_samples=SWING_ARC_SAMPLES,
+            max_joint_step_rad=up_request.constraints.max_joint_step_rad,
+        )
+    else:
+        up_segment = segment_from_swing_plan_2d(
+            up_plan, up_request, kind=SegmentKind.SWING_UP, source_id=source_id,
+            arc_samples=SWING_ARC_SAMPLES,
+            leg_arc_samples=SWING_COLLISION_ARC_SAMPLES,
+            apex_clearance_m=SWING_APEX_CLEARANCE_M,
+            liftoff_rise_m=float(ascent_liftoff_rise_m),
+            touchdown_drop_m=float(ascent_touchdown_drop_m),
+            duration_scale=float(ascent_duration_scale),
+        )
     down_segment = segment_from_swing_plan_2d(
         down_plan, down_request, kind=SegmentKind.SWING_DOWN, source_id=source_id,
         arc_samples=SWING_ARC_SAMPLES,
@@ -649,10 +720,18 @@ def compose_swing_swing_2d(
         ),
     )
     handoffs = sequence_handoffs_2d(sequence)
+    # A nominal ascent has no ``SwingPlan2D``, so its clearance is not read off
+    # a collision report -- it is measured per frame by the swing generator
+    # itself, and the minimum over the airborne frames is the same quantity.
     clearances = [
-        p.collision.minimum_clearance_m for p in (up_plan, down_plan)
-        if p.collision is not None
+        p.collision.minimum_clearance_m
+        for p in ((down_plan,) if up_ascent is not None else (up_plan, down_plan))
+        if p is not None and p.collision is not None
     ]
+    if up_ascent is not None and up_ascent.swing is not None:
+        airborne = [f.clearance_m for f in up_ascent.swing.frames if f.airborne]
+        if airborne:
+            clearances.append(float(min(airborne)))
     gap_on_top_m = float(takeoff_hip_x - landing_hip_x)
     return ComposedSequence2D(
         strategy=StrategyId.SWING_SWING, height_m=height_m,
@@ -662,7 +741,19 @@ def compose_swing_swing_2d(
         collision_free=True,
         min_clearance_m=min(clearances) if clearances else None,
         top_length_used_m=float(landing_distance_m) + float(takeoff_distance_m),
+        # UNFINISHED (Day 13 B5): ``swing_frame_rows`` reads a ``SwingPlan2D``,
+        # which a nominal ascent does not have.  Its rows have to be built from
+        # ``up_ascent.swing.frames`` instead, and that is the next piece of
+        # work -- the exporter needs them.  Until then a nominal ascent carries
+        # the descent's rows only, and says so rather than shipping a
+        # half-populated set that would silently export a crossing with no
+        # ascent in it.
         frame_rows=tuple(
+            swing_frame_rows(
+                down_plan, down_request, kind=SegmentKind.SWING_DOWN,
+                index_offset=up_segment.frames.indices[-1] + 1,
+            )
+            if up_ascent is not None else
             swing_frame_rows(up_plan, up_request, kind=SegmentKind.SWING_UP)
             + swing_frame_rows(
                 down_plan, down_request, kind=SegmentKind.SWING_DOWN,
@@ -837,15 +928,25 @@ def compose_2d(
     tables: DecisionTables2D,
     *,
     strategy: StrategyId | None = None,
+    order: Sequence[str] = DEFAULT_ORDER,
+    body_tolerance_m: float = DEFAULT_BODY_TOLERANCE_M,
 ) -> ComposedSequence2D:
     """Compose whatever Step 5's rule picks here -- or say why there is none.
 
     ``strategy`` forces a particular one, which is how the two refuted pairs
     are asked for explicitly: they answer with their refutation rather than
     being silently absent from the output.
+
+    ``order`` and ``body_tolerance_m`` are the decision rule, and they are
+    arguments because this function **re-decides**: a caller that ran
+    ``decide_2d`` itself and then called this would otherwise get a crossing
+    composed under a different rule than the one it just read, with nothing
+    saying so.  The defaults are Day 10--11's, so its frozen evidence is
+    unchanged.
     """
 
-    decision = decide_2d(height_m, top_length_m, tables)
+    decision = decide_2d(height_m, top_length_m, tables, order=order,
+                         body_tolerance_m=body_tolerance_m)
     chosen = strategy if strategy is not None else decision.winner
     if chosen is None:
         return ComposedSequence2D(

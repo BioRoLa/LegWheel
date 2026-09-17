@@ -35,6 +35,7 @@ is a wheel-disc model of the rim, not a full linkage/body collision check.
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from dataclasses import dataclass, field
 from enum import Enum
@@ -66,6 +67,7 @@ from legwheel.planners.obstacle_walk.handoff import (
     flat_recovery_segment,
     handover_contact_height_error_m,
     legacy_launch_flat_approach_segment,
+    resample_segment,
 )
 from legwheel.planners.obstacle_walk.stance import (
     StancePlanningError,
@@ -164,12 +166,35 @@ class ObstacleWalkRequest:
     # copied from one experimental filename and produced an excessive theta
     # excursion in this splice.
     flat_walk_step_height_m: float = 0.04
+    # Stance duty of the periodic flat Walk, and therefore of the crawl's swing
+    # timing.  The gait table's 0.75 makes the four swings tile the cycle
+    # exactly, which leaves no four-leg overlap *and* puts the CoM on the
+    # support-triangle edge for the two rear swings; 0.85 breaks that symmetry
+    # and is the value the flat-Walk hardware runs use.  None keeps the table
+    # default.
+    stance_duty: float | None = None
+    # Crawl swing duration.  ``None`` uses ``period_s / 4``, which pairs each
+    # swing with an equally long stance advance and is what the crawl used
+    # before ``stance_duty`` became configurable.
+    crawl_swing_seconds: float | None = None
+    # Sample period of the flat Walk sections.  They are the Walk's own samples
+    # at the rate the flat-Walk hardware runs use, so that the spliced flat
+    # stretches are the same trajectory the operator compares against rather
+    # than a coarse plan interpolated up afterwards.  The crawl keeps ``dt_s``
+    # and is resampled onto this grid before assembly.
+    flat_walk_dt_s: float = 0.001
     # The obstacle search is intentionally coarse; the exporter resamples its
     # accepted result to the controller's fixed 1 ms contract.  The old 1 ms
     # planner default made the lowest-rim solve change branch at the first
     # obstacle event and was not a runnable default.
     dt_s: float = 0.02
-    step_clearance_m: float = 0.03
+    # 0.03 is the geometry-checked nominal clearance assuming a level body, but
+    # a hardware run measured the flat Walk's own tilt (duty 0.85, no lateral
+    # sway compensation) at up to 14 deg -- worth ~60 mm at the foot, twice the
+    # nominal clearance -- so 0.05 buys margin against that tilt clipping the
+    # obstacle.  0.02 was separately measured to let the rim clip the
+    # top-front corner even with a level body.
+    step_clearance_m: float = 0.05
     body_lift_ratio: float = 0.6
     approach_distance_m: float = 1.0
     post_distance_m: float = 0.30
@@ -268,6 +293,20 @@ class ObstacleWalkRequest:
             value = float(getattr(self, name))
             if not np.isfinite(value) or value < 0.0:
                 raise ValueError(f"{name} must be finite and non-negative.")
+        if not np.isfinite(self.flat_walk_dt_s) or self.flat_walk_dt_s <= 0.0:
+            raise ValueError("flat_walk_dt_s must be finite and positive.")
+        ratio = self.dt_s / self.flat_walk_dt_s
+        if not np.isclose(ratio, round(ratio), rtol=0.0, atol=1e-9) or round(ratio) < 1:
+            raise ValueError(
+                "dt_s must be an integer multiple of flat_walk_dt_s so the crawl can be "
+                "resampled onto the flat Walk's grid without moving its knots."
+            )
+        if self.crawl_swing_seconds is not None and (
+            not np.isfinite(self.crawl_swing_seconds) or self.crawl_swing_seconds <= 0.0
+        ):
+            raise ValueError("crawl_swing_seconds must be finite and positive when given.")
+        if self.stance_duty is not None and not 0.0 < self.stance_duty < 1.0:
+            raise ValueError("stance_duty must lie in (0, 1) when given.")
         if not np.isfinite(self.obstacle_width_m) or self.obstacle_width_m <= 0.0:
             raise ValueError("obstacle_width_m must be finite and positive.")
         if self.flat_walk_velocity_m_s is not None and (
@@ -506,6 +545,7 @@ def build_walk_generator(request: ObstacleWalkRequest) -> GaitGenerator3D:
             gait_type="Walk",
             dt=request.dt_s,
             stability_margin=0.0,
+            stance_duty=request.stance_duty,
         )
     if not np.isclose(float(generator.v_com[0]), velocity, rtol=1e-6, atol=1e-9):
         raise ObstacleTraversalError(
@@ -514,6 +554,21 @@ def build_walk_generator(request: ObstacleWalkRequest) -> GaitGenerator3D:
             f"{float(generator.v_com[0]):.6g} m/s; reduce step_length_m or raise period_s",
         )
     return generator
+
+
+def build_flat_walk_generator(request: ObstacleWalkRequest) -> GaitGenerator3D:
+    """The Walk generator for the spliced flat sections, at their own dt.
+
+    Identical to :func:`build_walk_generator` except for the sample period, so
+    the flat stretches carry the Walk's native samples instead of a coarse plan
+    interpolated up by the exporter.
+    """
+
+    import dataclasses
+
+    return build_walk_generator(
+        dataclasses.replace(request, dt_s=request.flat_walk_dt_s)
+    )
 
 
 def walk_swing_order(generator: GaitGenerator3D) -> tuple[LegId, ...]:
@@ -838,7 +893,7 @@ def generate_obstacle_walk(
         try:
             if request.flat_launch_mode == "timewarp":
                 flat_approach = flat_approach_segment(
-                    build_walk_generator(request),
+                    build_flat_walk_generator(request),
                     cycles=request.flat_approach_cycles,
                     launch_cycles=request.flat_launch_cycles,
                     handover_body_x_m=handover_body_x,
@@ -850,7 +905,7 @@ def generate_obstacle_walk(
                 )
             else:
                 flat_approach = legacy_launch_flat_approach_segment(
-                    build_walk_generator(request),
+                    build_flat_walk_generator(request),
                     steady_cycles=request.flat_approach_cycles,
                     launch_cycles=request.flat_launch_cycles,
                     ramp_floor=request.flat_launch_ramp_floor,
@@ -897,7 +952,16 @@ def generate_obstacle_walk(
     stride = request.step_length_m
     advance = stride / 4.0
     joint_step_limit = request.joint_velocity_limit_rad_s * generator.dt
-    swing_duration = generator.T * (1.0 - generator.stance_duty)
+    # The crawl is quasi-static: it swings one leg while the body is at rest, so
+    # its swing duration is a free parameter.  Deriving it from the Walk's duty
+    # was accidental coupling -- raising the duty to 0.85 for the flat Walk's
+    # stability would otherwise shorten every crawl swing by 40% and push the
+    # per-sample joint step to 95% of its budget for no reason.
+    swing_duration = (
+        generator.T / 4.0
+        if request.crawl_swing_seconds is None
+        else request.crawl_swing_seconds
+    )
     stance_duration = generator.T / 4.0
 
     segments: list[TrajectorySegment] = []
@@ -1193,7 +1257,7 @@ def generate_obstacle_walk(
                     continue  # still walking the crawl clear of the obstacle
                 try:
                     flat_recovery = flat_recovery_segment(
-                        build_walk_generator(request),
+                        build_flat_walk_generator(request),
                         cycles=request.flat_recovery_cycles,
                         launch_cycles=request.flat_recovery_launch_cycles,
                         landing_cycles=request.flat_landing_cycles,
@@ -1294,9 +1358,32 @@ def generate_obstacle_walk(
         segments.append(flat_recovery)
         body_x = float(flat_recovery.body_pose_world[-1, 0])
 
+    # The flat sections are already on the controller's grid; the crawl was
+    # planned coarse and is brought up to it here, so assembly sees one clock
+    # and the exporter has nothing left to resample.
+    if len(records) != len(segments):
+        raise AssertionError(
+            f"{len(records)} records for {len(segments)} segments; the row ranges "
+            "below assume one record per segment, in order"
+        )
+    segments = [resample_segment(item, request.flat_walk_dt_s) for item in segments]
+    # Every record's row range was measured on the coarse plan, so re-derive it
+    # from the segments that actually reach the CSV.
+    records = [
+        dataclasses.replace(
+            record,
+            start_row=(max(_row_offset(segments[:index]) - 1, 0) if index else 0),
+            end_row=(max(_row_offset(segments[:index]) - 1, 0) if index else 0)
+            + segments[index].sample_count
+            - 1,
+            sample_count=segments[index].sample_count,
+        )
+        for index, record in enumerate(records)
+    ]
+
     combined = concatenate_segments(
         segments,
-        dt=generator.dt,
+        dt=request.flat_walk_dt_s,
         tolerances=tolerances or ContinuityTolerances(),
     )
     reference_schedule: dict[str, object] | None = None

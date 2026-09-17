@@ -20,7 +20,10 @@ from hybrid_note.scripts.experiments.day10_11_motion_schema_2d import SegmentKin
 from hybrid_note.scripts.experiments.day10_11_shared_scene_2d import (
     SharedTerrainSpec2D,
 )
+from hybrid_note.scripts.experiments.day10_11_decision_map_2d import decide_2d
 from hybrid_note.scripts.experiments.day12_terrain_generalization_2d import (
+    HYBRID_BODY_TOLERANCE_M,
+    HYBRID_DECISION_ORDER,
     PLANNER_MODULES,
     Stage,
     comparison_rows,
@@ -178,13 +181,26 @@ def test_both_obstacles_compose_and_get_a_trajectory(obstacle_runs):
         assert run.composed is not None and run.composed.composed
 
 
-def test_both_obstacles_use_the_same_primitives_chosen_by_day_10_11(obstacle_runs):
-    """Step 10 does not choose; ``decide_2d`` does, from frozen tables."""
+def test_both_obstacles_use_the_same_primitives_chosen_by_day_10_11(
+        obstacle_runs, tables):
+    """Step 10 does not choose; ``decide_2d`` does, from frozen tables.
+
+    Asserted against ``decide_2d`` itself rather than against a named
+    strategy: this test exists to hold that Step 10 defers, and hard-coding
+    the answer made it fail for the right reason when the rule changed (log
+    1.7: the project moved to a rolling preference) instead of catching a
+    Step 10 that had started choosing for itself.
+    """
 
     for run in obstacle_runs.values():
-        assert run.composed.strategy is StrategyId.SWING_SWING
-        assert run.ascent_primitive == "SWING_UP"
-        assert run.descent_primitive == "SWING_DOWN"
+        expected = decide_2d(run.terrain.height_m, run.terrain.top_length_m,
+                             tables, order=HYBRID_DECISION_ORDER,
+                             body_tolerance_m=HYBRID_BODY_TOLERANCE_M)
+        assert run.composed.strategy is expected.winner
+    # And they agree with each other, which is what "the same primitives"
+    # meant before it was written as a literal.
+    strategies = {run.composed.strategy for run in obstacle_runs.values()}
+    assert len(strategies) == 1
 
 
 def test_ascent_and_descent_stay_separately_reported(obstacle_runs):
@@ -194,11 +210,27 @@ def test_ascent_and_descent_stay_separately_reported(obstacle_runs):
         assert run.ascent_primitive != run.descent_primitive
 
 
-def test_the_obstacle_runs_add_transition_swings_over_the_flat_one(
-        flat, obstacle_runs):
+def test_a_crossing_run_rolls_further_than_a_flat_one(flat, obstacle_runs):
+    """World registration means a leg rolls **to** the obstacle first (log 1.11).
+
+    This has now been wrong twice for the same reason -- it asserted a number
+    that a design change was supposed to move.  First it asserted the crossing
+    added terrain-transition *swings* (the rolling preference made that zero,
+    log 1.7); then it asserted the nominal recovery count was *unchanged*, and
+    world registration made that false too: each leg now rolls from where it
+    actually starts to where the obstacle actually is, so the obstacle run
+    contains more nominal cycles than the flat one (18 against 8), and it
+    should.
+
+    So this asserts the direction and the reason, not the count.
+    """
+
     for run in obstacle_runs.values():
-        assert run.terrain_transition_swings > flat.terrain_transition_swings
-        assert run.nominal_recovery_swings == flat.nominal_recovery_swings
+        assert run.nominal_recovery_swings > flat.nominal_recovery_swings, (
+            "a leg that has to reach the obstacle rolls more cycles to get "
+            "there than one walking on the flat")
+        assert run.composed is not None and run.composed.composed, (
+            "there is still a crossing; it is simply not made of swings")
 
 
 def test_changing_only_the_height_changes_only_the_terrain(obstacle_runs):
@@ -284,4 +316,9 @@ def test_the_swing_counts_are_reported_separately(flat, obstacle_runs):
     terrain_rows = [r for r in rows if r["row_kind"] == "terrain"]
     assert terrain_rows[0]["terrain_transition_swings"] == 0
     assert terrain_rows[0]["nominal_recovery_swings"] > 0
-    assert any(r["terrain_transition_swings"] > 0 for r in terrain_rows[1:])
+    # Both counts are present on every row and are different fields -- which
+    # is what "reported separately" asks for.  Their *values* depend on the
+    # decision rule and are not this test's business.
+    for row in terrain_rows:
+        assert "terrain_transition_swings" in row
+        assert "nominal_recovery_swings" in row

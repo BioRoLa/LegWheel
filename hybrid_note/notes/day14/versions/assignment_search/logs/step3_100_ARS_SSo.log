@@ -1,0 +1,34 @@
+/home/chang/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+terrain 100 x 875 mm at x = 1.000 m
+  axle rise 100.0 mm for a 100 mm block
+  origin candidate   151.6 mm  (LF at arc end with contact at 847.5 mm)
+  origin 151.6 mm
+    trace[1] LF RECOVERY_SWING lift 151.6 land 209.1 (stroke from -174.4, cap -, last landing -) others: RF@343.3, LH@439.1, RH@247.4
+    trace[2] RH RECOVERY_SWING lift 247.4 land 304.9 (stroke from -78.5, cap -, last landing 209.1) others: LF@535.0, RF@343.3, LH@439.1
+    trace[3] RF RECOVERY_SWING lift 343.3 land 400.8 (stroke from 17.4, cap -, last landing 304.9) others: LF@535.0, LH@439.1, RH@630.8
+    trace[4] LH RECOVERY_SWING lift 439.1 land 496.6 (stroke from 113.2, cap -, last landing 400.8) others: LF@535.0, RF@669.7, RH@630.8
+    trace[5] LF RECOVERY_SWING lift 535.0 land 575.0 (stroke from 209.1, cap -, last landing 496.6) others: RF@669.7, LH@822.6, RH@630.8
+    trace[6] RH RECOVERY_SWING lift 630.8 land 669.7 (stroke from 304.9, cap -, last landing 575.0) others: LF@780.8, RF@669.7, LH@822.6
+    trace[7] RF SWING_UP lift 669.7 land 727.2 (stroke from 400.8, cap -, last landing 669.7) others: LF@780.8, LH@822.6, RH@995.6
+    trace[8] LF TOP_REPOSITION_SWING lift 780.8 land 880.8 (stroke from 575.0, cap -, last landing 727.2) others: RF@1053.1, LH@822.6, RH@995.6
+      cut LH: liftoff 822.6 -> 727.2 (floor 727.2, wanted 727.2), lands by 780.8
+    trace[9] LH RECOVERY_SWING lift 727.2 land 780.8 (stroke from 496.6, cap 780.8, last landing 727.2) others: LF@780.8, RF@1053.1, RH@995.6
+    trace[10] LF TOP_REPOSITION_SWING lift 780.8 land 880.8 (stroke from 575.0, cap -, last landing 780.8) others: RF@1053.1, LH@1166.9, RH@995.6
+    trace[11] RH SWING_UP lift 995.6 land 1213.3 (stroke from 669.7, cap -, last landing 880.8) others: LF@1206.7, RF@1053.1, LH@1166.9
+      cut RF: liftoff 1053.1 -> 995.6 (floor 880.8, wanted 995.6), lands by 995.6
+      cut LH: liftoff 1166.9 -> 995.6 (floor 880.8, wanted 995.6), lands by 995.6
+      cut LF: liftoff 1206.7 -> 995.6 (floor 880.8, wanted 995.6), lands by 995.6
+    trace[12] LF TOP_REPOSITION_SWING lift 995.6 land 995.6 (stroke from 880.8, cap 995.6, last landing 880.8) others: RF@995.6(cap 995.6), LH@995.6(cap 995.6), RH@995.6
+    trace[13] RF TOP_REPOSITION_SWING lift 995.6 land 995.6 (stroke from 727.2, cap 995.6, last landing 995.6) others: LF@1321.5, LH@995.6(cap 995.6), RH@995.6
+    trace[14] LH RECOVERY_SWING lift 995.6 land 995.6 (stroke from 780.8, cap 995.6, last landing 995.6) others: LF@1321.5, RF@1321.5, RH@995.6
+    trace[15] RH SWING_UP lift 995.6 land 1213.3 (stroke from 669.7, cap -, last landing 995.6) others: LF@1321.5, RF@1321.5, LH@1141.6
+  pass 1 refused; the legs' attempts so far:
+    LF: on TOP; RECOVERY@464+; ROLL_START@830+; TOP@1136+; TOP@1251+
+    RF: on TOP; RECOVERY@656+; UP@982+; TOP@1251+
+    LH: on GROUND_BEFORE; RECOVERY@242+; RECOVERY@526+; RECOVERY@741+
+    RH: on GROUND_BEFORE; RECOVERY@50+; RECOVERY@415+; RECOVERY@798-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@801-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@798-(RECOVERY_LEAVES_NO_STROKE); UP@948-(LANDED_ON_AN_EDGE:contact x=1004.563 mm ); UP@958+
+    axle front: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+    axle rear: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+  origin 151.6 mm refused: LH cannot stay in stance through RH's SWING_UP [995.631, 1213.271] mm: after swinging in place at 995.631 mm its next stroke ends at 1141.638 mm, still inside.
+[ 766.2s] REFUSED: no origin among [151.6] mm plans the crossing; last: LH cannot stay in stance through RH's SWING_UP [995.631, 1213.271] mm: after swinging in place at 995.631 mm its next stroke ends at 1141.638 mm, still inside.

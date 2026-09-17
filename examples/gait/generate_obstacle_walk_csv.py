@@ -79,6 +79,8 @@ def build_request(args: argparse.Namespace) -> ObstacleWalkRequest:
         stand_height_m=args.stand_height,
         step_length_m=step_length,
         period_s=args.period,
+        stance_duty=args.duty,
+        crawl_swing_seconds=args.crawl_swing_seconds,
         flat_walk_velocity_m_s=flat_walk_velocity,
         flat_walk_step_height_m=args.flat_step_height,
         dt_s=args.dt,
@@ -129,6 +131,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--period", type=float, default=2.0,
                         help="Walk period (s); the known flat baseline uses 4 s and "
                              "the crawl reuses its stance/swing timing")
+    parser.add_argument("--duty", type=float, default=0.85,
+                        help="Walk stance duty.  0.85 is the value the flat-Walk "
+                             "hardware runs use: the gait table's 0.75 leaves no "
+                             "four-leg overlap and puts the CoM on the support-triangle "
+                             "edge for both rear swings")
+    parser.add_argument("--crawl-swing-seconds", type=float, default=None,
+                        help="obstacle-crawl swing duration (s), independent of the "
+                             "flat Walk's duty.  Default period/4.  The crawl is "
+                             "quasi-static, so this is free; tying it to the duty "
+                             "made a stability fix for the flat Walk speed up every "
+                             "obstacle swing")
     parser.add_argument("--flat-step-height", type=float, default=0.04,
                         help="existing flat Walk swing height (m), independent of "
                              "the obstacle Bezier --step-clearance; default 0.04 "
@@ -137,10 +150,16 @@ def main(argv: list[str] | None = None) -> int:
                         help="planner sample period (s); must be an integer multiple "
                              "of the 1 ms controller period, which the exporter "
                              "resamples to")
-    parser.add_argument("--step-clearance", type=float, default=0.03,
+    parser.add_argument("--step-clearance", type=float, default=0.05,
                         help="swing apex above the tallest terrain in the corridor; "
-                             "0.03 is the geometry-checked nominal value; 0.02 was "
-                             "measured to let the rim clip the top-front corner")
+                             "0.03 was the geometry-checked nominal value assuming a "
+                             "level body, but a hardware run measured the flat Walk's "
+                             "own body tilt (duty 0.85, no lateral-sway compensation) "
+                             "at up to 14 deg -- worth ~60 mm at the foot, twice the "
+                             "nominal clearance -- so 0.05 buys margin against that "
+                             "tilt actually clipping the obstacle; 0.02 was separately "
+                             "measured to let the rim clip the top-front corner even "
+                             "with a level body")
     parser.add_argument("--body-lift-ratio", type=float, default=0.6)
     parser.add_argument("--approach-distance", type=float, default=1.0,
                         help="body-origin distance to the obstacle front face at start "

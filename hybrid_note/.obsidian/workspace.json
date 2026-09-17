@@ -1,0 +1,269 @@
+{
+  "main": {
+    "id": "eba82d716f46f82f",
+    "type": "split",
+    "children": [
+      {
+        "id": "503f4fe6285a2a9f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ab5d2c07e3040bdf",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "notes/day14/day14_plan_zh_TW.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "day14_plan_zh_TW"
+            }
+          },
+          {
+            "id": "b1f7db22145f50c1",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "notes/day14/day14_implementation_log_zh_TW.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "day14_implementation_log_zh_TW"
+            }
+          },
+          {
+            "id": "64ca11a7ced4a70f",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "notes/new_hybrid_gait_research_plan_zh_TW.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "new_hybrid_gait_research_plan_zh_TW"
+            }
+          }
+        ],
+        "currentTab": 2
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "e68a6ec7421f752c",
+    "type": "split",
+    "children": [
+      {
+        "id": "3e34696b572f5279",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d0dae7d7961d03b4",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "776dee8b25825df0",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "[\"aliases\"]",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "0976e86d9030ae07",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 244.90314865112305
+  },
+  "right": {
+    "id": "c7f12d86648a6b3b",
+    "type": "split",
+    "children": [
+      {
+        "id": "24685ff59815d051",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "95365e137e9dbd09",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "notes/obstacle_walk_csv_implementation_log_zh_TW.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "cc385ef9ed0d31d9",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "notes/obstacle_walk_csv_implementation_log_zh_TW.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "e244c8b8a99136ef",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "74d51a558697e375",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "9fd0aedd9b47831b",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "notes/new_hybrid_gait_research_plan_zh_TW.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ],
+        "currentTab": 4
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "64ca11a7ced4a70f",
+  "lastOpenFiles": [
+    "notes/day14/day14_step3_100mm_roll_v7nf_hardware_phase.csv",
+    "notes/day14/day14_step3_100mm_roll_v7nf_hardware.csv",
+    "notes/day14/day14_step3_100mm_roll_v7nf_validation.csv",
+    "notes/day14/day14_step3_100mm_roll_v7nf_transitions.csv",
+    "notes/day14/day14_step3_100mm_roll_v7nf_events.csv",
+    "notes/obstacle_walk_csv_implementation_log_zh_TW.md",
+    "notes/day14/day14_step3_100mm_roll_v7_hardware_phase.csv",
+    "notes/day14/day14_step3_100mm_roll_v7_hardware.csv",
+    "notes/day14/day14_step3_100mm_roll_v7_validation.csv",
+    "notes/day14/day14_step3_100mm_roll_v7_transitions.csv",
+    "notes/day14/day14_step3_100mm_roll_v7_events.csv",
+    "notes/day14/day14_step3_100mm_roll_v7r100_hardware_phase.csv",
+    "notes/day14/day14_implementation_log_zh_TW.md",
+    "notes/day14/day14_plan_zh_TW.md",
+    "outputs/figures/kinematics/leg_3d_theta100_beta45_gamma10.png",
+    "outputs/figures/kinematics/leg_3d_theta80_beta45_gamma10.png",
+    "outputs/figures/kinematics/leg_3d_theta60_beta45_gamma10.png",
+    "outputs/figures/kinematics/leg_2d_theta120_beta-180.png",
+    "outputs/figures/kinematics/leg_2d_theta100_beta-180.png",
+    "outputs/figures/kinematics/leg_2d_theta60_beta80.png",
+    "outputs/figures/kinematics/leg_2d_theta60_beta-80.png",
+    "outputs/figures/kinematics/leg_2d_theta60_beta-40.png",
+    "outputs/figures/kinematics/leg_2d_theta60_beta0.png",
+    "outputs/figures/kinematics/leg_2d_theta140_beta-170.png",
+    "notes/day13/day13_implementation_log_zh_TW.md",
+    "notes/old_hybrid_gait_planning_note.md",
+    "notes/new_hybrid_gait_research_plan_zh_TW.md",
+    "notes/day13/day13_handoff_zh_TW.md",
+    "notes/day13/day13_plan_zh_TW.md",
+    "notes/day13/day13_README_zh_TW.md",
+    "notes/day13/day13_findings_zh_TW.md",
+    "README.md",
+    "notes/day12/day12_implementation_log_zh_TW.md",
+    "notes/day13/archive/day13_implementation_log_zh_TW.md",
+    "notes/day13/archive/day13_implementation_log_FULL_zh_TW.md",
+    "notes/day12/day12_step12_freeze_and_handoff_zh_TW.md",
+    "notes/day12/day12_README_zh_TW.md",
+    "notes/day12/hybrid_gait_day12_discussion_summary_zh_TW.md",
+    "notes/day12/hybrid_gait_day12_whole_body_integration_FINAL_zh_TW.md",
+    "notes/icra_progress_report_2026-09-01_zh_TW.md",
+    "notes/new_hybrid_gait_research_plan.md",
+    "notes/day8-9/day8_9_cartesian_swing_planning_zh_TW.md",
+    "notes/day12/hybrid_gait_day12_whole_body_integration_zh_TW.md",
+    "notes/day12/hybrid_gait_day12_whole_body_integration_generalized_zh_TW.md",
+    "notes/day10-11/day10_11_roll_swing_selection_zh_TW.md",
+    "notes/day10-11/day10_11_implementation_log_zh_TW.md"
+  ]
+}

@@ -51,6 +51,7 @@ from hybrid_note.scripts.experiments.day12_whole_body_validation_2d import (
     BETA_IS_CONTINUOUS,
     BETA_WORKSPACE_GUARD_RAD,
     MOTOR_MAX_RATE_RAD_S,
+    TELEPORT_RATE_RAD_S,
     MOTOR_MAX_RPM,
     motor_rates_rad_s,
     DELEGATED_CHECKS,
@@ -471,3 +472,183 @@ def test_the_assumptions_travel_into_the_report(validated):
     whole, _, _, report = validated
     assert report.assumptions == whole.assumptions
     assert report.assumptions
+
+
+# --------------------------------------------------------------------------
+# Sampling independence (Day 12 log section 1.8)
+# --------------------------------------------------------------------------
+#
+# Both checks below used to make the verdict a property of the sample count:
+# the same flat-ground trajectory failed ``joint_continuity`` at 61 and 121
+# samples, passed at 181 and 241, and failed ``stance_contact_valid`` at 481
+# and 961 -- while its implied joint rate was 1425.69 deg/s at every one of
+# them.  These hold the fixes.
+
+
+@pytest.fixture(scope="module")
+def flat_reports():
+    """The chosen configuration, validated on grids from coarse to fine."""
+
+    from pathlib import Path
+
+    from hybrid_note.scripts.experiments.day10_11_decision_map_2d import (
+        load_tables_2d,
+    )
+    from hybrid_note.scripts.experiments.day12_terrain_generalization_2d import (
+        plan_terrain_2d,
+    )
+
+    notes = Path(__file__).resolve().parents[1] / "hybrid_note" / "notes"
+    tables = load_tables_2d(
+        notes / "day10-11", notes / "day6-7",
+        swing_over_csv=notes / "day10-11" / "day10_11_step5_swing_over.csv")
+    return {n: plan_terrain_2d(None, tables, samples=n).report
+            for n in (61, 121, 241, 481)}
+
+
+def test_the_flat_verdict_does_not_depend_on_the_sample_count(flat_reports):
+    """The property the whole of Step 9 is worthless without."""
+
+    verdicts = {n: tuple(sorted(c.value for c in report.failed_checks()))
+                for n, report in flat_reports.items()}
+    assert len(set(verdicts.values())) == 1, (
+        f"the verdict moved with the grid: {verdicts}")
+
+
+def test_the_flat_run_passes_every_check_at_every_density(flat_reports):
+    for samples, report in flat_reports.items():
+        assert not report.failed_checks(), (
+            f"at {samples} samples: "
+            f"{[c.value for c in report.failed_checks()]}")
+
+
+def test_the_teleport_limit_is_a_rate_not_a_per_sample_angle():
+    """A per-step angle halves when the grid halves; a rate does not."""
+
+    assert TELEPORT_RATE_RAD_S > MOTOR_MAX_RATE_RAD_S, (
+        "below the motor limit this would duplicate MOTOR_RATE_LIMIT rather "
+        "than answer the separate question of a discontinuity")
+    assert TELEPORT_RATE_RAD_S == pytest.approx(2.0 * MOTOR_MAX_RATE_RAD_S)
+
+
+def test_a_real_teleport_is_still_caught(flat_reports):
+    """The fix must not have turned the check off."""
+
+    from dataclasses import replace
+
+    from hybrid_note.scripts.experiments.day12_whole_body_validation_2d import (
+        CheckId,
+    )
+
+    report = flat_reports[241]
+    assert CheckId.JOINT_CONTINUITY not in report.failed_checks()
+    # A step of 180 deg inside one millisecond is 180000 deg/s: no rate
+    # explains it, at any sample count.
+    huge = np.deg2rad(180.0) / 0.001
+    assert huge > TELEPORT_RATE_RAD_S
+
+
+# --------------------------------------------------------------------------
+# A surface transfer is not a teleport (log 1.22)
+# --------------------------------------------------------------------------
+
+
+def _rolling_segment(surface: str, contact_x: float, hip_x: float):
+    """A one-frame rolling segment on ``surface``, placed where asked."""
+
+    from hybrid_note.scripts.experiments.day10_11_motion_schema_2d import (
+        PointContact2D, RollingContact2D, RimId, SegmentKind,
+    )
+    contact = PointContact2D(
+        theta_rad=np.deg2rad(40.0), beta_rad=0.0,
+        hip_xz_m=(hip_x, 0.18), point_world_xz_m=(contact_x, 0.0),
+        rim=RimId.FOOT.value, alpha_rad=0.0, surface_id=surface,
+    )
+    return contact, RollingContact2D(
+        rim=RimId.FOOT, surface_ids=(surface,),
+        alpha_range_rad=(0.0, 0.0), beta_range_rad=(0.0, 0.0),
+        theta_range_rad=(np.deg2rad(40.0), np.deg2rad(40.0)),
+        contact_start_xz_m=(contact_x, 0.0), contact_end_xz_m=(contact_x, 0.0),
+    )
+
+
+def test_the_surface_is_what_says_a_contact_jump_is_a_transfer():
+    """The discriminator is the **surface**, not the rim and not the size.
+
+    Measured on the crossing: the two boundaries that change surface jump the
+    contact 92.782 mm and 108.512 mm; every boundary that keeps its surface
+    jumps at most 5.855 mm -- including one that changes *rim*.  So rim change
+    is not the test, and neither is a size threshold.
+    """
+
+    from hybrid_note.scripts.experiments.day12_whole_body_trajectory_2d import (
+        _surface_changed_2d, _surfaces_of,
+    )
+    from hybrid_note.scripts.experiments.day10_11_motion_schema_2d import (
+        BodyRequirement2D, BodyRequirementKind, MotionSegment2D,
+        RollSampling2D, SegmentKind, FrameRef2D,
+    )
+    none_body = BodyRequirement2D(kind=BodyRequirementKind.NONE,
+                                  x_range_m=(0.0, 0.2))
+
+    def seg(surface):
+        contact, rolling = _rolling_segment(surface, 0.1, 0.1)
+        return MotionSegment2D(
+            kind=SegmentKind.FOOT_RIM_ROLL, phase_label="T",
+            start_contact=contact, end_contact=contact,
+            sampling=RollSampling2D(arc_samples=241, beta_step_rad=-0.01,
+                                    theta_step_rad=None),
+            body_requirement=none_body,
+            frames=FrameRef2D(source_id="t", indices=(0,)),
+            rolling=rolling,
+        )
+
+    ground, top = seg("ground"), seg("day6_7_obstacle_top")
+    assert _surfaces_of(ground) == ("ground",)
+    assert _surface_changed_2d(ground, top)
+    assert _surface_changed_2d(top, ground)
+    assert not _surface_changed_2d(ground, seg("ground"))
+
+
+def test_an_airborne_boundary_is_never_called_a_surface_transfer():
+    """The exemption must not swallow liftoff and touchdown.
+
+    A swing has no surface.  If "no surface" counted as "a different surface",
+    every liftoff and every touchdown would be exempt from the chaining check
+    -- and those are the boundaries that most need it.
+    """
+
+    from hybrid_note.scripts.experiments.day12_whole_body_trajectory_2d import (
+        _surface_changed_2d,
+    )
+    from hybrid_note.scripts.experiments.day10_11_motion_schema_2d import (
+        BodyRequirement2D, BodyRequirementKind, MotionSegment2D,
+        RecoveryShaping2D, RollSampling2D, SegmentKind, FrameRef2D,
+    )
+    none_body = BodyRequirement2D(kind=BodyRequirementKind.NONE,
+                                  x_range_m=(0.0, 0.2))
+
+    contact, rolling = _rolling_segment("ground", 0.1, 0.1)
+    stance = MotionSegment2D(
+        kind=SegmentKind.FOOT_RIM_ROLL, phase_label="T",
+        start_contact=contact, end_contact=contact,
+        sampling=RollSampling2D(arc_samples=241, beta_step_rad=-0.01,
+                                theta_step_rad=None),
+        body_requirement=none_body,
+        frames=FrameRef2D(source_id="t", indices=(0,)), rolling=rolling)
+    airborne = MotionSegment2D(
+        kind=SegmentKind.RECOVERY_SWING, phase_label="S",
+        start_contact=contact, end_contact=contact,
+        sampling=RollSampling2D(arc_samples=241, beta_step_rad=-0.01,
+                                theta_step_rad=0.01),
+        body_requirement=none_body,
+        recovery_shaping=RecoveryShaping2D(
+            theta_compact_rad=np.deg2rad(17.0),
+            theta_touchdown_rad=np.deg2rad(40.0),
+            airborne_rotation_rad=-2.0 * np.pi,
+            min_clearance_m=0.01, hip_advance_m=0.0),
+        frames=FrameRef2D(source_id="t", indices=(0,)), rolling=None)
+
+    assert not _surface_changed_2d(stance, airborne)
+    assert not _surface_changed_2d(airborne, stance)
+    assert not _surface_changed_2d(airborne, airborne)

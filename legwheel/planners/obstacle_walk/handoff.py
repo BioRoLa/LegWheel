@@ -92,6 +92,49 @@ def _liftoff_leg_at(phase_row: NDArray[np.int8]) -> LegId:
     return LEG_ORDER[int(swinging[0])]
 
 
+def handover_leg_at(
+    phase: NDArray[np.int8], row: int, samples_per_cycle: int
+) -> tuple[LegId, bool]:
+    """``(leg the Walk swings next, whether the row needs relabelling)``.
+
+    Which rows can carry a handover depends on the duty factor, and the two
+    cases are physically different:
+
+    * ``stance_duty = 0.75`` tiles the four swings across the whole cycle, so
+      **no** sample has four legs down.  The best available row is a liftoff
+      instant, where the departing wheel has not left the ground yet; that row
+      is relabelled all-stance, which is bookkeeping rather than a physical
+      claim.
+    * ``stance_duty = 0.85`` leaves a genuine four-leg overlap between swings.
+      A row inside it needs no relabelling at all -- the Walk really does have
+      all four feet down there, which is exactly what the crawl's world-fixed
+      stance assumes.
+
+    Returning the flag rather than always relabelling keeps the honest case
+    honest instead of hiding it behind the same fixup.
+    """
+
+    row_phase = np.asarray(phase[row])
+    swinging = np.flatnonzero(row_phase == 1)
+    if len(swinging) == 1:
+        return LEG_ORDER[int(swinging[0])], True
+    if len(swinging) == 0:
+        for step in range(1, samples_per_cycle + 1):
+            here = row + step
+            if here >= len(phase):
+                break
+            starts = np.flatnonzero((phase[here - 1] == 0) & (phase[here] == 1))
+            if len(starts):
+                return LEG_ORDER[int(starts[0])], False
+        raise FlatHandoffError(
+            f"no leg lifts within one cycle after the all-stance handover row {row}"
+        )
+    raise FlatHandoffError(
+        f"handover row {row} carries {len(swinging)} swing flags; this Walk does not "
+        "hand over one leg at a time"
+    )
+
+
 def launch_sample_index(warp_samples: int) -> NDArray[np.float64]:
     """Walk-sample index as a function of real sample index during the launch.
 
@@ -164,6 +207,41 @@ def _warped_index_grid(
         # Drop the first entry: it repeats the nominal stretch's final sample.
         pieces.append(nominal_end + landing_sample_index(landing_samples)[1:])
     return np.concatenate(pieces)
+
+
+def _name_final_next_swing_leg(
+    segment: TrajectorySegment, next_swing_leg: LegId
+) -> TrajectorySegment:
+    """Record the crawl's first swing leg on an already-all-stance final row."""
+
+    if np.any(segment.phase[-1] != 0):
+        raise FlatHandoffError("the final row is not four-leg stance.")
+    final_state = WalkState(
+        joint_position_rad=segment.commands_rad[-1],
+        previous_joint_position_rad=segment.commands_rad[-2],
+        body_pose_world=segment.body_pose_world[-1],
+        foot_contact_points_world_m=segment.foot_contact_points_world_m[-1],
+        phase=segment.phase[-1],
+        contact_active=segment.contact_active[-1],
+        surface_ids=segment.surface_ids[-1],
+        gait_cycle_phase=float(segment.gait_cycle_phase[-1]),
+        next_swing_leg=next_swing_leg,
+    )
+    return TrajectorySegment(
+        time_s=segment.time_s,
+        commands_rad=segment.commands_rad,
+        phase=segment.phase,
+        body_pose_world=segment.body_pose_world,
+        foot_contact_points_world_m=segment.foot_contact_points_world_m,
+        contact_active=segment.contact_active,
+        gait_cycle_phase=segment.gait_cycle_phase,
+        surface_ids=segment.surface_ids,
+        start_state=segment.start_state,
+        final_state=final_state,
+        dt_s=segment.dt_s,
+        segment_type=SegmentType.FLAT,
+        command_order=segment.command_order,
+    )
 
 
 def _relabel_final_row_all_stance(
@@ -327,11 +405,13 @@ def flat_approach_segment(
             f"reach the handover sample {handover_index}"
         )
 
-    liftoff_leg = _liftoff_leg_at(full.phase[handover_index])
-    if liftoff_leg is not expected_first_swing_leg:
+    handover_leg, needs_relabel = handover_leg_at(
+        full.phase, handover_index, samples_per_cycle
+    )
+    if handover_leg is not expected_first_swing_leg:
         raise FlatHandoffError(
-            f"the flat Walk lifts {liftoff_leg.value} at the cycle boundary but the "
-            f"crawl's leg order starts with {expected_first_swing_leg.value}; the "
+            f"the flat Walk swings {handover_leg.value} next at the cycle boundary but "
+            f"the crawl's leg order starts with {expected_first_swing_leg.value}; the "
             "handover would reorder the gait"
         )
 
@@ -339,6 +419,10 @@ def flat_approach_segment(
         handover_index, launch_samples=2 * launch_cycles * samples_per_cycle
     )
     walked = _resample_walk(generator, full, grid, ground_surface_id)
+    if not needs_relabel:
+        # A genuine four-leg overlap: nothing to relabel, only the successor leg
+        # to record for the crawl.
+        return _name_final_next_swing_leg(walked, expected_first_swing_leg)
     return _relabel_final_row_all_stance(walked, expected_first_swing_leg)
 
 
@@ -473,9 +557,28 @@ def handover_contact_height_error_m(
     return float(np.max(np.abs(heights - float(ground_height_m))))
 
 
+def _entry_row_for(
+    phase: NDArray[np.int8], leg: LegId, samples_per_cycle: int
+) -> int:
+    """Row the recovery Walk is entered on so that ``leg`` swings next.
+
+    At a duty with a genuine four-leg overlap the entry moves back to the start
+    of the all-stance block before that leg lifts, which hands the crawl a real
+    four-leg support to settle into instead of a relabelled liftoff instant.
+    """
+
+    liftoff = _liftoff_row(phase, leg, samples_per_cycle)
+    row = liftoff
+    while row - 1 >= 0 and not np.any(phase[row - 1] == 1):
+        row -= 1
+    return row
+
+
 def _relabel_first_row_all_stance(segment: TrajectorySegment) -> TrajectorySegment:
     """Mirror of ``_relabel_final_row_all_stance`` for the segment's first row."""
 
+    if not np.any(np.asarray(segment.phase[0]) == 1):
+        return segment  # already a genuine four-leg overlap
     liftoff_leg = _liftoff_leg_at(segment.phase[0])
     phase = segment.phase.copy()
     phase[0] = 0
@@ -556,7 +659,7 @@ def flat_recovery_segment(
     probe = flat_walk_segment_from_generator(
         generator, ground_surface_id=ground_surface_id
     )
-    entry_row = _liftoff_row(probe.phase, first_swing_leg, samples_per_cycle)
+    entry_row = _entry_row_for(probe.phase, first_swing_leg, samples_per_cycle)
 
     velocity_x = float(generator.v_com[0])
     initial_pose = np.array(
@@ -671,3 +774,108 @@ def blend_final_row_to(
         command_order=segment.command_order,
     )
     return settled, joint_correction, settle_drift
+
+
+def resample_segment(segment: TrajectorySegment, target_dt_s: float) -> TrajectorySegment:
+    """Re-sample one segment onto a finer uniform grid, keeping its knots exact.
+
+    The flat sections must be the Walk's *own* 1 kHz samples, because that is
+    what the flat-Walk hardware runs play and what the operator compares
+    against.  The crawl cannot be planned at 1 ms -- its lowest-rim solve
+    changes branch there -- so the two halves are planned on different clocks
+    and the coarse one is brought up here, before assembly, instead of the
+    exporter resampling everything afterwards.
+
+    PCHIP reproduces every original knot exactly, so the first and last rows
+    are untouched and the boundaries the crawl shares with the flat Walk stay
+    exact.  Phase is a discrete interval label and is repeated, never
+    interpolated; ``gait_cycle_phase`` is regenerated rather than interpolated
+    because it wraps, and interpolating across a wrap would run the cycle
+    backwards through the middle of the segment.
+    """
+
+    source_dt = float(segment.dt_s)
+    ratio_float = source_dt / float(target_dt_s)
+    ratio = int(round(ratio_float))
+    if ratio < 1 or not np.isclose(ratio_float, ratio, rtol=0.0, atol=1e-9):
+        raise FlatHandoffError(
+            f"segment dt {source_dt:g} s is not an integer multiple of the target "
+            f"{target_dt_s:g} s"
+        )
+    if ratio == 1:
+        return segment
+
+    knots = np.arange(segment.sample_count, dtype=float)
+    count = (segment.sample_count - 1) * ratio + 1
+    grid = np.arange(count, dtype=float) / ratio
+    grid[-1] = knots[-1]
+
+    commands = np.asarray(
+        PchipInterpolator(knots, segment.commands_rad, axis=0)(grid), dtype=float
+    )
+    body_pose = np.asarray(
+        PchipInterpolator(knots, segment.body_pose_world, axis=0)(grid), dtype=float
+    )
+    foot_points = np.asarray(
+        PchipInterpolator(knots, segment.foot_contact_points_world_m, axis=0)(grid),
+        dtype=float,
+    )
+    # Exactness at the shared rows matters more than interpolation: force the
+    # endpoints back onto the values the neighbouring segments were built from.
+    for array, source in (
+        (commands, segment.commands_rad),
+        (body_pose, segment.body_pose_world),
+        (foot_points, segment.foot_contact_points_world_m),
+    ):
+        array[0] = source[0]
+        array[-1] = source[-1]
+
+    phase = np.vstack(
+        [np.repeat(segment.phase[:-1], ratio, axis=0), segment.phase[-1:]]
+    ).astype(np.int8, copy=False)
+    active = phase == 0
+    surfaces = tuple(
+        [row for row in segment.surface_ids[:-1] for _ in range(ratio)]
+        + [segment.surface_ids[-1]]
+    )
+    period_samples = max(len(segment.gait_cycle_phase) - 1, 1) * source_dt
+    del period_samples
+    start_phase = float(segment.gait_cycle_phase[0])
+    span = float(segment.gait_cycle_phase[-1]) - start_phase
+    # The crawl advances its bookkeeping phase linearly, so regenerating it from
+    # the endpoints reproduces it without ever crossing a wrap incorrectly.
+    gait_cycle_phase = (start_phase + span * (grid / knots[-1])) % 1.0
+
+    def state_at(index: int, previous: int | None) -> WalkState:
+        return WalkState(
+            joint_position_rad=commands[index],
+            previous_joint_position_rad=None if previous is None else commands[previous],
+            body_pose_world=body_pose[index],
+            foot_contact_points_world_m=foot_points[index],
+            phase=phase[index],
+            contact_active=active[index],
+            surface_ids=surfaces[index],
+            gait_cycle_phase=float(gait_cycle_phase[index]),
+            next_swing_leg=(
+                segment.start_state.next_swing_leg
+                if index == 0
+                else segment.final_state.next_swing_leg
+            ),
+        )
+
+    return TrajectorySegment(
+        time_s=np.arange(count, dtype=float) * float(target_dt_s),
+        commands_rad=commands,
+        phase=phase,
+        body_pose_world=body_pose,
+        foot_contact_points_world_m=foot_points,
+        contact_active=active,
+        gait_cycle_phase=gait_cycle_phase,
+        surface_ids=surfaces,
+        start_state=state_at(0, None),
+        final_state=state_at(count - 1, count - 2),
+        dt_s=float(target_dt_s),
+        segment_type=segment.segment_type,
+        swing_leg=segment.swing_leg,
+        command_order=segment.command_order,
+    )

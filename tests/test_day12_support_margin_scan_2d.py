@@ -45,6 +45,7 @@ from hybrid_note.scripts.experiments.day12_support_margin_scan_2d import (
     best_within_motor_budget_2d,
     derived_margin_floor_m,
     frame_motor_rate_2d,
+    hybrid_posture_2d,
     hybrid_timing_2d,
     liftoff_order_2d,
     phase_offsets_for_2d,
@@ -142,7 +143,28 @@ def test_the_spacing_is_the_one_the_critical_duty_forces():
 
 @pytest.fixture(scope="module")
 def stride() -> RollingStride2D:
+    """The stride of the posture the gait rolls in, not of the default one."""
+
     return rolling_stride_2d()
+
+
+def test_the_stride_is_measured_on_the_posture_the_gait_actually_uses():
+    """The two postures give different strides, so the default has to be the
+    one that is flown -- otherwise the diagnostic describes another gait."""
+
+    from hybrid_note.scripts.experiments.day12_nominal_cycle_2d import (
+        NominalPosture2D as _Fixed,
+    )
+
+    chosen = rolling_stride_2d()
+    uncompensated = rolling_stride_2d(_Fixed())
+    assert chosen.hip_advance_m != uncompensated.hip_advance_m
+    assert chosen.contact_advance_m == pytest.approx(
+        uncompensated.contact_advance_m, abs=1e-9), (
+        "theta compensation moves the hip, not the contact")
+    assert chosen.relative_stride_m > uncompensated.relative_stride_m
+    assert rolling_stride_2d(hybrid_posture_2d()).hip_advance_m == pytest.approx(
+        chosen.hip_advance_m)
 
 
 def test_the_contact_advances_with_the_hip_so_the_polygon_sees_less(stride):
@@ -150,9 +172,11 @@ def test_the_contact_advances_with_the_hip_so_the_polygon_sees_less(stride):
     assert stride.relative_stride_m == pytest.approx(
         stride.hip_advance_m - stride.contact_advance_m)
     assert stride.relative_stride_m < stride.hip_advance_m
-    assert stride.stride_loss_ratio > 3.0, (
+    assert stride.stride_loss_ratio > 2.5, (
         "the measured cost of rolling: a planted foot would give the support "
-        "polygon over three times the excursion")
+        "polygon over two and a half times the excursion.  2.640x for the "
+        "levelled posture the gait uses; the uncompensated posture reads "
+        "3.140x and is not what is being flown")
 
 
 def test_rolling_a_shorter_stroke_does_not_buy_the_stride_back(stride):
@@ -549,3 +573,50 @@ def test_the_same_gait_does_not_clear_the_old_floor(scanned):
     stability = swing_stability_2d(four, body,
                                    margin_floor_m=DEFAULT_MARGIN_FLOOR_M)
     assert not stability.is_stable
+
+
+# --------------------------------------------------------------------------
+# The one thing Day 12 borrows from the Walk planner
+# --------------------------------------------------------------------------
+
+
+def test_the_only_shared_input_with_the_walk_planner_is_pinned():
+    """Day 12 reads exactly two numbers out of ``GAIT_LIBRARY["Walk"]``.
+
+    Nothing else in ``legwheel.planners`` reaches Day 12: the four legs, the
+    crossing, the schedule and the motor export are all built here.  But these
+    two are shared, and the whole of log section 1.6 rests on the duty being
+    **exactly** the critical 3/4 -- that is what makes Step 6's 0.000 mm the
+    textbook answer rather than a defect, and what makes
+    ``HYBRID_STANCE_DUTY`` a departure from the project's gait rather than an
+    arbitrary number.
+
+    So this is a **contract with the Walk planner**, not a sanity check.  If it
+    fails, the Walk gait was retuned -- which is a legitimate thing to do,
+    especially since a Walk at duty 3/4 has a zero support margin for exactly
+    the same reason a Hybrid does -- and then:
+
+    * log 1.6's diagnosis needs re-reading against the new duty;
+    * ``HYBRID_STANCE_DUTY`` should be reconsidered, because a Hybrid-vs-Walk
+      comparison at two different duties is confounded;
+    * the numbers in log 1.6's scan table were measured at 0.75 and stay
+      measured at 0.75.
+
+    Failing loudly here is the point: the alternative is Day 12 quietly
+    re-deriving its conclusions from a gait it was never checked against.
+    """
+
+    from legwheel.planners.gait_generator_3d import GAIT_LIBRARY
+
+    walk = GAIT_LIBRARY["Walk"]
+    assert walk["stance_duty"] == CRITICAL_STANCE_DUTY, (
+        f"the Walk gait's duty moved from {CRITICAL_STANCE_DUTY} to "
+        f"{walk['stance_duty']}.  Day 12's A4 analysis (log 1.6) is written "
+        "against 3/4 being the critical duty; re-read it before trusting "
+        "HYBRID_STANCE_DUTY, and note that a Walk at any duty of 3/4 has a "
+        "zero support margin for the same reason the Hybrid did.")
+    assert list(walk["phase_offsets"]) == [0.75, 0.25, 0.5, 0.0], (
+        f"the Walk gait's phase offsets moved to {walk['phase_offsets']}.  "
+        "LIFTOFF_SEQUENCES['project_walk'] names the liftoff order these "
+        "encode (LF RH RF LH), and the scan in log 1.6 found it is the only "
+        "one of the six with a non-negative margin -- re-run that scan.")

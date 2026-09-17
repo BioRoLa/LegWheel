@@ -283,9 +283,29 @@ class TraversalConstraints2D:
 
     theta_step_rad: float = np.deg2rad(1.0)
     wheel_beta_step_rad: float = np.deg2rad(1.0)
+    #: How far the wheel-transition's local continuation search may reach when
+    #: the nominal beta update is blocked.  Separate from
+    #: ``wheel_beta_step_rad`` on purpose: the step sets candidate *spacing*
+    #: and the window sets the search's *reach*, and
+    #: ``search_count = floor(window / step)`` couples them.  Widening the
+    #: window at a fixed step therefore adds candidates at the same spacing,
+    #: which is what distinguishes "the search was too narrow" from "the grid
+    #: was too coarse" -- a distinction Day 13 needs, because refining the step
+    #: alone also *regenerates the candidate set* and so cannot converge.
+    #: Default is the value every published sweep ran at.
+    wheel_beta_search_window_rad: float = np.deg2rad(5.0)
     max_seam_bridge_m: float = 5e-3
 
     pivot_beta_step_rad: float = np.deg2rad(1.0)
+    #: How far the pinned contact may drift, in **rim sample indices**, during
+    #: the corner pivot and ground roll.  It is a count, so the *angle* it
+    #: allows depends on ``arc_samples``: 3 indices is 1.330 deg at
+    #: ``arc_samples = 121`` but only 0.665 deg at 241.  Raising the rim
+    #: sampling therefore tightens this constraint unless the count is raised
+    #: with it -- the same count-vs-quantity trap as the step budgets.  Scale
+    #: it with ``arc_samples`` when sweeping the sampling density, or the sweep
+    #: measures the tolerance rather than the geometry.
+    descent_sample_match_tolerance: int = 3
     release_theta: bool = False
     theta_release_clearance_m: float = 0.02
     descent_rim_margin_m: float = 5e-3
@@ -303,6 +323,10 @@ class TraversalConstraints2D:
             raise ValueError("approach_max_steps must be non-negative.")
         if self.contact_tolerance_m < 0.0 or self.collision_tolerance_m < 0.0:
             raise ValueError("tolerances must be non-negative.")
+        if self.wheel_beta_search_window_rad < 0.0:
+            raise ValueError("wheel_beta_search_window_rad must be non-negative.")
+        if self.descent_sample_match_tolerance < 0:
+            raise ValueError("descent_sample_match_tolerance must be non-negative.")
 
 
 @dataclass(frozen=True)
@@ -1088,6 +1112,7 @@ def check_right_up_left_down_traversal(
         theta_target_rad=constraints.theta_wheel_rad,
         theta_step_rad=constraints.theta_step_rad,
         beta_step_rad=constraints.wheel_beta_step_rad,
+        beta_search_window_rad=constraints.wheel_beta_search_window_rad,
         max_seam_bridge_m=constraints.max_seam_bridge_m,
         contact_tolerance_m=constraints.contact_tolerance_m,
         collision_tolerance_m=constraints.collision_tolerance_m,
@@ -1122,6 +1147,7 @@ def check_right_up_left_down_traversal(
     descent = run_left_rim_roll_down_2d(
         transition,
         pivot_beta_step_rad=constraints.pivot_beta_step_rad,
+        sample_match_tolerance=constraints.descent_sample_match_tolerance,
         release_theta=constraints.release_theta,
         theta_release_clearance_m=constraints.theta_release_clearance_m,
         descent_rim_margin_m=constraints.descent_rim_margin_m,

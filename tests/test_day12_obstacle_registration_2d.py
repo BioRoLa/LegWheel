@@ -17,7 +17,11 @@ matplotlib.use("Agg")
 from hybrid_note.scripts.experiments.day10_11_composer_2d import (
     COMPOSER_FRAME_X_START_M,
 )
-from hybrid_note.scripts.experiments.day10_11_decision_map_2d import load_tables_2d
+from hybrid_note.scripts.experiments.day10_11_decision_map_2d import (
+    DEFAULT_ORDER,
+    StrategyId,
+    load_tables_2d,
+)
 from hybrid_note.scripts.experiments.day10_11_shared_scene_2d import (
     SharedTerrainSpec2D,
 )
@@ -110,16 +114,8 @@ def test_the_crossing_does_not_register(crossing):
     assert report.worst_drift_m > 0.1
 
 
-def test_nothing_ever_stands_on_the_obstacle(crossing):
-    """0.000 s, and the reason is checkable: no scheduled stance segment has a
-    raised contact at either end.  Step 7's unresolved ``TOP_REPOSITION`` is
-    the segment that would have."""
-
-    run, report = crossing
-    assert report.stance_on_top_s == 0.0
-    assert stance_on_top_seconds_2d(run.plan) == 0.0
-
-    raised_stance = 0
+def _raised_stance_segments(run) -> int:
+    raised = 0
     for leg in LEG_ORDER:
         for scheduled in run.plan.schedule.segments_of(leg):
             if scheduled.mode is not LegMode.STANCE:
@@ -127,8 +123,36 @@ def test_nothing_ever_stands_on_the_obstacle(crossing):
             segment = run.plan.plans[leg].phased[scheduled.segment_index].segment
             if max(float(segment.start_contact.point_world_xz_m[1]),
                    float(segment.end_contact.point_world_xz_m[1])) > 1e-3:
-                raised_stance += 1
-    assert raised_stance == 0
+                raised += 1
+    return raised
+
+
+def test_the_rolling_crossing_does_stand_on_the_obstacle(crossing):
+    """Problem A6, dissolved by the rolling preference (log 1.7 / 1.8).
+
+    A swing crossing touched down and lifted off at the same instant, so the
+    robot never actually stood on the platform -- 0.000 s, and the missing
+    160 mm was Step 7's unresolved ``TOP_REPOSITION``.  A rolling crossing
+    carries the contact across the top instead, so the stance is there without
+    a reposition segment: 6.4168 leg-seconds at this cell.
+    """
+
+    run, report = crossing
+    assert report.stance_on_top_s > 0.0
+    assert stance_on_top_seconds_2d(run.plan) == pytest.approx(
+        report.stance_on_top_s)
+    assert _raised_stance_segments(run) > 0
+
+
+def test_a_swing_crossing_still_never_stands_on_the_obstacle(tables):
+    """The other half, kept: A6 was real, and it is a property of the swing
+    crossing rather than something that was fixed underneath it."""
+
+    run = plan_terrain_2d(TERRAIN, tables, samples=61, reposition_unresolved=2,
+                          order=DEFAULT_ORDER, body_tolerance_m=0.0)
+    assert run.composed.strategy is StrategyId.SWING_SWING
+    assert stance_on_top_seconds_2d(run.plan) == 0.0
+    assert _raised_stance_segments(run) == 0
 
 
 def test_the_raised_surface_reaches_the_drawing(crossing):

@@ -253,7 +253,11 @@ def test_joint_commands_stay_inside_the_configured_limits(traversal):
     assert np.all(np.abs(commands[:, :, 1]) <= np.deg2rad(RobotParams.BETA_MAX_DEG) + 1e-9)
     assert np.all(np.abs(commands[:, :, 2]) <= np.deg2rad(RobotParams.GAMMA_MAX_DEG) + 1e-9)
     step = np.max(np.abs(np.diff(commands, axis=0)))
-    assert step <= TRAVERSAL_REQUEST.joint_velocity_limit_rad_s * TRAVERSAL_REQUEST.dt_s + 1e-9
+    # The guard is a rate, so it is checked against the period the assembled
+    # trajectory actually carries, not the coarser one the crawl planned on.
+    assert step <= (
+        TRAVERSAL_REQUEST.joint_velocity_limit_rad_s * traversal.segment.dt_s + 1e-9
+    )
 
 
 def test_commands_keep_the_requested_joint_limit_margin(traversal):
@@ -377,7 +381,11 @@ def test_export_writes_row_aligned_hardware_files(tmp_path, traversal):
     assert set(np.unique(phase)).issubset({0.0, 1.0})
 
     prep_rows = paths.prep_row_count
-    ratio = int(round(TRAVERSAL_REQUEST.dt_s / CONTROLLER_DT_S))
+    # The ratio belongs to the *assembled* segment, not to the crawl's planner
+    # dt.  The flat sections are generated at the controller rate and the crawl
+    # is resampled onto their grid before assembly, so by the time the exporter
+    # sees the trajectory there is normally nothing left for it to resample.
+    ratio = int(round(traversal.segment.dt_s / CONTROLLER_DT_S))
     expected_trajectory_rows = (traversal.segment.sample_count - 1) * ratio + 1
     assert prep_rows == CONTROLLER_TRANSFORM_ROWS
     assert paths.trajectory_row_count == expected_trajectory_rows
@@ -390,7 +398,9 @@ def test_export_writes_row_aligned_hardware_files(tmp_path, traversal):
     metadata = json.loads(paths.metadata_path.read_text(encoding="utf-8"))
     assert metadata["rows"]["prep_rows"] == prep_rows
     assert metadata["rows"]["trajectory_start_row"] == CONTROLLER_TRANSFORM_ROWS
-    assert metadata["rows"]["planner_dt_s"] == pytest.approx(TRAVERSAL_REQUEST.dt_s)
+    assert metadata["rows"]["planner_dt_s"] == pytest.approx(traversal.segment.dt_s)
+    # The crawl's own planning period stays recoverable from the request block.
+    assert metadata["request"]["dt_s"] == pytest.approx(TRAVERSAL_REQUEST.dt_s)
     assert metadata["rows"]["controller_dt_s"] == pytest.approx(CONTROLLER_DT_S)
     assert metadata["rows"]["resample_ratio"] == ratio
     assert metadata["rows"]["total_rows"] == len(commands)

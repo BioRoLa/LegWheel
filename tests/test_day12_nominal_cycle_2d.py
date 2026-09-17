@@ -9,6 +9,8 @@ every test below is an assertion about the *same* trajectory rather than about
 a fresh one.
 """
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -27,12 +29,16 @@ from hybrid_note.scripts.experiments.day10_11_motion_schema_2d import (
     SwingSampling2D,
 )
 from hybrid_note.scripts.experiments.day12_nominal_cycle_2d import (
+    HipZProfile2D,
     NominalPosture2D,
     RecoveryConfig2D,
     cycle_segments_2d,
     recovery_beta_target_2d,
     run_foot_rim_roll_2d,
+    NominalCycle2D,
     run_nominal_cycles_2d,
+    run_recovery_swing_2d,
+    translate_cycle_2d,
 )
 from hybrid_note.scripts.experiments.day12_segment_contract_2d import (
     BoundaryKind,
@@ -403,7 +409,6 @@ def test_a_recovery_may_not_be_dressed_as_a_cartesian_swing(cycles):
     shaping was supplied."""
 
     _, recovery = cycle_segments_2d(cycles[0], source_id="t")
-    from dataclasses import replace
 
     with pytest.raises(TypeError, match="stepped in theta/beta"):
         replace(recovery, sampling=SwingSampling2D(
@@ -461,3 +466,217 @@ def test_a_stroke_cut_short_does_need_the_hip_ramp():
     touchdown_z = posture.hip_z_for_flat_stance(recovery_beta_target_2d(stroke))
     ramp_mm = (touchdown_z - stroke.end.hip_xz_m[1]) * 1e3
     assert ramp_mm == pytest.approx(-12.73, abs=0.05)
+
+
+# --------------------------------------------------------------------------
+# Cycle replication (Day 12 log section 1.11)
+# --------------------------------------------------------------------------
+#
+# ``run_nominal_cycles_2d`` generates the first cycle and translates it for the
+# rest, which is what makes a four-leg world-registered plan affordable.  That
+# is only allowed because the cycles really are translates of each other; these
+# hold that, so the optimisation cannot quietly become an approximation.
+
+
+def _cycle_frames(cycle):
+    return list(cycle.stroke.frames) + list(cycle.recovery.frames)
+
+
+@pytest.mark.parametrize("hold_hip_z", [False, True])
+def test_a_translated_cycle_matches_a_generated_one(hold_hip_z):
+    """The claim the replication rests on, checked against real generation."""
+
+    from dataclasses import replace as _replace
+
+    posture = NominalPosture2D()
+    if hold_hip_z:
+        held = max(float(f.hip_xz_m[1])
+                   for f in run_foot_rim_roll_2d(posture).frames)
+        posture = _replace(posture, hold_hip_z_m=held)
+
+    replicated = run_nominal_cycles_2d(3, posture)
+    assert len(replicated) == 3
+    assert all(c.recovery.success for c in replicated)
+
+    # Generate the second and third cycles the slow way -- each one starting
+    # where the previous landed, which is exactly what the loop used to do.
+    beta = float(replicated[0].recovery.end.beta_rad)
+    hip_x = float(replicated[0].recovery.end.hip_xz_m[0])
+    for index in (1, 2):
+        stroke = run_foot_rim_roll_2d(posture, start_beta_rad=beta,
+                                      hip_x_m=hip_x)
+        generated = NominalCycle2D(stroke, run_recovery_swing_2d(stroke))
+        assert generated.recovery.success
+
+        got, want = _cycle_frames(replicated[index]), _cycle_frames(generated)
+        assert len(got) == len(want), f"cycle {index} frame count"
+        for a, b in zip(got, want):
+            assert a.theta_rad == pytest.approx(b.theta_rad, abs=1e-12)
+            assert a.beta_rad == pytest.approx(b.beta_rad, abs=1e-12)
+            assert a.hip_xz_m[0] == pytest.approx(b.hip_xz_m[0], abs=1e-9)
+            assert a.hip_xz_m[1] == pytest.approx(b.hip_xz_m[1], abs=1e-9)
+            assert a.airborne == b.airborne
+            assert a.rim == b.rim
+            if a.contact_xz_m is None:
+                assert b.contact_xz_m is None
+            else:
+                assert a.contact_xz_m[0] == pytest.approx(
+                    b.contact_xz_m[0], abs=1e-9)
+                assert a.contact_xz_m[1] == pytest.approx(
+                    b.contact_xz_m[1], abs=1e-9)
+        beta = float(generated.recovery.end.beta_rad)
+        hip_x = float(generated.recovery.end.hip_xz_m[0])
+
+
+def test_translating_a_cycle_rebuilds_its_final_scene():
+    """No field of a translated cycle may describe the untranslated one."""
+
+    cycle = run_nominal_cycles_2d(1)[0]
+    moved = translate_cycle_2d(cycle, 0.5, -2.0 * np.pi)
+    assert moved.recovery.final_scene is not cycle.recovery.final_scene
+    assert moved.recovery.final_scene.hip_pose.position_world_xz_m[0] == (
+        pytest.approx(
+            cycle.recovery.final_scene.hip_pose.position_world_xz_m[0] + 0.5))
+
+
+def test_a_single_cycle_request_is_generated_not_replicated():
+    """One cycle has nothing to translate from; it must be the real thing."""
+
+    assert len(run_nominal_cycles_2d(1)) == 1
+
+
+def test_a_failed_first_cycle_is_not_replicated_into_more_failures():
+    """A cycle that did not complete must not be copied N times."""
+
+    broken = NominalPosture2D(theta_rad=float(np.deg2rad(160.0)))
+    out = run_nominal_cycles_2d(3, broken)
+    assert len(out) == 1 or all(c.recovery.success for c in out)
+
+
+# --------------------------------------------------------------------------
+# Following a shared body height instead of dictating one (log 1.20-1.21)
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def levelled_height():
+    """The height the levelled posture holds, taken from the geometry."""
+
+    return float(max(f.hip_xz_m[1] for f in run_foot_rim_roll_2d(
+        NominalPosture2D()).frames))
+
+
+def test_a_constant_profile_is_the_held_height_exactly(levelled_height):
+    """The generalisation has to contain what it generalises.
+
+    ``hold_hip_z_m`` is one number for the whole stroke; a profile is a number
+    per hip position.  A *constant* profile is therefore the same request, and
+    if it produced even a slightly different stroke then every number frozen
+    before profiles existed would be a number about the old code only.
+    """
+
+    held = levelled_height
+    scalar = run_foot_rim_roll_2d(
+        replace(NominalPosture2D(), hold_hip_z_m=held))
+    profiled = run_foot_rim_roll_2d(
+        replace(NominalPosture2D(),
+                hold_hip_z_profile=HipZProfile2D.constant(held)))
+
+    assert len(profiled.frames) == len(scalar.frames)
+    for a, b in zip(scalar.frames, profiled.frames):
+        assert a.theta_rad == b.theta_rad
+        assert a.beta_rad == b.beta_rad
+        assert a.hip_xz_m == b.hip_xz_m
+        assert a.contact_xz_m == b.contact_xz_m
+
+
+def test_a_profile_wins_over_the_scalar_when_both_are_given(levelled_height):
+    """A caller who supplies a trajectory means the trajectory."""
+
+    posture = replace(NominalPosture2D(), hold_hip_z_m=levelled_height,
+                      hold_hip_z_profile=HipZProfile2D.constant(0.2))
+    assert posture.held_hip_z_at(0.0) == pytest.approx(0.2)
+    assert posture.holds_hip_z
+
+
+def test_a_posture_that_levels_nothing_says_so():
+    plain = NominalPosture2D()
+    assert not plain.holds_hip_z
+    assert plain.held_hip_z_at(0.0) is None
+
+
+def test_a_profile_holds_its_ends_rather_than_extrapolating():
+    """A leg that rolls past where the body was sampled keeps standing at the
+    last height it was told; extrapolating invents a body motion."""
+
+    profile = HipZProfile2D((0.0, 1.0), (0.20, 0.15))
+    assert profile.at(-5.0) == pytest.approx(0.20)
+    assert profile.at(0.5) == pytest.approx(0.175)
+    assert profile.at(5.0) == pytest.approx(0.15)
+
+
+def test_a_profile_refuses_to_go_backwards():
+    with pytest.raises(ValueError):
+        HipZProfile2D((0.0, 1.0, 0.5), (0.2, 0.2, 0.2))
+    with pytest.raises(ValueError):
+        HipZProfile2D((), ())
+    with pytest.raises(ValueError):
+        HipZProfile2D((0.0, 1.0), (0.2,))
+
+
+def test_a_stance_leg_follows_a_sloped_body_without_losing_its_stroke(
+        levelled_height):
+    """The point of the whole change.
+
+    The crossing's own frames run 143.8-198.0 mm while the flat nominal stance
+    is 219.4 mm, so a stance leg that has to share a body with a crossing leg
+    must follow a height that *moves*.  It has to do that without giving up
+    any of its rolling stroke -- if following the body cost contact distance,
+    the gait would slow down every time the terrain did anything.
+    """
+
+    span = 0.33
+    flat = run_foot_rim_roll_2d(
+        replace(NominalPosture2D(),
+                hold_hip_z_profile=HipZProfile2D.constant(levelled_height)))
+    for slope in (0.02, 0.05, 0.10, 0.25):
+        sloped = run_foot_rim_roll_2d(replace(
+            NominalPosture2D(),
+            hold_hip_z_profile=HipZProfile2D(
+                (0.0, span),
+                (levelled_height, max(0.150, levelled_height - slope * span)))))
+        assert sloped.success, (slope, sloped.stop_reason)
+        assert sloped.stop_reason == flat.stop_reason
+        assert sloped.contact_advance_m == pytest.approx(
+            flat.contact_advance_m, abs=1e-9), slope
+
+
+def test_the_tracking_error_stays_inside_the_contact_tolerance(
+        levelled_height):
+    """How closely the hip follows what it was asked for.
+
+    Not zero, and it should not be claimed as zero: theta for each step is
+    solved against the height at where the hip is *going*, and where it is
+    going is itself one step of estimate.  What matters is that the residue is
+    small against the tolerance the contact query already works to -- and that
+    it stays proportional to the slope rather than growing along the stroke.
+    """
+
+    span = 0.33
+    tolerance = NominalPosture2D().contact_tolerance_m
+    for slope in (0.02, 0.05, 0.10, 0.25):
+        stroke = run_foot_rim_roll_2d(replace(
+            NominalPosture2D(),
+            hold_hip_z_profile=HipZProfile2D(
+                (0.0, span),
+                (levelled_height, max(0.150, levelled_height - slope * span)))))
+        error = stroke.hip_z_tracking_error_m
+        assert error < tolerance, (slope, error)
+        # One roll step of hip travel is about 6.4 mm; the residue is a
+        # fraction of a step's worth of slope, not a step's worth.
+        assert error < 0.002 * slope + 1e-4, (slope, error)
+
+
+def test_a_stroke_that_was_asked_for_nothing_reports_no_tracking_error():
+    assert run_foot_rim_roll_2d(
+        NominalPosture2D()).hip_z_tracking_error_m == 0.0

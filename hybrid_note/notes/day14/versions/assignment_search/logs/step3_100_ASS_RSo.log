@@ -1,0 +1,29 @@
+/home/chang/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+terrain 100 x 875 mm at x = 1.000 m
+  axle rise 100.0 mm for a 100 mm block
+  origin candidate   182.3 mm  (RH at arc end with contact at 847.5 mm)
+  origin 182.3 mm
+    trace[1] LF RECOVERY_SWING lift 182.3 land 239.8 (stroke from -143.6, cap -, last landing -) others: RF@374.0, LH@469.8, RH@278.1
+    trace[2] RH RECOVERY_SWING lift 278.1 land 335.6 (stroke from -47.8, cap -, last landing 239.8) others: LF@599.5, RF@374.0, LH@469.8
+    trace[3] RF RECOVERY_SWING lift 374.0 land 431.5 (stroke from 48.1, cap -, last landing 335.6) others: LF@599.5, LH@469.8, RH@661.6
+    trace[4] LH RECOVERY_SWING lift 469.8 land 527.4 (stroke from 143.9, cap -, last landing 431.5) others: LF@599.5, RF@653.2, RH@661.6
+    trace[5] LF SWING_UP lift 599.5 land 703.3 (stroke from 239.8, cap -, last landing 527.4) others: RF@653.2, LH@853.3, RH@661.6
+      cut RF: liftoff 653.2 -> 528.6 (floor 527.4, wanted 528.6), lands by 528.6
+      cut RH: liftoff 661.6 -> 599.5 (floor 527.4, wanted 599.5), lands by 599.5
+    trace[6] RF RECOVERY_SWING lift 528.6 land 528.6 (stroke from 431.5, cap 528.6, last landing 527.4) others: LF@599.5, LH@853.3, RH@599.5(cap 599.5)
+    trace[7] RF SWING_UP lift 543.6 land 703.3 (stroke from 528.6, cap -, last landing 528.6) others: LF@599.5, LH@853.3, RH@599.5(cap 599.5)
+      cut LF: liftoff 599.5 -> 528.6 (floor 528.6, wanted 528.6), lands by 528.6
+      cut RH: liftoff 599.5 -> 543.6 (floor 528.6, wanted 543.6), lands by 543.6
+    trace[8] LF RECOVERY_SWING lift 528.6 land 528.6 (stroke from 239.8, cap 528.6, last landing 528.6) others: RF@543.6, LH@853.3, RH@543.6(cap 543.6)
+    trace[9] RH RECOVERY_SWING lift 543.6 land 543.6 (stroke from 335.6, cap 543.6, last landing 528.6) others: LF@543.6, RF@543.6, LH@853.3
+    trace[10] LF SWING_UP lift 543.6 land 703.3 (stroke from 528.6, cap -, last landing 543.6) others: RF@543.6, LH@853.3, RH@869.5
+  pass 1 refused; the legs' attempts so far:
+    LF: on GROUND_BEFORE; RECOVERY@495+; RECOVERY@908-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@904-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@914-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@894-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@924-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@884-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@934-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@874-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@944-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@864-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@954-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@854-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@964-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@974-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@984-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@994-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1004-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1014-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1024-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1034-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1044-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1054-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1064-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1074-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1084-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1094-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1104-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1114-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1124-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1134-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1144-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1154-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@912-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); UP@948-(LANDED_ON_AN_EDGE:contact x=1004.563 mm ); UP@958+; RECOVERY@784+; UP@948-(LANDED_ON_AN_EDGE:contact x=1004.563 mm ); UP@958+
+    RF: on GROUND_BEFORE; RECOVERY@686+; RECOVERY@784+; UP@948-(LANDED_ON_AN_EDGE:contact x=1004.563 mm ); UP@958+
+    LH: on GROUND_BEFORE; RECOVERY@272+
+    RH: on GROUND_BEFORE; RECOVERY@81+; RECOVERY@289+
+    axle front: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+    axle rear: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+  origin 182.3 mm refused: RF lifts off at body x 543.630 mm, inside LF's SWING_UP [543.630, 703.271] mm, and cannot lift at 528.604 mm: its stroke starts at 528.604 mm and the previous s
+[1093.3s] REFUSED: no origin among [182.3] mm plans the crossing; last: RF lifts off at body x 543.630 mm, inside LF's SWING_UP [543.630, 703.271] mm, and cannot lift at 528.604 mm: its stroke starts at 528.604 mm and the previous swing lands at 543.630 mm (1 legs to fit in).

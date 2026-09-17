@@ -36,6 +36,7 @@ from hybrid_note.scripts.experiments.day12_body_trajectory_2d import (
     merge_demands,
 )
 from hybrid_note.scripts.experiments.day12_four_leg_state_2d import (
+    leg_mounts_2d,
     LEG_ORDER,
     LegId,
     initialize_four_leg_state_2d,
@@ -112,12 +113,48 @@ def test_several_compatible_lower_bounds_take_the_highest_not_the_sum():
     assert conflicts == ()
 
 
-def test_conflicting_hard_requirements_are_refused_not_averaged():
-    """Plan §12 requirement 5.  An average would satisfy neither leg."""
+def test_a_front_rear_disagreement_is_a_pitch_not_a_conflict():
+    """Day 13.  Two legs at different mount x wanting different body heights
+    describe a **slope**, which a rigid body simply tilts to.
+
+    Day 12 pinned ``body_rpy`` to zero and had to call this infeasible; the
+    project owner removed that restriction ("why force the body to be level?").
+    LF is at x = +255 mm and RH at -255 mm, so 40 mm of disagreement over the
+    510 mm wheelbase is a 4.5 degree pitch -- well inside what the crossing
+    itself demands (15.35 degrees at 140 mm).
+
+    The midpoint is still never produced: the fitted plane passes *through*
+    both demands rather than splitting the difference, which is what plan §12
+    requirement 5 was protecting."""
 
     demands = [
         _demand(LegId.LF, BodyRequirementKind.TRACK, 0.20),
         _demand(LegId.RH, BodyRequirementKind.TRACK, 0.24),
+    ]
+    body_z, driver, winner, conflicts = merge_demands(
+        demands, NOMINAL_BODY_Z_M, 1.5)
+    assert conflicts == ()
+    assert driver is BodyDriver.HARD
+    assert np.isfinite(body_z)
+    # The plane is fitted at the body origin, which sits midway between the
+    # mounts -- so the value there *is* 0.22, but as a point on a line through
+    # both demands, not as an average that satisfies neither.
+    mounts = {m.leg: float(m.offset_body_xyz_m[0]) for m in leg_mounts_2d(0.0)}
+    slope = (0.24 - 0.20) / (mounts[LegId.RH] - mounts[LegId.LF])
+    assert body_z + slope * mounts[LegId.LF] == pytest.approx(0.20)
+    assert body_z + slope * mounts[LegId.RH] == pytest.approx(0.24)
+
+
+def test_a_same_mount_disagreement_is_still_refused():
+    """No pitch can separate two legs that share a mount x.
+
+    LF and RF are both at x = +255 mm, so a disagreement between them is not a
+    slope in the sagittal plane and there is nothing for a tilt to resolve.
+    This is the case plan §12 requirement 5 still governs."""
+
+    demands = [
+        _demand(LegId.LF, BodyRequirementKind.TRACK, 0.20),
+        _demand(LegId.RF, BodyRequirementKind.TRACK, 0.24),
     ]
     body_z, driver, winner, conflicts = merge_demands(
         demands, NOMINAL_BODY_Z_M, 1.5)
@@ -135,15 +172,18 @@ def test_conflicting_hard_requirements_are_refused_not_averaged():
 
 
 def test_two_hard_requirements_that_agree_are_one_requirement():
+    # Same mount x, so this is the agreement case rather than a slope: two
+    # legs at the same place asking for the same height, to within the
+    # tolerance, are one requirement seen twice.
     demands = [
         _demand(LegId.LF, BodyRequirementKind.TRACK, 0.20),
-        _demand(LegId.RH, BodyRequirementKind.PINNED,
+        _demand(LegId.RF, BodyRequirementKind.PINNED,
                 0.20 + HARD_AGREEMENT_M / 2),
     ]
     body_z, driver, _, conflicts = merge_demands(demands, NOMINAL_BODY_Z_M, 0.0)
     assert conflicts == ()
     assert driver is BodyDriver.HARD
-    assert body_z == pytest.approx(0.20)
+    assert body_z == pytest.approx(0.20, abs=HARD_AGREEMENT_M)
 
 
 def test_a_hard_requirement_beats_a_higher_lower_bound():

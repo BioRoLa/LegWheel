@@ -1,0 +1,132 @@
+/home/chang/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+terrain 100 x 855 mm at x = 1.000 m
+  axle rise 100.0 mm for a 100 mm block
+  origin 131.6 mm
+    trace[1] LF RECOVERY_SWING lift 131.6 land 189.1 (stroke from -194.3, cap -, last landing -) others: RF@323.3, LH@419.2, RH@227.5
+    trace[2] RH RECOVERY_SWING lift 227.5 land 285.0 (stroke from -98.5, cap -, last landing 189.1) others: LF@566.5, RF@323.3, LH@419.2
+    trace[3] RF RECOVERY_SWING lift 323.3 land 380.8 (stroke from -2.6, cap -, last landing 285.0) others: LF@566.5, LH@419.2, RH@610.9
+    trace[4] LH RECOVERY_SWING lift 419.2 land 476.7 (stroke from 93.3, cap -, last landing 380.8) others: LF@566.5, RF@708.5, RH@610.9
+    trace[5] LF SWING_UP lift 566.5 land 693.3 (stroke from 189.1, cap -, last landing 476.7) others: RF@708.5, LH@802.6, RH@610.9
+      cut RH: liftoff 610.9 -> 509.0 (floor 476.7, wanted 509.0), lands by 566.5
+    trace[6] RH RECOVERY_SWING lift 509.0 land 566.5 (stroke from 285.0, cap 566.5, last landing 476.7) others: LF@566.5, RF@708.5, LH@802.6
+    trace[7] LF SWING_UP lift 566.5 land 693.3 (stroke from 189.1, cap -, last landing 566.5) others: RF@708.5, LH@802.6, RH@892.4
+    trace[8] RF SWING_UP lift 708.5 land 766.0 (stroke from 380.8, cap -, last landing 693.3) others: LF@1019.2, LH@802.6, RH@892.4
+    trace[9] LH RECOVERY_SWING lift 802.6 land 860.1 (stroke from 476.7, cap -, last landing 766.0) others: LF@1019.2, RF@1091.9, RH@892.4
+    trace[10] RH RECOVERY_SWING lift 892.4 land 949.9 (stroke from 566.5, cap -, last landing 860.1) others: LF@1019.2, RF@1091.9, LH@1256.8
+    trace[11] LF TOP_REPOSITION_SWING lift 1019.2 land 1076.7 (stroke from 693.3, cap -, last landing 949.9) others: RF@1091.9, LH@1256.8, RH@1179.2
+    trace[12] RF TOP_REPOSITION_SWING lift 1091.9 land 1149.5 (stroke from 766.0, cap -, last landing 1076.7) others: LF@1354.5, LH@1256.8, RH@1179.2
+    trace[13] RH SWING_UP lift 1179.2 land 1236.8 (stroke from 949.9, cap -, last landing 1149.5) others: LF@1354.5, RF@1354.5, LH@1256.8
+    trace[14] LH SWING_UP lift 1256.8 land 1314.3 (stroke from 860.1, cap -, last landing 1236.8) others: LF@1354.5, RF@1354.5, RH@1562.7
+    trace[15] LF TOP_REPOSITION_SWING lift 1354.5 land 1354.5 (stroke from 1076.7, cap -, last landing 1314.3) others: RF@1354.5, LH@1640.2, RH@1562.7
+    trace[16] RF TOP_REPOSITION_SWING lift 1354.5 land 1354.5 (stroke from 1149.5, cap -, last landing 1354.5) others: LF@1594.0, LH@1640.2, RH@1562.7
+    trace[17] RH TOP_REPOSITION_SWING lift 1562.7 land 1594.0 (stroke from 1236.8, cap -, last landing 1354.5) others: LF@1594.0, RF@1594.0, LH@1640.2
+    trace[18] LF SWING_DOWN lift 1594.0 land 1640.2 (stroke from 1354.5, cap -, last landing 1594.0) others: RF@1594.0, LH@1640.2, RH@1864.5
+      yield LF: liftoff 1594.0 -> 1594.0, lands by 1594.0 for RF's climb
+    trace[19] LF SWING_DOWN lift 1594.0 land 1594.0 (stroke from 1354.5, cap 1594.0, last landing 1594.0) others: RF@1594.0, LH@1640.2, RH@1864.5
+    trace[20] RF SWING_DOWN lift 1594.0 land 1640.2 (stroke from 1354.5, cap -, last landing 1594.0) others: LF@2003.4, LH@1640.2, RH@1864.5
+    trace[21] LH TOP_REPOSITION_SWING lift 1640.2 land 1697.8 (stroke from 1314.3, cap -, last landing 1640.2) others: LF@2003.4, RF@2044.6, RH@1864.5
+    trace[22] RH TOP_REPOSITION_SWING lift 1864.5 land 1864.5 (stroke from 1594.0, cap -, last landing 1697.8) others: LF@2003.4, RF@2044.6, LH@1864.5
+    trace[23] LH TOP_REPOSITION_SWING lift 1864.5 land 1864.5 (stroke from 1697.8, cap -, last landing 1864.5) others: LF@2003.4, RF@2044.6, RH@2101.8
+    trace[24] LF RECOVERY_SWING lift 2003.4 land 2060.9 (stroke from 1594.0, cap -, last landing 1864.5) others: RF@2044.6, LH@2104.0, RH@2101.8
+      cut RF: liftoff 2044.6 -> 1945.8 (floor 1864.5, wanted 1945.8), lands by 2003.4
+    trace[25] RF RECOVERY_SWING lift 1945.8 land 2003.4 (stroke from 1640.2, cap 2003.4, last landing 1864.5) others: LF@2003.4, LH@2104.0, RH@2101.8
+    trace[26] LF RECOVERY_SWING lift 2003.4 land 2060.9 (stroke from 1594.0, cap -, last landing 2003.4) others: RF@2329.3, LH@2104.0, RH@2101.8
+    trace[27] RH SWING_DOWN lift 2101.8 land 2104.0 (stroke from 1864.5, cap -, last landing 2060.9) others: LF@2386.8, RF@2329.3, LH@2104.0
+    trace[28] LH SWING_DOWN lift 2104.0 land 2161.5 (stroke from 1864.5, cap -, last landing 2104.0) others: LF@2386.8, RF@2329.3, RH@2513.4
+    trace[29] RF RECOVERY_SWING lift 2329.3 land 2386.8 (stroke from 2003.4, cap -, last landing 2161.5) others: LF@2386.8, LH@2558.7, RH@2513.4
+    trace[30] LF RECOVERY_SWING lift 2386.8 land 2444.3 (stroke from 2060.9, cap -, last landing 2386.8) others: RF@2712.7, LH@2558.7, RH@2513.4
+    trace[31] RH RECOVERY_SWING lift 2513.4 land 2570.9 (stroke from 2104.0, cap -, last landing 2444.3) others: LF@2770.2, RF@2712.7, LH@2558.7
+      cut LH: liftoff 2558.7 -> 2455.8 (floor 2444.3, wanted 2455.8), lands by 2513.4
+    trace[32] LH RECOVERY_SWING lift 2455.8 land 2513.4 (stroke from 2161.5, cap 2513.4, last landing 2444.3) others: LF@2770.2, RF@2712.7, RH@2513.4
+    trace[33] RH RECOVERY_SWING lift 2513.4 land 2570.9 (stroke from 2104.0, cap -, last landing 2513.4) others: LF@2770.2, RF@2712.7, LH@2839.3
+    trace[34] RF RECOVERY_SWING lift 2712.7 land 2770.2 (stroke from 2386.8, cap -, last landing 2570.9) others: LF@2770.2, LH@2839.3, RH@2896.8
+    trace[35] LF RECOVERY_SWING lift 2770.2 land 2827.7 (stroke from 2444.3, cap -, last landing 2770.2) others: LH@2839.3, RH@2896.8
+    trace[36] LH RECOVERY_SWING lift 2839.3 land 2896.8 (stroke from 2513.4, cap -, last landing 2827.7) others: RH@2896.8
+    trace[37] RH RECOVERY_SWING lift 2896.8 land 2954.3 (stroke from 2570.9, cap -, last landing 2896.8) others: LH@3222.7
+    trace[38] LH RECOVERY_SWING lift 3222.7 land 3280.2 (stroke from 2896.8, cap -, last landing 2954.3) others: RH@3280.2
+    trace[39] RH RECOVERY_SWING lift 3280.2 land 3337.7 (stroke from 2954.3, cap -, last landing 3280.2) others: 
+  pass 1: axle profiles moved by 100.00 mm in z  (front knots [821.5, 823.3, 825.0, 826.8, 828.6, 830.4, 832.2, 834.0, 835.8, 837.5, 839.3, 841.1, 842.9, 844.7, 846.5, 848.3, 850.0, 851.8, 853.6, 855.4, 857.2, 859.0, 860.8, 862.5, 864.3, 866.1, 867.9, 869.7, 871.5, 873.3, 875.1, 876.8, 878.6, 880.4, 882.2, 884.0, 885.8, 887.6, 889.3, 891.1, 892.9, 894.7, 896.5, 898.3, 900.1, 901.8, 903.6, 905.4, 907.2, 909.0, 910.8, 912.6, 914.3, 916.1, 917.9, 919.7, 921.5, 923.3, 925.1, 926.8, 928.6, 930.4, 932.2, 934.0, 935.8, 937.6, 939.3, 941.1, 942.9, 944.7, 946.5, 948.3, 2055.0, 2155.0] mm, rear [924.2, 984.2, 2055.0, 2155.0] mm)
+           worst-instant LF: segment SWING_UP hip x 821.47..948.27 mm clock leave(821.47)=2.7220 arrive(948.27)=3.1212 window (2.7905, 3.1212) frames x [821.5, 823.3, 825.0, 826.8, 828.6, 830.4, 832.2, 834.0, 835.8, 837.5, 839.3, 841.1]
+           worst-instant RF: segment FOOT_RIM_ROLL hip x 910.59..922.01 mm clock leave(910.59)=3.0229 arrive(922.01)=3.0527 window (3.0229, 3.0527) frames x [910.6, 922.0]
+           worst-instant LH: segment FOOT_RIM_ROLL hip x 409.64..416.02 mm clock leave(409.64)=3.0465 arrive(416.02)=3.0631 window (3.0465, 3.0631) frames x [409.6, 416.0]
+           worst-instant RH: segment FOOT_RIM_ROLL hip x 409.33..415.91 mm clock leave(409.33)=3.0457 arrive(415.91)=3.0628 window (3.0457, 3.0628) frames x [409.3, 415.9]
+[1450.1s] planned in 1 pass(es); strokes generated 24 (cached 5), translated 17; body plane {'coplanarity_residual_max_mm': 3.9351711275461, 'coplanarity_worst_at': {'time_s': 3.0465479484105464, 'body_x_mm': 664.66, 'hips_mm': {'LF': 310.8, 'RF': 318.67, 'LH': 219.45, 'RH': 219.45}, 'legs': {'LF': {'hip_x_mm': 919.66, 'hip_z_mm': 310.8, 'kind': 'SWING_UP', 'label': 'SWING_UP', 'segment': 98, 'window_s': (2.7905, 3.1212), 'frames': 72, 'fraction': 0.774, 'hip_x_ends_mm': (821.47, 948.27), 'hip_x_uniform_mm': [821.5, 823.3, 825.0, 826.8, 828.6, 830.4, 832.2, 834.0, 835.8, 837.5, 839.3, 841.1]}, 'RF': {'hip_x_mm': 919.66, 'hip_z_mm': 318.67, 'kind': 'FOOT_RIM_ROLL', 'label': 'NOMINAL_FOOT_RIM_ROLL', 'segment': 87, 'window_s': (3.0229, 3.0527), 'frames': 2, 'fraction': 0.795, 'hip_x_ends_mm': (910.59, 922.01), 'hip_x_uniform_mm': [910.6, 922.0]}, 'LH': {'hip_x_mm': 409.66, 'hip_z_mm': 219.45, 'kind': 'FOOT_RIM_ROLL', 'label': 'NOMINAL_FOOT_RIM_ROLL', 'segment': 79, 'window_s': (3.0465, 3.0631), 'frames': 2, 'fraction': 0.004, 'hip_x_ends_mm': (409.64, 416.02), 'hip_x_uniform_mm': [409.6, 416.0]}, 'RH': {'hip_x_mm': 409.66, 'hip_z_mm': 219.45, 'kind': 'FOOT_RIM_ROLL', 'label': 'NOMINAL_FOOT_RIM_ROLL', 'segment': 99, 'window_s': (3.0457, 3.0628), 'frames': 2, 'fraction': 0.051, 'hip_x_ends_mm': (409.33, 415.91), 'hip_x_uniform_mm': [409.3, 415.9]}}}, 'pitch_min_deg': -11.093737719250125, 'pitch_max_deg': 11.093735922614309, 'body_z_min_mm': 162.281744822678, 'body_z_max_mm': 262.28185589918354}
+           {'legs': 4, 'segments': 1700, 'swings': 35, 'slowdowns': 30, 'cuts': 4, 'max_airborne_count': 1, 'start_s': -2.04, 'end_s': 23.391120410916503, 'clock_speed_mm_s': 159.76263051593162, 'clock_origin_x_mm': 131.6, 'clock_cycle_period_s': 2.4, 'clock_stance_duty': 0.85, 'clock_liftoff_order': 'LF,RH,RF,LH', 'clock_zones': 3, 'clock_dwells': 27, 'clock_dwell_time_s': 3.5902496245406827}
+           swing LF RECOVERY_SWING        -0.0000 ..   0.3600 s  body x    131.6 ..    189.1 mm  min 0.350 s
+           swing RH RECOVERY_SWING         0.6000 ..   0.9600 s  body x    227.5 ..    285.0 mm  min 0.350 s
+           swing RF RECOVERY_SWING         1.2000 ..   1.5600 s  body x    323.3 ..    380.8 mm  min 0.350 s
+           swing LH RECOVERY_SWING         1.8000 ..   2.1600 s  body x    419.2 ..    476.7 mm  min 0.350 s
+           swing RH RECOVERY_SWING         2.3620 ..   2.7220 s  body x    509.0 ..    566.5 mm  min 0.353 s
+           swing LF SWING_UP               2.7220 ..   3.2020 s  body x    566.5 ..    693.3 mm  min 0.410 s
+           swing RF SWING_UP               3.2974 ..   3.8155 s  body x    708.5 ..    766.0 mm  min 0.434 s
+           swing LH RECOVERY_SWING         4.0444 ..   4.4044 s  body x    802.6 ..    860.1 mm  min 0.350 s
+           swing RH RECOVERY_SWING         4.6064 ..   4.9702 s  body x    892.4 ..    949.9 mm  min 0.364 s
+           swing LF TOP_REPOSITION_SWING   5.4039 ..   5.8839 s  body x   1019.2 ..   1076.7 mm  min 0.350 s
+           swing RF TOP_REPOSITION_SWING   5.9793 ..   6.4594 s  body x   1091.9 ..   1149.5 mm  min 0.350 s
+           swing RH SWING_UP               6.6458 ..   7.1557 s  body x   1179.2 ..   1236.8 mm  min 0.432 s
+           swing LH SWING_UP               7.2812 ..   7.8089 s  body x   1256.8 ..   1314.3 mm  min 0.447 s
+           swing LF TOP_REPOSITION_SWING   8.0603 ..   8.4114 s  body x   1354.5 ..   1354.5 mm  min 0.351 s
+           swing RF TOP_REPOSITION_SWING   8.4114 ..   8.7658 s  body x   1354.5 ..   1354.5 mm  min 0.354 s
+           swing RH TOP_REPOSITION_SWING  10.0690 ..  10.3851 s  body x   1562.7 ..   1594.0 mm  min 0.350 s
+           swing LF SWING_DOWN            10.3851 ..  10.8357 s  body x   1594.0 ..   1594.0 mm  min 0.451 s
+           swing RF SWING_DOWN            10.8357 ..  11.3303 s  body x   1594.0 ..   1640.2 mm  min 0.442 s
+           swing LH TOP_REPOSITION_SWING  11.3303 ..  11.8103 s  body x   1640.2 ..   1697.8 mm  min 0.350 s
+           swing RH TOP_REPOSITION_SWING  12.8539 ..  13.2050 s  body x   1864.5 ..   1864.5 mm  min 0.351 s
+           swing LH TOP_REPOSITION_SWING  13.2050 ..  13.5672 s  body x   1864.5 ..   1864.5 mm  min 0.362 s
+           swing RF RECOVERY_SWING        14.0764 ..  14.4364 s  body x   1945.8 ..   2003.4 mm  min 0.354 s
+           swing LF RECOVERY_SWING        14.4364 ..  14.7964 s  body x   2003.4 ..   2060.9 mm  min 0.350 s
+           swing RH SWING_DOWN            15.0529 ..  15.4718 s  body x   2101.8 ..   2104.0 mm  min 0.451 s
+           swing LH SWING_DOWN            15.4718 ..  16.0288 s  body x   2104.0 ..   2161.5 mm  min 0.434 s
+           swing RF RECOVERY_SWING        17.0789 ..  17.4389 s  body x   2329.3 ..   2386.8 mm  min 0.350 s
+           swing LF RECOVERY_SWING        17.4389 ..  17.7989 s  body x   2386.8 ..   2444.3 mm  min 0.350 s
+           swing LH RECOVERY_SWING        17.8711 ..  18.2311 s  body x   2455.8 ..   2513.4 mm  min 0.354 s
+           swing RH RECOVERY_SWING        18.2311 ..  18.5911 s  body x   2513.4 ..   2570.9 mm  min 0.350 s
+           swing RF RECOVERY_SWING        19.4789 ..  19.8389 s  body x   2712.7 ..   2770.2 mm  min 0.350 s
+           swing LF RECOVERY_SWING        19.8389 ..  20.1989 s  body x   2770.2 ..   2827.7 mm  min 0.350 s
+           swing LH RECOVERY_SWING        20.2711 ..  20.6311 s  body x   2839.3 ..   2896.8 mm  min 0.350 s
+           swing RH RECOVERY_SWING        20.6311 ..  20.9911 s  body x   2896.8 ..   2954.3 mm  min 0.350 s
+           swing LH RECOVERY_SWING        22.6711 ..  23.0311 s  body x   3222.7 ..   3280.2 mm  min 0.350 s
+           swing RH RECOVERY_SWING        23.0311 ..  23.3911 s  body x   3280.2 ..   3337.7 mm  min 0.350 s
+           slowdown {'leg': 'LF', 'kind': 'SWING_UP:fold', 'body_x_start_mm': 566.474342451725, 'body_x_end_mm': 566.474342451725, 'nominal_s': 0.0, 'minimum_s': 0.06846058017921297, 'speed_mm_s': 0.0, 'dwell_s': 0.06846058017921297}
+           slowdown {'leg': 'LF', 'kind': 'SWING_UP:rotate', 'body_x_start_mm': 566.474342451725, 'body_x_end_mm': 693.2710604952458, 'nominal_s': 0.7936569248643939, 'minimum_s': 0.19131347256347705, 'speed_mm_s': 383.4303132382359, 'dwell_s': 0.0}
+           slowdown {'leg': 'LF', 'kind': 'SWING_UP:extend', 'body_x_start_mm': 693.2710604952458, 'body_x_end_mm': 693.2710604952458, 'nominal_s': 0.0, 'minimum_s': 0.08083667854794596, 'speed_mm_s': 0.0, 'dwell_s': 0.08083667854794596}
+           slowdown {'leg': 'RF', 'kind': 'SWING_UP:fold', 'body_x_start_mm': 708.5109973233526, 'body_x_end_mm': 708.5109973233526, 'nominal_s': 0.0, 'minimum_s': 0.07621667060497682, 'speed_mm_s': 0.0, 'dwell_s': 0.07621667060497682}
+           slowdown {'leg': 'RF', 'kind': 'SWING_UP:extend', 'body_x_start_mm': 766.0255443090881, 'body_x_end_mm': 766.0255443090881, 'nominal_s': 0.0, 'minimum_s': 0.08189569940425988, 'speed_mm_s': 0.0, 'dwell_s': 0.08189569940425988}
+           slowdown {'leg': 'RH', 'kind': 'RECOVERY_SWING', 'body_x_start_mm': 892.3901087042254, 'body_x_end_mm': 949.9046556899608, 'nominal_s': 0.35999999999999943, 'minimum_s': 0.3637650534657662, 'speed_mm_s': 158.10904988746566, 'dwell_s': 0.0}
+           slowdown {'leg': 'LF', 'kind': 'TOP_REPOSITION_SWING:fold', 'body_x_start_mm': 1019.1868267477378, 'body_x_end_mm': 1019.1868267477378, 'nominal_s': 0.0, 'minimum_s': 0.03922135916798627, 'speed_mm_s': 0.0, 'dwell_s': 0.03922135916798627}
+           slowdown {'leg': 'LF', 'kind': 'TOP_REPOSITION_SWING:extend', 'body_x_start_mm': 1076.7013737334735, 'body_x_end_mm': 1076.7013737334735, 'nominal_s': 0.0, 'minimum_s': 0.08083667854794804, 'speed_mm_s': 0.0, 'dwell_s': 0.08083667854794804}
+           slowdown {'leg': 'RF', 'kind': 'TOP_REPOSITION_SWING:fold', 'body_x_start_mm': 1091.9413105615804, 'body_x_end_mm': 1091.9413105615804, 'nominal_s': 0.0, 'minimum_s': 0.03922135916798627, 'speed_mm_s': 0.0, 'dwell_s': 0.03922135916798627}
+           slowdown {'leg': 'RF', 'kind': 'TOP_REPOSITION_SWING:extend', 'body_x_start_mm': 1149.4558575473154, 'body_x_end_mm': 1149.4558575473154, 'nominal_s': 0.0, 'minimum_s': 0.08083667854794804, 'speed_mm_s': 0.0, 'dwell_s': 0.08083667854794804}
+           slowdown {'leg': 'RH', 'kind': 'SWING_UP:fold', 'body_x_start_mm': 1179.2465857053273, 'body_x_end_mm': 1179.2465857053273, 'nominal_s': 0.0, 'minimum_s': 0.06838527858580631, 'speed_mm_s': 0.0, 'dwell_s': 0.06838527858580631}
+           slowdown {'leg': 'RH', 'kind': 'SWING_UP:extend', 'body_x_start_mm': 1236.7611326910628, 'body_x_end_mm': 1236.7611326910628, 'nominal_s': 0.0, 'minimum_s': 0.08145711270710988, 'speed_mm_s': 0.0, 'dwell_s': 0.08145711270710988}
+           slowdown {'leg': 'LH', 'kind': 'SWING_UP:fold', 'body_x_start_mm': 1256.8166391595996, 'body_x_end_mm': 1256.8166391595996, 'nominal_s': 0.0, 'minimum_s': 0.08640652603809965, 'speed_mm_s': 0.0, 'dwell_s': 0.08640652603809965}
+           slowdown {'leg': 'LH', 'kind': 'SWING_UP:extend', 'body_x_start_mm': 1314.3311861453349, 'body_x_end_mm': 1314.3311861453349, 'nominal_s': 0.0, 'minimum_s': 0.0813188148135321, 'speed_mm_s': 0.0, 'dwell_s': 0.0813188148135321}
+           slowdown {'leg': 'LF', 'kind': 'TOP_REPOSITION_SWING', 'body_x_start_mm': 1354.4851389013024, 'body_x_end_mm': 1354.4851389013024, 'nominal_s': 0.0, 'minimum_s': 0.3511082519216653, 'speed_mm_s': 0.0, 'dwell_s': 0.3511082519216653}
+           slowdown {'leg': 'RF', 'kind': 'TOP_REPOSITION_SWING', 'body_x_start_mm': 1354.4851389013024, 'body_x_end_mm': 1354.4851389013024, 'nominal_s': 0.0, 'minimum_s': 0.35444182924399276, 'speed_mm_s': 0.0, 'dwell_s': 0.35444182924399276}
+           slowdown {'leg': 'RH', 'kind': 'TOP_REPOSITION_SWING:fold', 'body_x_start_mm': 1562.6768989435704, 'body_x_end_mm': 1562.6768989435704, 'nominal_s': 0.0, 'minimum_s': 0.03922135916798803, 'speed_mm_s': 0.0, 'dwell_s': 0.03922135916798803}
+           slowdown {'leg': 'RH', 'kind': 'TOP_REPOSITION_SWING:extend', 'body_x_start_mm': 1593.9999999999998, 'body_x_end_mm': 1593.9999999999998, 'nominal_s': 0.0, 'minimum_s': 0.08083667854794804, 'speed_mm_s': 0.0, 'dwell_s': 0.08083667854794804}
+           slowdown {'leg': 'LF', 'kind': 'SWING_DOWN', 'body_x_start_mm': 1593.9999999999998, 'body_x_end_mm': 1593.9999999999998, 'nominal_s': 0.0, 'minimum_s': 0.450579540447197, 'speed_mm_s': 0.0, 'dwell_s': 0.450579540447197}
+           slowdown {'leg': 'RF', 'kind': 'SWING_DOWN:fold', 'body_x_start_mm': 1593.9999999999998, 'body_x_end_mm': 1593.9999999999998, 'nominal_s': 0.0, 'minimum_s': 0.03245858296798455, 'speed_mm_s': 0.0, 'dwell_s': 0.03245858296798455}
+           slowdown {'leg': 'RF', 'kind': 'SWING_DOWN:extend', 'body_x_start_mm': 1640.2469523978427, 'body_x_end_mm': 1640.2469523978427, 'nominal_s': 0.0, 'minimum_s': 0.17267718915341682, 'speed_mm_s': 0.0, 'dwell_s': 0.17267718915341682}
+           slowdown {'leg': 'LH', 'kind': 'TOP_REPOSITION_SWING:fold', 'body_x_start_mm': 1640.2469523978427, 'body_x_end_mm': 1640.2469523978427, 'nominal_s': 0.0, 'minimum_s': 0.03922135916798803, 'speed_mm_s': 0.0, 'dwell_s': 0.03922135916798803}
+           slowdown {'leg': 'LH', 'kind': 'TOP_REPOSITION_SWING:extend', 'body_x_start_mm': 1697.761499383578, 'body_x_end_mm': 1697.761499383578, 'nominal_s': 0.0, 'minimum_s': 0.08083667854794804, 'speed_mm_s': 0.0, 'dwell_s': 0.08083667854794804}
+           slowdown {'leg': 'RH', 'kind': 'TOP_REPOSITION_SWING', 'body_x_start_mm': 1864.4851389013022, 'body_x_end_mm': 1864.4851389013022, 'nominal_s': 0.0, 'minimum_s': 0.35113026714503925, 'speed_mm_s': 0.0, 'dwell_s': 0.35113026714503925}
+           slowdown {'leg': 'LH', 'kind': 'TOP_REPOSITION_SWING', 'body_x_start_mm': 1864.4851389013022, 'body_x_end_mm': 1864.4851389013022, 'nominal_s': 0.0, 'minimum_s': 0.36215215094498837, 'speed_mm_s': 0.0, 'dwell_s': 0.36215215094498837}
+           slowdown {'leg': 'RH', 'kind': 'SWING_DOWN:fold', 'body_x_start_mm': 2101.8464487684346, 'body_x_end_mm': 2101.8464487684346, 'nominal_s': 0.0, 'minimum_s': 0.03235502510386358, 'speed_mm_s': 0.0, 'dwell_s': 0.03235502510386358}
+           slowdown {'leg': 'RH', 'kind': 'SWING_DOWN:rotate', 'body_x_start_mm': 2101.8464487684346, 'body_x_end_mm': 2104.0, 'nominal_s': 0.013479693121043468, 'minimum_s': 0.20542204135956077, 'speed_mm_s': 10.483545082662792, 'dwell_s': 0.0}
+           slowdown {'leg': 'RH', 'kind': 'SWING_DOWN:extend', 'body_x_start_mm': 2104.0, 'body_x_end_mm': 2104.0, 'nominal_s': 0.0, 'minimum_s': 0.18109574698801523, 'speed_mm_s': 0.0, 'dwell_s': 0.18109574698801523}
+           slowdown {'leg': 'LH', 'kind': 'SWING_DOWN:fold', 'body_x_start_mm': 2104.0, 'body_x_end_mm': 2104.0, 'nominal_s': 0.0, 'minimum_s': 0.03245858296798445, 'speed_mm_s': 0.0, 'dwell_s': 0.03245858296798445}
+           slowdown {'leg': 'LH', 'kind': 'SWING_DOWN:extend', 'body_x_start_mm': 2161.5145469857353, 'body_x_end_mm': 2161.5145469857353, 'nominal_s': 0.0, 'minimum_s': 0.1645829459118504, 'speed_mm_s': 0.0, 'dwell_s': 0.1645829459118504}
+           cut {'leg': 'RH', 'for': 'LF', 'for_kind': 'SWING_UP', 'liftoff_was_mm': 610.8878915477948, 'liftoff_now_mm': 508.9597954659896, 'cut_hip_mm': 101.9280960818052, 'landing_cap_mm': 566.474342451725, 'room_mm': 57.514546985735436}
+           cut {'leg': 'LF', 'for': 'RF', 'for_kind': 'RIGHT_RIM_ROLL_UP', 'liftoff_was_mm': 1593.9999999999998, 'liftoff_now_mm': 1593.9999999999998, 'cut_hip_mm': 0.0, 'landing_cap_mm': 1593.9999999999998, 'room_mm': 0.0}
+           cut {'leg': 'RF', 'for': 'LF', 'for_kind': 'RECOVERY_SWING', 'liftoff_was_mm': 2044.5791480304235, 'liftoff_now_mm': 1945.8475057738526, 'cut_hip_mm': 98.73164225657094, 'landing_cap_mm': 2003.3620527595879, 'room_mm': 57.514546985735215}
+           cut {'leg': 'LH', 'for': 'RH', 'for_kind': 'RECOVERY_SWING', 'liftoff_was_mm': 2558.6921805973893, 'liftoff_now_mm': 2455.847505773863, 'cut_hip_mm': 102.84467482352655, 'landing_cap_mm': 2513.362052759598, 'room_mm': 57.514546985735215}
+           covered -0.240 .. 19.839 s   max airborne 1   spread 0.0000 mm
+           swings: nominal 19, terrain 38; min margin -0.06777968095836186
+           Step 9 (after the plane refit): HARD failures []   ADVISORY ['support_margin']
+             support_margin               x28: the CoM projection is not far enough inside the support triangle over the whole swing  (first at t=3.1054066972946273, value=-33.11935572861542, leg=LF)
+           CSV rows 25071  peak per-motor 1893.1 deg/s (95.6%)  theta 17.00..145.47  rows below 17 deg 0  body x 93.3 -> 2768.9 mm
+wrote -> /home/chang/corgi_ws/icra hybrid/LegWheel/hybrid_note/notes/day14/day14_step3_100mm_top855step1d24_hardware.csv
+wrote -> /home/chang/corgi_ws/icra hybrid/LegWheel/hybrid_note/notes/day14/day14_step3_100mm_top855step1d24_hardware_phase.csv
+[1453.0s] done

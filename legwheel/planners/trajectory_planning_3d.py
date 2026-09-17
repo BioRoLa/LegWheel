@@ -10,6 +10,12 @@ from legwheel.bezier import swing
 from legwheel.config import RobotParams
 
 
+# Cartesian convergence tolerance (m) for the swing-phase IK. Must stay well below
+# the distance between consecutive swing targets, or the warm-started solver returns
+# the previous pose and the swing command degenerates into a staircase.
+SWING_IK_TOL = 1e-5
+
+
 class TrajectoryPlanner3D:
     """
     3D Trajectory Planner for a single leg of the Corgi robot.
@@ -357,9 +363,19 @@ class TrajectoryPlanner3D:
         self._last_swing_target_path = swing_points_3d
 
         # Inverse Kinematics: track the material point alpha_td throughout
+        #
+        # tol must be well below the spacing between consecutive swing targets
+        # (~0.85 mm at dt=1ms). The IK default of 1 mm exceeds that spacing, so the
+        # warm start from self.cmd[-1] already satisfies it and solve_core returns
+        # the PREVIOUS pose unchanged: the swing command freezes for several frames,
+        # then jumps ~1 deg in a single dt once the accumulated drift breaks 1 mm.
+        # That staircase also leaves the last swing pose up to 0.4 mm short of the
+        # stance touchdown pose, which the stance loop then closes in one dt -- a
+        # 0.4 m/s vertical step at every touchdown. 1e-5 m keeps the swing smooth
+        # and closes the seam to ~2 um.
         for p, alpha_t in swing_points_3d:
             q = self.kin.inverse_kinematics(
-                p, guess_q=np.array(self.cmd[-1]), rim_point=(alpha_t, 0.0)
+                p, guess_q=np.array(self.cmd[-1]), rim_point=(alpha_t, 0.0), tol=SWING_IK_TOL
             )
             self.cmd.append(q.tolist())
 

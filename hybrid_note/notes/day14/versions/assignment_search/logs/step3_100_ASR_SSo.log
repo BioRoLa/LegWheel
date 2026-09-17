@@ -1,0 +1,32 @@
+/home/chang/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+terrain 100 x 875 mm at x = 1.000 m
+  axle rise 100.0 mm for a 100 mm block
+  origin candidate   343.3 mm  (RF at arc end with contact at 847.5 mm)
+  origin 343.3 mm
+    trace[1] LF RECOVERY_SWING lift 343.3 land 400.8 (stroke from 17.4, cap -, last landing -) others: RF@535.0, LH@630.8, RH@439.1
+    trace[2] RH RECOVERY_SWING lift 439.1 land 496.6 (stroke from 113.2, cap -, last landing 400.8) others: LF@669.7, RF@535.0, LH@630.8
+    trace[3] RF RECOVERY_SWING lift 535.0 land 575.0 (stroke from 209.1, cap -, last landing 496.6) others: LF@669.7, LH@630.8, RH@822.6
+    trace[4] LH RECOVERY_SWING lift 630.8 land 669.7 (stroke from 304.9, cap -, last landing 575.0) others: LF@669.7, RF@781.3, RH@822.6
+    trace[5] LF SWING_UP lift 669.7 land 727.2 (stroke from 400.8, cap -, last landing 669.7) others: RF@781.3, LH@995.6, RH@822.6
+    trace[6] RF TOP_REPOSITION_SWING lift 781.3 land 879.9 (stroke from 575.0, cap -, last landing 727.2) others: LF@1053.1, LH@995.6, RH@822.6
+      cut RH: liftoff 822.6 -> 727.2 (floor 727.2, wanted 727.2), lands by 781.3
+    trace[7] RH RECOVERY_SWING lift 727.2 land 781.3 (stroke from 496.6, cap 781.3, last landing 727.2) others: LF@1053.1, RF@781.3, LH@995.6
+    trace[8] RF TOP_REPOSITION_SWING lift 781.3 land 879.9 (stroke from 575.0, cap -, last landing 781.3) others: LF@1053.1, LH@995.6, RH@1167.8
+    trace[9] LH SWING_UP lift 995.6 land 1213.3 (stroke from 669.7, cap -, last landing 879.9) others: LF@1053.1, RF@1205.8, RH@1167.8
+      cut LF: liftoff 1053.1 -> 995.6 (floor 879.9, wanted 995.6), lands by 995.6
+      cut RH: liftoff 1167.8 -> 995.6 (floor 879.9, wanted 995.6), lands by 995.6
+      cut RF: liftoff 1205.8 -> 995.6 (floor 879.9, wanted 995.6), lands by 995.6
+    trace[10] LF TOP_REPOSITION_SWING lift 995.6 land 995.6 (stroke from 727.2, cap 995.6, last landing 879.9) others: RF@995.6(cap 995.6), LH@995.6, RH@995.6(cap 995.6)
+    trace[11] RH RECOVERY_SWING lift 995.6 land 995.6 (stroke from 781.3, cap 995.6, last landing 995.6) others: LF@1321.5, RF@995.6(cap 995.6), LH@995.6
+    trace[12] RF TOP_REPOSITION_SWING lift 995.6 land 995.6 (stroke from 879.9, cap 995.6, last landing 995.6) others: LF@1321.5, LH@995.6, RH@1141.6
+    trace[13] LH SWING_UP lift 995.6 land 1213.3 (stroke from 669.7, cap -, last landing 995.6) others: LF@1321.5, RF@1321.5, RH@1141.6
+  pass 1 refused; the legs' attempts so far:
+    LF: on TOP; RECOVERY@656+; UP@982+; TOP@1251+
+    RF: on TOP; ROLL_START@830+; TOP@1135+; TOP@1251+
+    LH: on GROUND_BEFORE; RECOVERY@415+; RECOVERY@798-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@801-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@798-(RECOVERY_LEAVES_NO_STROKE); UP@948-(LANDED_ON_AN_EDGE:contact x=1004.563 mm ); UP@958+
+    RH: on GROUND_BEFORE; RECOVERY@242+; RECOVERY@526+; RECOVERY@741+
+    axle front: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+    axle rear: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+  origin 343.3 mm refused: RH cannot stay in stance through LH's SWING_UP [995.631, 1213.271] mm: after swinging in place at 995.631 mm its next stroke ends at 1141.638 mm, still inside.
+[1649.9s] REFUSED: no origin among [343.3] mm plans the crossing; last: RH cannot stay in stance through LH's SWING_UP [995.631, 1213.271] mm: after swinging in place at 995.631 mm its next stroke ends at 1141.638 mm, still inside.

@@ -1,0 +1,61 @@
+=== BEFORE ===
+  LF & RF: 0.033 s  [3.745,3.778]
+  LH & RH: 0.019 s  [6.951,6.970]
+  LF & RF: 0.360 s  [7.897,8.257]
+  LH & RH: 0.360 s  [11.090,11.450]
+  overlaps: 4   legs: 4   segments: 77   end: 13.269 s
+
+=== waits inserted ===
+  LF: +0.166 s from 3.745 s (overlap was 0.033 s)
+  RH: +0.362 s from 6.951 s (overlap was 0.019 s)
+  LF: +0.360 s from 8.063 s (overlap was 0.194 s)
+
+=== AFTER ===
+  overlaps: 0   legs: 4   segments: 77   end: 13.269 s
+
+=== did anything disappear? ===
+  legs      4 -> 4   OK
+  segments  77 -> 77   OK
+  total segment duration 44.2425 -> 44.2425 s   OK (unchanged)
+  trajectory end 13.269 -> 13.269 s (+0.000 s, +0.0%)
+
+=== per-leg gaps introduced (the waits) ===
+  LF: 0.166 s gap at 3.745 s  (FOOT_RIM_ROLL -> RECOVERY_SWING)
+  LF: 0.020 s gap at 4.337 s  (APPROACH -> APPROACH)
+  LF: 0.017 s gap at 4.357 s  (APPROACH -> ROLL_UP)
+  LF: 0.017 s gap at 4.797 s  (ROLL_UP -> ROLL_UP)
+  LF: 0.006 s gap at 4.935 s  (ROLL_UP -> WHEEL_TRANSITION)
+  LF: 0.004 s gap at 5.040 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  LF: 0.016 s gap at 6.458 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  LF: 0.027 s gap at 7.291 s  (WHEEL_TRANSITION -> ROLL_DOWN)
+  LF: 0.016 s gap at 7.396 s  (ROLL_DOWN -> ROLL_DOWN)
+  LF: 0.007 s gap at 7.915 s  (ROLL_DOWN -> ROLL_DOWN)
+  LF: 0.360 s gap at 8.063 s  (ROLL_DOWN -> RECOVERY_SWING)
+  RF: 0.020 s gap at 4.171 s  (APPROACH -> APPROACH)
+  RF: 0.017 s gap at 4.191 s  (APPROACH -> ROLL_UP)
+  RF: 0.017 s gap at 4.631 s  (ROLL_UP -> ROLL_UP)
+  RF: 0.006 s gap at 4.769 s  (ROLL_UP -> WHEEL_TRANSITION)
+  RF: 0.004 s gap at 4.874 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  RF: 0.016 s gap at 6.292 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  RF: 0.027 s gap at 7.124 s  (WHEEL_TRANSITION -> ROLL_DOWN)
+  RF: 0.016 s gap at 7.230 s  (ROLL_DOWN -> ROLL_DOWN)
+  RF: 0.007 s gap at 7.749 s  (ROLL_DOWN -> ROLL_DOWN)
+  LH: 0.020 s gap at 7.363 s  (APPROACH -> APPROACH)
+  LH: 0.017 s gap at 7.383 s  (APPROACH -> ROLL_UP)
+  LH: 0.017 s gap at 7.823 s  (ROLL_UP -> ROLL_UP)
+  LH: 0.006 s gap at 7.961 s  (ROLL_UP -> WHEEL_TRANSITION)
+  LH: 0.004 s gap at 8.066 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  LH: 0.016 s gap at 9.484 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  LH: 0.027 s gap at 10.317 s  (WHEEL_TRANSITION -> ROLL_DOWN)
+  LH: 0.016 s gap at 10.422 s  (ROLL_DOWN -> ROLL_DOWN)
+  LH: 0.007 s gap at 10.941 s  (ROLL_DOWN -> ROLL_DOWN)
+  RH: 0.362 s gap at 6.951 s  (FOOT_RIM_ROLL -> RECOVERY_SWING)
+  RH: 0.020 s gap at 7.725 s  (APPROACH -> APPROACH)
+  RH: 0.017 s gap at 7.744 s  (APPROACH -> ROLL_UP)
+  RH: 0.017 s gap at 8.185 s  (ROLL_UP -> ROLL_UP)
+  RH: 0.006 s gap at 8.323 s  (ROLL_UP -> WHEEL_TRANSITION)
+  RH: 0.004 s gap at 8.428 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  RH: 0.016 s gap at 9.846 s  (WHEEL_TRANSITION -> WHEEL_TRANSITION)
+  RH: 0.027 s gap at 10.678 s  (WHEEL_TRANSITION -> ROLL_DOWN)
+  RH: 0.016 s gap at 10.783 s  (ROLL_DOWN -> ROLL_DOWN)
+  RH: 0.007 s gap at 11.303 s  (ROLL_DOWN -> ROLL_DOWN)

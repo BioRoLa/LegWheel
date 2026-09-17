@@ -195,12 +195,19 @@ def test_the_nominal_recovery_swing_is_not_a_terrain_transition_swing():
 
 
 def test_nominal_and_terrain_transition_partition_everything_but_wheel_mode():
-    """No kind may be both, and none may be neither -- except true wheel mode,
-    which is neither the nominal cycle nor a terrain transition."""
+    """No kind may be both, and none may be neither -- except the two that
+    genuinely are neither.
 
+    ``WHEEL_ROLL`` is neither the nominal cycle nor a terrain transition, and
+    Day 13 added a second such kind: ``BODY_HOLD`` is a deliberate pause, so
+    the gait did not make it and the terrain did not force it.  The exceptions
+    are listed rather than the assertion weakened -- a kind that falls into
+    neither bucket by accident is exactly what this test is for."""
+
+    neither = {SegmentKind.WHEEL_ROLL, SegmentKind.BODY_HOLD}
     for kind in SegmentKind:
         assert not (kind.is_nominal_locomotion and kind.is_terrain_transition)
-        if kind is not SegmentKind.WHEEL_ROLL:
+        if kind not in neither:
             assert kind.is_nominal_locomotion or kind.is_terrain_transition
 
 
@@ -233,7 +240,8 @@ def test_the_semantics_table_covers_every_kind():
     rows = segment_semantics_rows()
     assert sum(r["is_nominal_locomotion"] for r in rows) == 2   # the cycle
     assert sum(r["pins_theta_to_wheel_mode"] for r in rows) == 1
-    assert sum(r["is_terrain_transition"] for r in rows) == len(SegmentKind) - 3
+    # Everything but the nominal cycle's two, WHEEL_ROLL and BODY_HOLD.
+    assert sum(r["is_terrain_transition"] for r in rows) == len(SegmentKind) - 4
 
 
 def test_as_dict_carries_the_distinction_into_the_csv():

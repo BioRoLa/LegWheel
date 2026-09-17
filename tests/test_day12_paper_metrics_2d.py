@@ -41,10 +41,15 @@ def flat_metrics(tables):
                                       run.body, run.stability)
 
 
+#: The platform the obstacle fixtures use, named so assertions about it read
+#: as "of the obstacle's order" rather than as a bare literal.
+OBSTACLE_HEIGHT_M: float = 0.04
+
+
 @pytest.fixture(scope="module")
 def obstacle_metrics(tables):
     terrain = SharedTerrainSpec2D(
-        height_m=0.04, top_length_m=0.40, x_start_m=1.00,
+        height_m=OBSTACLE_HEIGHT_M, top_length_m=0.40, x_start_m=1.00,
         obstacle_id="day12_platform")
     run = plan_terrain_2d(terrain, tables, samples=61)
     return run, trajectory_metrics_2d("40mm x 400mm", run.trajectory, run.plan,
@@ -92,13 +97,33 @@ def test_body_centre_and_com_stay_labelled_apart(flat_metrics):
 
 
 def test_an_unmeasurable_body_excursion_is_none_not_zero(flat_metrics):
-    """Step 5 left no usable heights; a 0 would read as "the body never moves"."""
+    """A 0 would read as "the body never moves"; None says "not measured".
+
+    This used to be asserted on the flat run itself, which had no usable body
+    heights because Step 5 was INFEASIBLE there.  The flat run is feasible now
+    (log 1.6 and 1.8), so the unmeasurable case has to be constructed -- if it
+    were left as it was it would still pass one day and silently stop
+    exercising the rule it is named for.
+    """
+
+    from dataclasses import replace as _replace
+
+    _, measured = flat_metrics
+    unmeasurable = _replace(measured, usable_body_samples=0,
+                            body_z_peak_to_peak_m=None, body_z_std_m=None)
+    assert unmeasurable.usable_body_samples < 2
+    assert unmeasurable.body_z_peak_to_peak_m is None
+    assert unmeasurable.body_z_std_m is None
+    assert unmeasurable.as_dict()["body_z_peak_to_peak_mm"] is None, (
+        "and it must survive the trip to the row as None, not become 0")
+
+
+def test_a_feasible_flat_run_does_report_a_body_excursion(flat_metrics):
+    """The other half: once Step 5 succeeds the metric must appear."""
 
     _, metrics = flat_metrics
-    assert metrics.usable_body_samples < 2
-    assert metrics.body_z_peak_to_peak_m is None
-    assert metrics.body_z_std_m is None
-    assert metrics.total_samples > 0
+    assert metrics.usable_body_samples >= 2
+    assert metrics.body_z_peak_to_peak_m is not None
 
 
 # --------------------------------------------------------------------------
@@ -119,21 +144,51 @@ def test_an_obstacle_adds_transition_swings_without_changing_the_nominal_ones(
 
     _, flat = flat_metrics
     _, obstacle = obstacle_metrics
-    assert obstacle.terrain_transition_swings > 0
-    assert obstacle.nominal_recovery_swings == flat.nominal_recovery_swings
+    # Two things this used to assert are no longer true, both because the
+    # planner changed under it and both correctly:
+    #
+    #   * the crossing need not contain a terrain-transition *swing* at all --
+    #     the rolling preference (log 1.7) makes that count zero;
+    #   * the nominal recovery count is not preserved -- world registration
+    #     (log 1.11) has each leg roll to where the obstacle really is, so the
+    #     obstacle run has more cycles than the flat one, 18 against 8.
+    #
+    # What plan section 18 actually needs, and what holds under every one of
+    # those rules, is that the two counts **partition** the swings: whatever a
+    # crossing is made of, it is counted, and it is counted apart from the
+    # nominal recoveries.
+    assert obstacle.nominal_recovery_swings > flat.nominal_recovery_swings
     assert (obstacle.total_swing_segments
             == obstacle.nominal_recovery_swings
             + obstacle.terrain_transition_swings)
+    assert (flat.total_swing_segments
+            == flat.nominal_recovery_swings + flat.terrain_transition_swings)
+    assert flat.terrain_transition_swings == 0
+    assert flat.transition_roll_time_s == pytest.approx(0.0), (
+        "a flat run crosses nothing, by either kind")
 
 
-def test_a_swing_swing_crossing_has_no_transition_roll(obstacle_metrics):
-    """Its transition primitives are swings, so the rolling total is 0 --
-    an absence, not a missing measurement."""
+def test_the_two_crossing_kinds_are_counted_in_different_fields(
+        obstacle_metrics):
+    """A crossing is made of swings or of rolls, and the totals say which.
+
+    Named for the property rather than for one strategy: this used to assert a
+    ``SWING_SWING`` crossing specifically, and the project now prefers rolling
+    (log 1.7), so the strategy-specific form was testing the decision rule
+    instead of the counting.
+    """
 
     _, metrics = obstacle_metrics
-    assert metrics.terrain_transition_swings > 0
-    assert metrics.transition_roll_time_s == pytest.approx(0.0)
-    assert metrics.transition_roll_distance_m == pytest.approx(0.0)
+    swings = metrics.terrain_transition_swings
+    rolling = metrics.transition_roll_time_s
+    assert swings > 0 or rolling > 0.0, (
+        "a crossing is made of something, and it must be counted somewhere")
+    if swings == 0:
+        assert rolling > 0.0
+        assert metrics.transition_roll_distance_m is not None
+    else:
+        assert rolling == pytest.approx(0.0)
+        assert metrics.transition_roll_distance_m == pytest.approx(0.0)
 
 
 # --------------------------------------------------------------------------
@@ -198,7 +253,11 @@ def test_the_hip_lift_grows_with_the_obstacle(flat_metrics, obstacle_metrics):
     _, flat = flat_metrics
     _, obstacle = obstacle_metrics
     assert obstacle.max_hip_lift_m > flat.max_hip_lift_m
-    assert obstacle.max_hip_lift_m == pytest.approx(0.04, abs=1e-3)
+    # Not pinned to the obstacle height any more: a swing crossing lifts the
+    # hip by exactly the obstacle, a rolling one by whatever the climb costs
+    # (37.80 mm for this 40 mm platform).  The property is that the obstacle
+    # is what drives it, and that it is of the obstacle's order.
+    assert 0.5 * OBSTACLE_HEIGHT_M < obstacle.max_hip_lift_m < 2.0 * OBSTACLE_HEIGHT_M
 
 
 # --------------------------------------------------------------------------

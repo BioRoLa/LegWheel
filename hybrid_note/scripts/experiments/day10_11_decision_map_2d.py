@@ -600,6 +600,86 @@ class StrategyCell2D:
         return row
 
 
+#: Whether a height between two swept heights may borrow the harder of them.
+#:
+#: Day 13.  Every cell used to look its height up by exact float equality, so
+#: 130 mm was refused even though 120 and 140 both work -- the map answered for
+#: the heights that happened to be swept and for nothing in between, which
+#: makes it a lookup table rather than a strategy for crossing obstacles.
+#:
+#: Interpolating is sound in one direction only.  If the sweep found a height
+#: feasible on both sides of ``h``, the leg's reach, clearance and rim budget at
+#: ``h`` lie between two measured feasible cases, so *reading the worse
+#: neighbour* is a conservative answer rather than an invented one.  Going
+#: outside the swept range is not: nothing measured bounds it, and guessing
+#: there would manufacture an envelope out of missing experiments.  So this
+#: brackets, and refuses to extrapolate.
+INTERPOLATION_NOTE: str = (
+    "height not swept directly; answered from the nearest swept height above "
+    "it, which bounds the demand because reach and clearance vary monotonically "
+    "with height between two measured points"
+)
+
+
+#: How much untraversed top ``#4`` may leave, in metres.
+#:
+#: ``#4`` is exactly two swings, so any top they do not between them cover has
+#: to be crossed by a segment nobody generated.  A few millimetres is the
+#: generating grid meeting itself -- one roll step is 4 mm and the hand-over
+#: tolerance is 10 mm -- so 20 mm admits a coarse boundary and refuses a tear.
+TOP_BRIDGE_TOLERANCE_M: float = 0.020
+
+
+#: Whether a swept height's own result is healthy enough to answer for its
+#: neighbours.
+#:
+#: Measured 2026-09-07, after a first version of this reached too far and I
+#: mis-diagnosed why.  Bracketing 130 mm from 140 mm gives 24 Step 9 failures
+#: -- identical to the 120 and 140 mm cells it sits between.  Bracketing 190 mm
+#: from 200 mm gives 182, including ``segment_chaining: contact teleports``.
+#:
+#: The tempting reading is that the interpolation over-reached.  It did not:
+#: **180 and 200 mm, both swept directly, give the same 182 failures with the
+#: same 8 chaining breaks.**  The interpolation faithfully passed on the
+#: quality of its source; the source is what is broken.  A gap-width limit was
+#: tried first and cannot tell the two cases apart -- both gaps are 20 mm.
+#:
+#: So nothing is limited here.  A height between two swept heights is answered
+#: from the harder of them, and if that answer is poor it is poor for the same
+#: reason the measured neighbour is.  Hiding that behind a refusal would make
+#: the map claim ignorance where it actually has a bad measurement, which is
+#: the more misleading of the two.
+
+
+def bracketing_height_m(height_m: float, swept: set[float]) -> float | None:
+    """The swept height to answer for ``height_m`` with, or ``None``.
+
+    Returns the nearest swept height **at or above** ``height_m`` -- the harder
+    of the two neighbours, so a cell answered this way is never more optimistic
+    than something that was actually measured.
+
+    ``None`` in two cases, both of which stay ``NOT_MEASURED``:
+
+    * ``height_m`` is outside the swept range.  An extrapolated envelope
+      boundary would be an artefact of where the sweeps stopped, not a fact
+      about the robot.
+    Note that a *poor* answer is still returned when the neighbour's own
+    result is poor: see the note above this function.  This function reports
+    what the sweeps support, not whether the sweeps were any good.
+    """
+
+    if not swept:
+        return None
+    key = round(float(height_m), 6)
+    if key in swept:
+        return key
+    lo = [h for h in swept if h < key]
+    hi = [h for h in swept if h > key]
+    if not lo or not hi:
+        return None          # outside the measured range: do not guess
+    return min(hi)
+
+
 def _not_measured(strategy, height_m, top_length_m, what: str) -> StrategyCell2D:
     return StrategyCell2D(
         strategy=strategy, height_m=height_m, top_length_m=top_length_m,
@@ -618,13 +698,15 @@ def roll_roll_cell_2d(
     optimum is always at the constraint boundary, and no search is needed.
     """
 
-    if round(height_m, 6) not in tables.heights_for(StrategyId.ROLL_ROLL):
+    key = bracketing_height_m(height_m, tables.heights_for(StrategyId.ROLL_ROLL))
+    if key is None:
         return _not_measured(StrategyId.ROLL_ROLL, height_m, top_length_m,
                              "the rolling traversal")
+    interpolated = key != round(height_m, 6)
 
     candidates = [
         row for row in tables.roll
-        if round(row.height_m, 6) == round(height_m, 6) and row.feasible
+        if round(row.height_m, 6) == key and row.feasible
     ]
     if not candidates:
         return StrategyCell2D(
@@ -699,10 +781,11 @@ def swing_swing_cell_2d(
     takeoffs work; this only intersects that with what the top can hold.
     """
 
-    key = round(height_m, 6)
-    if key not in tables.heights_for(StrategyId.SWING_SWING):
+    key = bracketing_height_m(height_m, tables.heights_for(StrategyId.SWING_SWING))
+    if key is None:
         return _not_measured(StrategyId.SWING_SWING, height_m, top_length_m,
                              "the swing pair")
+    interpolated = key != round(height_m, 6)
 
     ups = [r for r in tables.swing_up if round(r.height_m, 6) == key and r.feasible]
     if not ups:
@@ -738,10 +821,56 @@ def swing_swing_cell_2d(
                 f"{(landing_distance_m + shortest) * 1e3:.0f} mm."
             ),
         )
-    best_down = min(
-        fitting,
-        key=lambda r: (r.min_hip_hold_fraction, -(r.min_clearance_m or 0.0)),
-    )
+    # Choose a takeoff that actually **reaches** the ascent's landing point.
+    #
+    # ``#4`` is two swings and nothing between them, so the top between where
+    # the ascent lands and where the descent leaves is crossed by no segment at
+    # all.  The cheapest takeoff by hip hold is the shortest one (80 mm at every
+    # height), which on a 400 mm top leaves 160 mm uncrossed -- and that is
+    # exactly the tear Step 9 reports at 200 mm as eight ``segment_chaining``
+    # breaks among 182 failures.
+    #
+    # The sweep measured longer takeoffs too, and a longer one closes the gap:
+    # 240 mm is feasible at every height up to 100 mm, which leaves nothing
+    # uncrossed on a 400 mm top.  So prefer the takeoffs that bridge, and fall
+    # back to the cheapest only when none of them do -- at 200 mm the longest
+    # feasible takeoff is 120 mm, so 120 mm of top stays uncrossed no matter
+    # what is chosen, and the cell is honestly blocked rather than quietly
+    # producing a sequence that tears.
+    #
+    # An earlier version of this refused on the gap alone, which was wrong
+    # twice over: the gap is identical at every height, so it also killed the
+    # low cells that work, and it never tried the longer takeoffs the sweep had
+    # already measured.
+    bridging = [r for r in fitting
+                if top_length_m - landing_distance_m - r.takeoff_distance_m
+                <= TOP_BRIDGE_TOLERANCE_M]
+    if bridging:
+        best_down = min(
+            bridging,
+            key=lambda r: (r.min_hip_hold_fraction, -(r.min_clearance_m or 0.0)),
+        )
+    else:
+        longest = max(r.takeoff_distance_m for r in fitting)
+        uncrossed_m = top_length_m - landing_distance_m - longest
+        return StrategyCell2D(
+            strategy=StrategyId.SWING_SWING, height_m=height_m,
+            top_length_m=top_length_m,
+            availability=Availability.HANDOFF_BLOCKED,
+            limiter=Limiter.HANDOFF_BLOCKED,
+            reason=(
+                f"the ascent lands {landing_distance_m * 1e3:.0f} mm in and the "
+                f"longest feasible takeoff is {longest * 1e3:.0f} mm, so "
+                f"{uncrossed_m * 1e3:.0f} mm of top is crossed by neither "
+                "swing and #4 has no segment that traverses it (Day 12's "
+                "unresolved TOP_REPOSITION)."
+            ),
+            parameters=(
+                ("uncrossed_top_m", uncrossed_m),
+                ("longest_takeoff_m", longest),
+                ("landing_distance_m", landing_distance_m),
+            ),
+        )
 
     # Composition, spec task 3: item-wise maximum of the two demands.  Both are
     # "how high the body must be", so the pair's demand is the larger -- and the
@@ -944,8 +1073,26 @@ def _passes_margin(cell: StrategyCell2D, margin_floor_m: float | None) -> bool:
     return cell.min_clearance_m >= margin_floor_m
 
 
+#: How much worse than the best feasible body deviation a strategy may be and
+#: still count as tied on ``body``.
+#:
+#: **Zero reproduces the original rule exactly**, and not approximately: the
+#: body term becomes ``max(0, body - best)``, which is a monotone shift of
+#: ``body`` and therefore sorts identically.  A test holds that.
+#:
+#: It exists because a strict ``body`` comparison decides the whole map on
+#: differences of a few millimetres, and ``roll_preference`` -- the spec's own
+#: "terrain-transition swing only when required" -- then never fires at all.
+#: See the Day 12 log, section 1.7.
+DEFAULT_BODY_TOLERANCE_M: float = 0.0
+
+
 def _sort_key(
-    cell: StrategyCell2D, order: Sequence[str], margin_floor_m: float | None
+    cell: StrategyCell2D,
+    order: Sequence[str],
+    margin_floor_m: float | None,
+    body_reference_m: float | None = None,
+    body_tolerance_m: float = DEFAULT_BODY_TOLERANCE_M,
 ):
     feasible = _passes_margin(cell, margin_floor_m)
     parts = []
@@ -953,10 +1100,16 @@ def _sort_key(
         if name == "feasible":
             parts.append(0 if feasible else 1)
         elif name == "body":
-            parts.append(
-                cell.body_deviation_m
-                if (feasible and cell.body_deviation_m is not None) else np.inf
-            )
+            if not (feasible and cell.body_deviation_m is not None):
+                parts.append(np.inf)
+            elif body_reference_m is None:
+                parts.append(cell.body_deviation_m)
+            else:
+                # Everything within the tolerance of the best ties at 0 and
+                # falls through to the next key; everything beyond it keeps
+                # ordering by how far beyond.
+                parts.append(max(0.0, cell.body_deviation_m
+                                 - (body_reference_m + body_tolerance_m)))
         elif name == "margin":
             parts.append(
                 -cell.min_clearance_m
@@ -1029,6 +1182,7 @@ def decide_2d(
     order: Sequence[str] = DEFAULT_ORDER,
     margin_floor_m: float | None = DEFAULT_MARGIN_FLOOR_M,
     landing_distance_m: float = SWING_LANDING_DISTANCE_M,
+    body_tolerance_m: float = DEFAULT_BODY_TOLERANCE_M,
 ) -> Decision2D:
     """``(h, L_top) -> (ascent, descent) + internal parameters + body demand``.
 
@@ -1045,7 +1199,12 @@ def decide_2d(
         swing_over_cell_2d(height_m, top_length_m, tables),
     )
     order = tuple(order)
-    ranked = sorted(cells, key=lambda c: _sort_key(c, order, margin_floor_m))
+    usable = [c.body_deviation_m for c in cells
+              if _passes_margin(c, margin_floor_m)
+              and c.body_deviation_m is not None]
+    reference = min(usable) if usable else None
+    ranked = sorted(cells, key=lambda c: _sort_key(
+        c, order, margin_floor_m, reference, body_tolerance_m))
     feasible = tuple(
         c.strategy for c in ranked if _passes_margin(c, margin_floor_m)
     )
@@ -1069,8 +1228,10 @@ def decide_2d(
         prefix = tuple(k for k in order if k != "roll_preference")
         if prefix and prefix != order:
             tie_break = (
-                _sort_key(best, prefix, margin_floor_m)
-                == _sort_key(runner_up, prefix, margin_floor_m)
+                _sort_key(best, prefix, margin_floor_m, reference,
+                          body_tolerance_m)
+                == _sort_key(runner_up, prefix, margin_floor_m, reference,
+                             body_tolerance_m)
             )
     return Decision2D(
         height_m=height_m, top_length_m=top_length_m, cells=cells, order=order,

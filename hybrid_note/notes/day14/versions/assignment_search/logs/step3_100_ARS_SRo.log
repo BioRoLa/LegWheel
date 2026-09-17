@@ -1,0 +1,100 @@
+/home/chang/.local/lib/python3.10/site-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+terrain 100 x 875 mm at x = 1.000 m
+  axle rise 100.0 mm for a 100 mm block
+  origin candidate   151.6 mm  (LF at arc end with contact at 847.5 mm)
+  origin candidate   374.0 mm  (LH at arc end with contact at 847.5 mm)
+  origin 151.6 mm
+    trace[1] LF RECOVERY_SWING lift 151.6 land 209.1 (stroke from -174.4, cap -, last landing -) others: RF@343.3, LH@439.1, RH@247.4
+    trace[2] RH RECOVERY_SWING lift 247.4 land 304.9 (stroke from -78.5, cap -, last landing 209.1) others: LF@535.0, RF@343.3, LH@439.1
+    trace[3] RF RECOVERY_SWING lift 343.3 land 400.8 (stroke from 17.4, cap -, last landing 304.9) others: LF@535.0, LH@439.1, RH@630.8
+    trace[4] LH RECOVERY_SWING lift 439.1 land 496.6 (stroke from 113.2, cap -, last landing 400.8) others: LF@535.0, RF@669.7, RH@630.8
+    trace[5] LF RECOVERY_SWING lift 535.0 land 575.0 (stroke from 209.1, cap -, last landing 496.6) others: RF@669.7, LH@822.6, RH@630.8
+    trace[6] RH RECOVERY_SWING lift 630.8 land 669.7 (stroke from 304.9, cap -, last landing 575.0) others: LF@780.8, RF@669.7, LH@822.6
+    trace[7] RF SWING_UP lift 669.7 land 727.2 (stroke from 400.8, cap -, last landing 669.7) others: LF@780.8, LH@822.6, RH@995.6
+    trace[8] LF TOP_REPOSITION_SWING lift 780.8 land 880.8 (stroke from 575.0, cap -, last landing 727.2) others: RF@1053.1, LH@822.6, RH@995.6
+      cut LH: liftoff 822.6 -> 727.2 (floor 727.2, wanted 727.2), lands by 780.8
+    trace[9] LH RECOVERY_SWING lift 727.2 land 780.8 (stroke from 496.6, cap 780.8, last landing 727.2) others: LF@780.8, RF@1053.1, RH@995.6
+    trace[10] LF TOP_REPOSITION_SWING lift 780.8 land 880.8 (stroke from 575.0, cap -, last landing 780.8) others: RF@1053.1, LH@1085.0, RH@995.6
+    trace[11] RH SWING_UP lift 995.6 land 1213.3 (stroke from 669.7, cap -, last landing 880.8) others: LF@1206.7, RF@1053.1, LH@1085.0
+      cut RF: liftoff 1053.1 -> 995.6 (floor 880.8, wanted 995.6), lands by 995.6
+      cut LH: liftoff 1085.0 -> 995.6 (floor 880.8, wanted 995.6), lands by 995.6
+      cut LF: liftoff 1206.7 -> 995.6 (floor 880.8, wanted 995.6), lands by 995.6
+    trace[12] LF TOP_REPOSITION_SWING lift 995.6 land 995.6 (stroke from 880.8, cap 995.6, last landing 880.8) others: RF@995.6(cap 995.6), LH@995.6(cap 995.6), RH@995.6
+    trace[13] RF TOP_REPOSITION_SWING lift 995.6 land 995.6 (stroke from 727.2, cap 995.6, last landing 995.6) others: LF@1321.5, LH@995.6(cap 995.6), RH@995.6
+  pass 1 refused; the legs' attempts so far:
+    LF: on TOP; RECOVERY@464+; ROLL_START@830+; TOP@1136+; TOP@1251+
+    RF: on TOP; RECOVERY@656+; UP@982+; TOP@1251+
+    LH: on GROUND_BEFORE; RECOVERY@242+; RECOVERY@526+
+    RH: on GROUND_BEFORE; RECOVERY@50+; RECOVERY@415+; RECOVERY@798-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@801-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@798-(RECOVERY_LEAVES_NO_STROKE); UP@948-(LANDED_ON_AN_EDGE:contact x=1004.563 mm ); UP@958+
+    axle front: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+    axle rear: 780.0->219.4, 960.0->319.4, 1905.0->319.4, 2075.0->219.4
+  origin 151.6 mm refused: LH rolls, but its landing in the approach window would be capped at hip x 740.6 mm, behind it.
+  origin 374.0 mm
+    trace[1] LF RECOVERY_SWING lift 374.0 land 431.5 (stroke from 48.1, cap -, last landing -) others: RF@599.5, LH@661.6, RH@469.8
+    trace[2] RH RECOVERY_SWING lift 469.8 land 527.4 (stroke from 143.9, cap -, last landing 431.5) others: LF@575.0, RF@599.5, LH@661.6
+    trace[3] LF RECOVERY_SWING lift 575.0 land 575.0 (stroke from 431.5, cap -, last landing 527.4) others: RF@599.5, LH@661.6, RH@853.3
+    trace[4] RF SWING_UP lift 599.5 land 703.3 (stroke from 239.8, cap -, last landing 575.0) others: LF@781.3, LH@661.6, RH@853.3
+      cut LH: liftoff 661.6 -> 575.0 (floor 575.0, wanted 575.0), lands by 599.5
+    trace[5] LH RECOVERY_SWING lift 575.0 land 599.5 (stroke from 335.6, cap 599.5, last landing 575.0) others: LF@781.3, RF@599.5, RH@853.3
+    trace[6] RF SWING_UP lift 599.5 land 703.3 (stroke from 239.8, cap -, last landing 599.5) others: LF@781.3, LH@925.4, RH@853.3
+    trace[7] LF TOP_REPOSITION_SWING lift 781.3 land 879.9 (stroke from 575.0, cap -, last landing 703.3) others: RF@1028.4, LH@925.4, RH@853.3
+      cut RH: liftoff 853.3 -> 723.8 (floor 703.3, wanted 723.8), lands by 781.3
+    trace[8] RH RECOVERY_SWING lift 723.8 land 781.3 (stroke from 527.4, cap 781.3, last landing 703.3) others: LF@781.3, RF@1028.4, LH@925.4
+    trace[9] LF TOP_REPOSITION_SWING lift 781.3 land 879.9 (stroke from 575.0, cap -, last landing 781.3) others: RF@1028.4, LH@925.4, RH@1167.8
+    trace[10] LH RECOVERY_SWING lift 925.4 land 982.9 (stroke from 599.5, cap -, last landing 879.9) others: LF@1205.8, RF@1028.4, RH@1167.8
+    trace[11] RF TOP_REPOSITION_SWING lift 1028.4 land 1085.0 (stroke from 703.3, cap -, last landing 982.9) others: LF@1205.8, LH@1085.0, RH@1167.8
+    trace[12] LH RECOVERY_SWING lift 1085.0 land 1085.0 (stroke from 982.9, cap -, last landing 1085.0) others: LF@1205.8, RF@1374.5, RH@1167.8
+    trace[13] RH SWING_UP lift 1167.8 land 1213.3 (stroke from 781.3, cap -, last landing 1085.0) others: LF@1205.8, RF@1374.5, LH@1290.8
+      cut LF: liftoff 1205.8 -> 1110.3 (floor 1085.0, wanted 1110.3), lands by 1167.8
+    trace[14] LF TOP_REPOSITION_SWING lift 1110.3 land 1167.8 (stroke from 879.9, cap 1167.8, last landing 1085.0) others: RF@1374.5, LH@1290.8, RH@1167.8
+    trace[15] RH SWING_UP lift 1167.8 land 1213.3 (stroke from 781.3, cap -, last landing 1167.8) others: LF@1374.5, RF@1374.5, LH@1290.8
+    trace[16] LH TOP_REPOSITION_SWING lift 1290.8 land 1390.8 (stroke from 1085.0, cap -, last landing 1213.3) others: LF@1374.5, RF@1374.5, RH@1538.4
+      cut LF: liftoff 1374.5 -> 1290.8 (floor 1213.3, wanted 1290.8), lands by 1290.8
+      cut RF: liftoff 1374.5 -> 1290.8 (floor 1213.3, wanted 1290.8), lands by 1290.8
+    trace[17] LF TOP_REPOSITION_SWING lift 1290.8 land 1290.8 (stroke from 1167.8, cap 1290.8, last landing 1213.3) others: RF@1290.8(cap 1290.8), LH@1290.8, RH@1538.4
+    trace[18] RF TOP_REPOSITION_SWING lift 1290.8 land 1290.8 (stroke from 1085.0, cap 1290.8, last landing 1290.8) others: LF@1614.0, LH@1290.8, RH@1538.4
+    trace[19] LH TOP_REPOSITION_SWING lift 1290.8 land 1390.8 (stroke from 1085.0, cap -, last landing 1290.8) others: LF@1614.0, RF@1614.0, RH@1538.4
+    trace[20] RH TOP_REPOSITION_SWING lift 1538.4 land 1595.9 (stroke from 1213.3, cap -, last landing 1390.8) others: LF@1614.0, RF@1614.0, LH@1716.7
+    trace[21] LF SWING_DOWN lift 1614.0 land 1671.5 (stroke from 1290.8, cap -, last landing 1595.9) others: RF@1614.0, LH@1716.7, RH@1884.5
+      yield LF: liftoff 1614.0 -> 1614.0, lands by 1614.0 for RF's climb
+    trace[22] LF SWING_DOWN lift 1614.0 land 1614.0 (stroke from 1290.8, cap 1614.0, last landing 1595.9) others: RF@1614.0, LH@1716.7, RH@1884.5
+    trace[23] RF SWING_DOWN lift 1614.0 land 1671.5 (stroke from 1290.8, cap -, last landing 1614.0) others: LF@2023.4, LH@1716.7, RH@1884.5
+    trace[24] LH TOP_REPOSITION_SWING lift 1716.7 land 1774.2 (stroke from 1390.8, cap -, last landing 1671.5) others: LF@2023.4, RF@2070.3, RH@1884.5
+    trace[25] RH TOP_REPOSITION_SWING lift 1884.5 land 1884.5 (stroke from 1595.9, cap -, last landing 1774.2) others: LF@2023.4, RF@2070.3, LH@1884.5
+    trace[26] LH TOP_REPOSITION_SWING lift 1884.5 land 1884.5 (stroke from 1774.2, cap -, last landing 1884.5) others: LF@2023.4, RF@2070.3, RH@2124.0
+    trace[27] LF RECOVERY_SWING lift 2023.4 land 2080.9 (stroke from 1614.0, cap -, last landing 1884.5) others: RF@2070.3, LH@2124.0, RH@2124.0
+      cut RF: liftoff 2070.3 -> 1965.8 (floor 1884.5, wanted 1965.8), lands by 2023.4
+    trace[28] RF RECOVERY_SWING lift 1965.8 land 2023.4 (stroke from 1671.5, cap 2023.4, last landing 1884.5) others: LF@2023.4, LH@2124.0, RH@2124.0
+    trace[29] LF RECOVERY_SWING lift 2023.4 land 2080.9 (stroke from 1614.0, cap -, last landing 2023.4) others: RF@2349.3, LH@2124.0, RH@2124.0
+    trace[30] RH SWING_DOWN lift 2124.0 land 2181.5 (stroke from 1884.5, cap -, last landing 2080.9) others: LF@2406.8, RF@2349.3, LH@2124.0
+      yield RH: liftoff 2124.0 -> 2124.0, lands by 2124.0 for LH's climb
+    trace[31] RH SWING_DOWN lift 2124.0 land 2124.0 (stroke from 1884.5, cap 2124.0, last landing 2080.9) others: LF@2406.8, RF@2349.3, LH@2124.0
+    trace[32] LH SWING_DOWN lift 2124.0 land 2181.5 (stroke from 1884.5, cap -, last landing 2124.0) others: LF@2406.8, RF@2349.3, RH@2531.7
+    trace[33] RF RECOVERY_SWING lift 2349.3 land 2406.8 (stroke from 2023.4, cap -, last landing 2181.5) others: LF@2406.8, LH@2578.7, RH@2531.7
+    trace[34] LF RECOVERY_SWING lift 2406.8 land 2464.3 (stroke from 2080.9, cap -, last landing 2406.8) others: RF@2732.7, LH@2578.7, RH@2531.7
+    trace[35] RH RECOVERY_SWING lift 2531.7 land 2589.3 (stroke from 2124.0, cap -, last landing 2464.3) others: LF@2790.2, RF@2732.7, LH@2578.7
+      cut LH: liftoff 2578.7 -> 2474.2 (floor 2464.3, wanted 2474.2), lands by 2531.7
+    trace[36] LH RECOVERY_SWING lift 2474.2 land 2531.7 (stroke from 2181.5, cap 2531.7, last landing 2464.3) others: LF@2790.2, RF@2732.7, RH@2531.7
+    trace[37] RH RECOVERY_SWING lift 2531.7 land 2589.3 (stroke from 2124.0, cap -, last landing 2531.7) others: LF@2790.2, RF@2732.7, LH@2857.7
+    trace[38] RF RECOVERY_SWING lift 2732.7 land 2790.2 (stroke from 2406.8, cap -, last landing 2589.3) others: LF@2790.2, LH@2857.7, RH@2915.2
+    trace[39] LF RECOVERY_SWING lift 2790.2 land 2847.7 (stroke from 2464.3, cap -, last landing 2790.2) others: LH@2857.7, RH@2915.2
+    trace[40] LH RECOVERY_SWING lift 2857.7 land 2915.2 (stroke from 2531.7, cap -, last landing 2847.7) others: RH@2915.2
+    trace[41] RH RECOVERY_SWING lift 2915.2 land 2972.7 (stroke from 2589.3, cap -, last landing 2915.2) others: LH@3241.1
+    trace[42] LH RECOVERY_SWING lift 3241.1 land 3298.6 (stroke from 2915.2, cap -, last landing 2972.7) others: RH@3298.6
+    trace[43] RH RECOVERY_SWING lift 3298.6 land 3356.1 (stroke from 2972.7, cap -, last landing 3298.6) others: 
+  pass 1: axle profiles moved by 99.97 mm in z  (front knots [830.0, 837.1, 1036.3, 1037.9, 1039.5, 1041.0, 1042.6, 1044.2, 1045.7, 1047.3, 1048.9, 1050.4, 1052.0, 1053.6, 1055.1, 1056.7, 1058.3, 1059.8, 1061.4, 1062.9, 1064.5, 1066.1, 1067.6, 1069.2, 1070.8, 1072.3, 1073.9, 1075.5, 1077.0, 1078.6, 1080.2, 1081.7, 1083.3, 1084.9, 1086.4, 1088.0, 1089.5, 1091.1, 1092.7, 1094.2, 1095.8, 1097.4, 1098.9, 1100.5, 1102.1, 1103.6, 1105.2, 1106.8, 1108.3, 1109.9, 1111.5, 1113.0, 1114.6, 1116.2, 1117.7, 1119.3, 1120.8, 1122.4, 1124.0, 1125.5, 1127.1, 1128.7, 1130.2, 1131.8, 1133.4, 1134.9, 2075.0, 2175.0] mm, rear [830.0, 837.1, 1035.8, 1037.4, 1039.0, 1040.6, 1042.2, 1043.8, 1045.3, 1046.9, 1048.5, 1050.1, 1051.7, 1053.3, 1054.9, 1056.5, 1058.0, 1059.6, 1061.2, 1062.8, 1064.4, 1066.0, 1067.6, 1069.2, 1070.7, 1072.3, 1073.9, 1075.5, 1077.1, 1078.7, 1080.3, 1081.9, 1083.4, 1085.0, 1086.6, 1088.2, 1089.8, 1091.4, 1093.0, 1094.6, 1096.1, 1097.7, 1099.3, 1100.9, 1102.5, 1104.1, 1105.7, 1107.2, 1108.8, 1110.4, 1112.0, 1113.6, 1115.2, 1116.8, 1118.4, 1119.9, 1121.5, 1123.1, 1124.7, 1126.3, 1127.9, 1129.5, 1131.1, 1132.6, 1134.2, 1135.8, 1769.0, 1869.0, 2075.0, 2175.0] mm)
+    trace[1] LF RECOVERY_SWING lift 374.0 land 431.5 (stroke from 48.1, cap -, last landing -) others: RF@565.7, LH@661.6, RH@469.8
+    trace[2] RH RECOVERY_SWING lift 469.8 land 527.4 (stroke from 143.9, cap -, last landing 431.5) others: LF@575.0, RF@565.7, LH@661.6
+    trace[3] RF SWING_UP lift 565.7 land 743.3 (stroke from 239.8, cap -, last landing 527.4) others: LF@575.0, LH@661.6, RH@853.3
+      cut LF: liftoff 575.0 -> 535.0 (floor 527.4, wanted 535.0), lands by 535.0
+      cut LH: liftoff 661.6 -> 565.7 (floor 527.4, wanted 565.7), lands by 565.7
+  pass 2 refused; the legs' attempts so far:
+    LF: on GROUND_BEFORE; RECOVERY@686+
+    RF: on GROUND_BEFORE; RECOVERY@830-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@831-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@821-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@841-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@851-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@861-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@871-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@881-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@891-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@901-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@911-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@921-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@931-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@941-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@951-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@961-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@971-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@981-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@991-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1001-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1011-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1021-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1031-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1041-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1051-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1061-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1071-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1081-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1091-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1101-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1111-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@1121-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); RECOVERY@878-(EXTEND_PENETRATES_TERRAIN_BEFORE_TOUCHDO); UP@948-(TOUCHDOWN_IS_NOT_A_VALID_GROUND_CONTACT); UP@958-(TOUCHDOWN_IS_NOT_A_VALID_GROUND_CONTACT); UP@968-(TOUCHDOWN_IS_NOT_A_VALID_GROUND_CONTACT); UP@978-(LANDED_ON_AN_EDGE:contact x=999.166 mm o); UP@988-(LANDED_ON_AN_EDGE:contact x=999.495 mm o); UP@998+
+    LH: on GROUND_BEFORE; 
+    RH: on GROUND_BEFORE; RECOVERY@272+
+    axle front: 830.0->219.4, 837.1->219.4, 1036.3->270.2, 1037.9->270.9, 1039.5->271.7, 1041.0->272.5, 1042.6->273.3, 1044.2->274.1, 1045.7->274.8, 1047.3->275.6, 1048.9->276.4, 1050.4->277.2, 1052.0->278.0, 1053.6->278.8, 1055.1->279.5, 1056.7->280.3, 1058.3->281.1, 1059.8->281.9, 1061.4->282.7, 1062.9->283.5, 1064.5->284.2, 1066.1->285.0, 1067.6->285.8, 1069.2->286.6, 1070.8->287.4, 1072.3->288.2, 1073.9->288.9, 1075.5->289.7, 1077.0->290.5, 1078.6->291.3, 1080.2->292.1, 1081.7->292.8, 1083.3->293.6, 1084.9->294.4, 1086.4->295.2, 1088.0->296.0, 1089.5->296.8, 1091.1->297.5, 1092.7->298.3, 1094.2->299.1, 1095.8->299.9, 1097.4->300.7, 1098.9->301.5, 1100.5->302.2, 1102.1->303.0, 1103.6->303.8, 1105.2->304.6, 1106.8->305.4, 1108.3->306.1, 1109.9->306.9, 1111.5->307.7, 1113.0->308.5, 1114.6->309.3, 1116.2->310.1, 1117.7->310.8, 1119.3->311.6, 1120.8->312.4, 1122.4->313.2, 1124.0->314.0, 1125.5->314.8, 1127.1->315.5, 1128.7->316.3, 1130.2->317.1, 1131.8->317.9, 1133.4->318.7, 1134.9->319.4, 2075.0->319.4, 2175.0->219.4
+    axle rear: 830.0->219.4, 837.1->219.4, 1035.8->269.4, 1037.4->269.4, 1039.0->269.4, 1040.6->269.4, 1042.2->269.4, 1043.8->269.4, 1045.3->269.4, 1046.9->269.4, 1048.5->269.4, 1050.1->269.4, 1051.7->269.4, 1053.3->269.4, 1054.9->269.4, 1056.5->269.4, 1058.0->269.4, 1059.6->269.4, 1061.2->269.4, 1062.8->269.4, 1064.4->269.4, 1066.0->269.4, 1067.6->269.4, 1069.2->269.4, 1070.7->269.4, 1072.3->269.4, 1073.9->269.4, 1075.5->269.4, 1077.1->269.4, 1078.7->269.4, 1080.3->269.4, 1081.9->269.4, 1083.4->269.4, 1085.0->269.4, 1086.6->269.4, 1088.2->269.4, 1089.8->269.4, 1091.4->269.4, 1093.0->269.4, 1094.6->269.4, 1096.1->269.4, 1097.7->269.4, 1099.3->269.4, 1100.9->269.4, 1102.5->269.4, 1104.1->269.4, 1105.7->269.4, 1107.2->269.4, 1108.8->269.4, 1110.4->269.4, 1112.0->269.4, 1113.6->269.4, 1115.2->269.4, 1116.8->269.4, 1118.4->269.4, 1119.9->269.4, 1121.5->269.4, 1123.1->269.4, 1124.7->269.4, 1126.3->269.4, 1127.9->269.4, 1129.5->269.4, 1131.1->269.4, 1132.6->269.4, 1134.2->269.4, 1135.8->269.4, 1769.0->269.4, 1869.0->319.4, 2075.0->319.4, 2175.0->219.4
+  origin 374.0 mm refused: LF rolls, but its landing in the approach window would be capped at hip x 790.0 mm, behind it.
+[3958.7s] REFUSED: no origin among [151.6, 374.0] mm plans the crossing; last: LF rolls, but its landing in the approach window would be capped at hip x 790.0 mm, behind it.

@@ -48,6 +48,7 @@ Output_datas/
 *.svg
 *.jpg
 *.png
+*.gif
 
 # OS
 .DS_Store
@@ -60,3 +61,6 @@ htmlcov/
 
 # Documentation
 docs/_build/
+
+# git
+*.gitkeep

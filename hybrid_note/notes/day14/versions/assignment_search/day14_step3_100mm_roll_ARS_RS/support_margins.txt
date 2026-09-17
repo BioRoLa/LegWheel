@@ -1,0 +1,27 @@
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+LF swing csv   5.24-  5.61 s (plan  0.00) margin at liftoff  +18.0 min   +4.2 mm  stance contact-hip: {'RF': 10, 'RH': -24, 'LH': 45}
+LF swing csv   7.64-  8.00 s (plan  2.40) margin at liftoff  +18.3 min   +8.6 mm  stance contact-hip: {'RF': 10, 'RH': -23, 'LH': 45}
+LF swing csv   9.52- 10.25 s (plan  4.28) margin at liftoff  +24.8 min   +4.4 mm  stance contact-hip: {'RF': 12, 'RH': 2, 'LH': 62}
+LF swing csv  11.65- 11.97 s (plan  6.41) margin at liftoff  -12.9 min  -19.1 mm  stance contact-hip: {'RF': 9, 'RH': 0, 'LH': -53}
+LF swing csv  13.97- 14.32 s (plan  8.73) margin at liftoff   +8.3 min   +8.1 mm  stance contact-hip: {'RF': 28, 'RH': 15, 'LH': -1}
+LF swing csv  15.96- 16.41 s (plan 10.72) margin at liftoff  -18.3 min  -18.3 mm  stance contact-hip: {'RF': -61, 'RH': 20, 'LH': 8}
+LF swing csv  19.30- 19.66 s (plan 14.06) margin at liftoff  -15.4 min  -31.5 mm  stance contact-hip: {'RF': -38, 'RH': -2, 'LH': -9}
+RF swing csv   6.45-  6.80 s (plan  1.21) margin at liftoff  +18.0 min   +4.6 mm  stance contact-hip: {'LF': 9, 'RH': 45, 'LH': -24}
+RF swing csv   8.36-  9.16 s (plan  3.12) margin at liftoff  +15.5 min  -34.3 mm  stance contact-hip: {'LF': -17, 'RH': 62, 'LH': 12}
+RF swing csv  10.33- 10.80 s (plan  5.09) margin at liftoff   +5.5 min   -8.3 mm  stance contact-hip: {'LF': 57, 'RH': -38, 'LH': 18}
+RF swing csv  13.07- 13.38 s (plan  7.83) margin at liftoff   -4.4 min   -6.7 mm  stance contact-hip: {'LF': -1, 'RH': -13, 'LH': 12}
+RF swing csv  16.41- 16.99 s (plan 11.17) margin at liftoff  +45.8 min  +33.5 mm  stance contact-hip: {'LF': 145, 'RH': 20, 'LH': 8}
+RF swing csv  19.66- 20.01 s (plan 14.42) margin at liftoff  +11.8 min  +11.8 mm  stance contact-hip: {'LF': 62, 'RH': -21, 'LH': -33}
+RH swing csv   5.84-  6.20 s (plan  0.60) margin at liftoff   +4.5 min   +4.5 mm  stance contact-hip: {'LF': 45, 'RF': -24, 'LH': 10}
+RH swing csv   8.00-  8.36 s (plan  2.76) margin at liftoff   -8.5 min   -8.5 mm  stance contact-hip: {'LF': 0, 'RF': -4, 'LH': 29}
+RH swing csv  10.80- 11.65 s (plan  5.56) margin at liftoff  -17.7 min  -17.7 mm  stance contact-hip: {'LF': 33, 'RF': 62, 'LH': -2}
+RH swing csv  13.38- 13.80 s (plan  8.14) margin at liftoff  -22.2 min  -22.2 mm  stance contact-hip: {'LF': -6, 'RF': 62, 'LH': 12}
+RH swing csv  15.72- 15.96 s (plan 10.48) margin at liftoff  +13.2 min  +13.2 mm  stance contact-hip: {'LF': -18, 'RF': -50, 'LH': 12}
+RH swing csv  18.19- 18.43 s (plan 12.95) margin at liftoff  -15.3 min  -15.3 mm  stance contact-hip: {'LF': 2, 'RF': 30, 'LH': 18}
+RH swing csv  20.28- 20.73 s (plan 15.04) margin at liftoff   +4.8 min   +4.8 mm  stance contact-hip: {'LF': 43, 'RF': 43, 'LH': -60}
+LH swing csv   7.04-  7.41 s (plan  1.80) margin at liftoff   +4.8 min   +4.8 mm  stance contact-hip: {'LF': -24, 'RF': 45, 'RH': 10}
+LH swing csv   9.16-  9.52 s (plan  3.92) margin at liftoff  +34.4 min   +0.1 mm  stance contact-hip: {'LF': -108, 'RF': 13, 'RH': 15}
+LH swing csv  11.97- 12.93 s (plan  6.73) margin at liftoff  -15.7 min  -15.7 mm  stance contact-hip: {'LF': 62, 'RF': 1, 'RH': -8}
+LH swing csv  15.03- 15.43 s (plan  9.79) margin at liftoff   -4.5 min   -4.5 mm  stance contact-hip: {'LF': 17, 'RF': -11, 'RH': -2}
+LH swing csv  17.71- 18.12 s (plan 12.47) margin at liftoff   -9.6 min   -9.6 mm  stance contact-hip: {'LF': 40, 'RF': 73, 'RH': -8}
+LH swing csv  20.73- 21.31 s (plan 15.49) margin at liftoff  -67.8 min  -67.8 mm  stance contact-hip: {'LF': 43, 'RF': 43, 'RH': 145}

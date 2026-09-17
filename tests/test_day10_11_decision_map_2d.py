@@ -16,6 +16,7 @@ import pytest
 from hybrid_note.scripts.experiments.day10_11_concession_2d import BodyRequirementKind
 from hybrid_note.scripts.experiments.day10_11_decision_map_2d import (
     BLOCKED_PAIRS,
+    DEFAULT_BODY_TOLERANCE_M,
     DEFAULT_ORDER,
     Verdict,
     REFUTATIONS,
@@ -57,7 +58,20 @@ def _tables(**overrides) -> DecisionTables2D:
             SwingUpRow2D(0.10, 0.06, True, 0.02, 0.008),
         ),
         swing_down=(
+            # 0.19 m is the shortest takeoff that reaches the ascent's landing
+            # point on the 0.35 m top these tests use (0.35 - 0.16 = 0.19), and
+            # it is here because Day 13 made ``#4`` choose a takeoff that
+            # actually bridges the top rather than the cheapest one.  Without a
+            # bridging row the pair is HANDOFF_BLOCKED and every test below
+            # that compares ``#4`` against ``#1`` has nothing to compare.
+            #
+            # It keeps ``min_hip_hold_fraction = 0.0`` so the cheapest-cost
+            # assertions still mean what they meant: the point of those tests is
+            # that the pair takes the cheapest of what is *usable*, and 0.19 m
+            # now is.  0.08 m stays, unusable here, so a shorter-is-cheaper rule
+            # would still be caught.
             SwingDownRow2D(0.10, 0.08, True, 0.0, 0.005),
+            SwingDownRow2D(0.10, 0.19, True, 0.0, 0.005),
             SwingDownRow2D(0.10, 0.24, True, 0.5, 0.005),
         ),
         swing_over=(
@@ -403,3 +417,85 @@ def test_a_cell_with_no_option_reports_no_winner_rather_than_guessing():
     assert decision.winner is None
     assert decision.feasible_strategies == ()
     assert decision.as_dict()["winner"] is None
+
+
+
+# --------------------------------------------------------------------------
+# The body tolerance (Day 12 log section 1.7 -- problems B1/B2)
+# --------------------------------------------------------------------------
+
+#: The order the tolerance is meant to be used with.  ``DEFAULT_ORDER`` puts
+#: ``margin`` before ``roll_preference``, so a tie on ``body`` is intercepted
+#: by clearance and the preference still never fires.
+BODY_ROLL_ORDER = ("feasible", "body", "roll_preference", "margin")
+
+
+def test_the_default_tolerance_is_zero_so_nothing_moves_by_default():
+    assert DEFAULT_BODY_TOLERANCE_M == 0.0
+
+
+@pytest.mark.parametrize("height_m", [0.04, 0.06, 0.08, 0.10, 0.12])
+@pytest.mark.parametrize("top_length_m", [0.24, 0.30, 0.40, 0.50])
+def test_zero_tolerance_reproduces_the_original_rule_exactly(height_m,
+                                                             top_length_m):
+    """Not approximately: ``max(0, body - best)`` is a monotone shift of
+    ``body``, so the ranking is identical, and the whole safety of this change
+    rests on that."""
+
+    tables = _tables()
+    without = decide_2d(height_m, top_length_m, tables)
+    with_zero = decide_2d(height_m, top_length_m, tables, body_tolerance_m=0.0)
+    assert without.winner is with_zero.winner
+    assert without.feasible_strategies == with_zero.feasible_strategies
+
+
+def test_a_tolerance_lets_the_roll_preference_fire_at_all():
+    """B1: with a strict body comparison the tie-break is dead code.
+
+    The synthetic tables give rolling a real but small body penalty, which is
+    exactly the situation the measured map is in.
+    """
+
+    tables = _tables()
+    strict = decide_2d(0.10, 0.40, tables, order=BODY_ROLL_ORDER,
+                       body_tolerance_m=0.0)
+    lenient = decide_2d(0.10, 0.40, tables, order=BODY_ROLL_ORDER,
+                        body_tolerance_m=0.200)
+    assert StrategyId.ROLL_ROLL in strict.feasible_strategies, (
+        "the point only stands if rolling was available and still lost")
+    assert lenient.winner is StrategyId.ROLL_ROLL
+    assert strict.winner is not StrategyId.ROLL_ROLL
+
+
+def test_the_tolerance_never_promotes_an_infeasible_strategy():
+    """``feasible`` is first in the order and the tolerance must not reach it."""
+
+    tables = _tables()
+    for tolerance in (0.0, 0.05, 1.0):
+        decision = decide_2d(0.10, 0.40, tables, order=BODY_ROLL_ORDER,
+                             body_tolerance_m=tolerance)
+        if decision.winner is not None:
+            assert decision.winner in decision.feasible_strategies
+
+
+def test_a_strategy_beyond_the_tolerance_still_loses_by_how_far_beyond():
+    """Outside the band the ordering must stay by body, not collapse to a tie."""
+
+    tables = _tables()
+    decision = decide_2d(0.10, 0.40, tables, order=BODY_ROLL_ORDER,
+                         body_tolerance_m=0.001)
+    assert decision.winner is not StrategyId.ROLL_ROLL, (
+        "a 1 mm band is far too small to cover rolling's penalty here")
+
+
+def test_the_tolerance_is_monotone_in_how_much_rolling_it_admits():
+    """A wider band may only ever add rolling, never take it away."""
+
+    tables = _tables()
+    admitted = []
+    for tolerance in (0.0, 0.01, 0.05, 0.20, 1.0):
+        decision = decide_2d(0.10, 0.40, tables, order=BODY_ROLL_ORDER,
+                             body_tolerance_m=tolerance)
+        admitted.append(decision.winner is StrategyId.ROLL_ROLL)
+    assert admitted == sorted(admitted), (
+        f"rolling came and went as the band widened: {admitted}")
