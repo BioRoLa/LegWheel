@@ -1,97 +1,170 @@
 # LegWheel
 
-A Python library for leg-wheel robot control and trajectory planning.
+A Python library for leg-wheel robot kinematics, trajectory planning, and 3D visualization,
+designed for the Corgi quadruped wheel-leg robot platform.
 
-## Installation
+> **Toolchain**: Uses [`uv`](https://github.com/astral-sh/uv) for fast, reproducible package management.
+> Run all scripts with `uv run python <script>`.
 
-### From Source (Development)
-
-```bash
-# Clone the repository
-git clone https://github.com/BioRoLa/LegWheel.git
-cd legwheel
-
-# Install in editable mode
-pip install -e .
-
-# Or with development dependencies
-pip install -e ".[dev]"
-```
-
-### Using pip (once published)
-
-```bash
-pip install legwheel
-```
-
-## Quick Start
-
-```python
-import legwheel
-from legwheel import LegModel, TrajectoryPlanner
-
-# Create a leg model
-leg = LegModel(sim=True)
-
-# Forward kinematics
-import numpy as np
-theta = np.deg2rad(90)
-beta = np.deg2rad(30)
-leg.forward(theta, beta)
-print(f"Foot position: {leg.G}")
-
-# Plan trajectory
-traj = TrajectoryPlanner(
-    stand_height=0.3,
-    step_length=0.4,
-    leg=leg,
-)
-traj.move()
-```
+---
 
 ## Features
 
-- **Leg Kinematics**: Forward and inverse kinematics for leg-wheel mechanisms
-- **Trajectory Planning**: Generate smooth trajectories for walking gaits
-- **Gait Generation**: Support for walk, trot, and custom gaits
-- **Visualization**: Real-time visualization of leg movements
-- **Bezier Curves**: Optimized swing phase trajectories
+| Category | Description |
+|---|---|
+| **3D Kinematics** | FK/IK with ABAD joints; frame transforms `{B}` → `{Mi}` → `{Li}` |
+| **Trajectory Planning** | Stance/swing planning with automatic workspace-guard scaling |
+| **Gait Generation** | Walk / Trot / Pace / Bound / Pronk — 12-DOF CSV export for hardware |
+| **Collision Model** | 24-point bounding volume: chassis octagon + M6 studs + wheel rims |
+| **Rendering** | 2D/3D mechanism plots, leg envelope, multi-view screenshots, animation |
+| **CLI** | Rapid IK testing and gait safety validation without writing code |
 
-## Documentation
+---
 
-See the `docs/` directory for detailed documentation and examples.
+## Installation
+
+```bash
+git clone https://github.com/BioRoLa/LegWheel.git
+cd LegWheel
+uv sync                                  # creates .venv, installs pinned deps
+uv run python examples/kinematics/basic_usage.py
+```
+
+### Requirements
+- Python >= 3.10
+- NumPy, SciPy, Matplotlib, Pandas, Nlopt (pinned in `uv.lock`)
+- **Optional visualization backend**: Plotly 6.x via `uv sync --extra plotly`
+- **Optional notebook tools**: Jupyter via `uv sync --extra notebook`
+- **Optional**: [FFmpeg](https://ffmpeg.org/) — required for MP4 animation export
+
+---
+
+## CLI
+
+```bash
+# Verify gait parameters against physical constraints
+uv run legwheel check --height 0.3 --vx 0.15 --gait Trot
+
+# Inverse Kinematics for one leg
+uv run legwheel ik --leg 0 --x 0.2 --y 0.1 --z -0.25
+
+# Generate hardware-ready trajectory CSV
+uv run legwheel generate --gait Walk --vx 0.1 --cycles 5
+```
+
+---
+
+## Plotly Viewer (Optional)
+
+Install the optional Plotly backend first:
+
+```bash
+uv sync --extra plotly
+```
+
+**Robot 3D viewer** — static snapshot of the Corgi mechanism at given joint angles:
+
+```bash
+uv run python -m legwheel.cli render --theta 75 --beta 0 --gamma 0 \
+  --html outputs/plotly/corgi_robot.html --show
+```
+
+**Gait CSV trajectory viewer** — animated frame slider over a hardware CSV:
+
+```bash
+uv run python -m legwheel.cli view outputs/csv/<trajectory>.csv \
+  --backend plotly --html outputs/plotly/gait_viewer.html \
+  --frame-step 10 --max-frames 200 --show
+```
+
+Both commands write a standalone HTML file and optionally open it in the browser (`--show`). Use `--frame-step` and `--max-frames` to keep large CSV files responsive.
+
+> **Note:** On `fuseblk` mounts (e.g. Windows NTFS drives mounted in WSL), use `uv run python -m legwheel.cli` instead of `uv run legwheel` — the filesystem does not preserve executable bits on console scripts.
+
+**Matplotlib vs Plotly responsibilities:**
+
+| Backend | Use for |
+|---|---|
+| Matplotlib (default) | Static publication figures, legacy scripts, animation export |
+| Plotly | Interactive 3D inspection, HTML sharing, trajectory slider |
+
+---
+
+## Python API
+
+```python
+import numpy as np
+from legwheel.models.corgi_leg import CorgiLegKinematics
+
+leg = CorgiLegKinematics(0)                       # 0=FL, 1=FR, 2=RR, 3=RL
+p_B = leg.forward_kinematics(np.deg2rad(75),      # θ
+                              np.deg2rad(90),      # β
+                              np.deg2rad(0))       # γ (ABAD)
+q   = leg.inverse_kinematics(p_B)
+```
+
+```python
+from legwheel.models.corgi_robot import CorgiRobot
+from legwheel.models.collision_model import CorgiCollisionModel
+
+robot = CorgiRobot()
+robot.base_ori = [np.deg2rad(180), 0, 0]           # upside-down
+col   = CorgiCollisionModel(robot)
+min_z, pivots = col.find_contact_pivots([[np.deg2rad(60), np.deg2rad(90), 0.0]] * 4)
+```
+
+---
 
 ## Project Structure
 
 ```
-legwheel/
-├── legwheel/           # Main package
-│   ├── models/         # Kinematic models
-│   ├── planners/       # Trajectory and gait planning
-│   ├── visualization/  # Plotting utilities
-│   ├── utils/          # Helper functions
-│   ├── bezier/         # Bezier curve tools
-│   └── config.py       # Configuration
-├── scripts/            # Executable scripts
-├── examples/           # Usage examples
-├── tests/              # Unit tests
-├── data/               # Data files
-└── docs/               # Documentation
+LegWheel/
+│
+├── legwheel/                   # Core library (installed package)
+│   ├── models/
+│   │   ├── leg_model.py        # 2D five-bar linkage geometry
+│   │   ├── corgi_leg.py        # 3D kinematics with ABAD
+│   │   ├── corgi_robot.py      # Full 4-leg robot
+│   │   └── collision_model.py  # 24-point bounding volume
+│   ├── planners/               # Trajectory & gait generators
+│   ├── visualization/          # PlotLeg (2D) + Plotly robot/CSV viewers
+│   ├── config/                 # RobotParams, GaitParams
+│   └── cli.py
+│
+├── render/                     # Standalone rendering & animation scripts
+│   ├── plot_corgi_robot.py     # Full robot 3D (+ collision bounds overlay)
+│   ├── plot_single_leg.py      # Single-leg debug view
+│   ├── plot_cone_assembly.py   # M6-stud + wheel cone geometry
+│   ├── plot_leg_envelope.py    # Leg ABAD-sweep envelope (triple cone)
+│   └── animation_*.py
+│
+├── examples/
+│   ├── kinematics/             # FK/IK, workspace, frame validation
+│   ├── gait/                   # Gait generation, CSV export, trajectory
+│   ├── self_righting/          # Stability windows, collision analysis
+│   └── stability/              # CoM & screw analysis
+│
+├── output/                     # Generated figures / CSVs (gitignored)
+├── data/                       # Lookup tables
+├── docs/                       # Derivation notes
+└── uv.lock
 ```
 
-## Requirements
+---
 
-- Python >= 3.7
-- NumPy >= 1.19.0
-- Matplotlib >= 3.3.0
-- SciPy >= 1.5.0
-- Pandas >= 1.1.0
-- NLopt >= 2.6.0
+## Key Parameters (`RobotParams`)
+
+| Parameter | Value | Description |
+|---|---|---|
+| `WHEEL_BASE` | 510 mm | Front–rear wheel-centre distance |
+| `BODY_WIDTH` | 240 mm | Hip-to-hip (ABAD axis) |
+| `WHEEL_RADIUS_OUTER` | ≈135 mm | Physical outer radius |
+| θ range | 17° – 160° | Extension (17° = wheel mode) |
+| β range | ±40° | Sagittal swing |
+| γ range | ±30° | ABAD (hip roll) |
+
+---
 
 ## License
 
 MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.

@@ -24,6 +24,7 @@ wheels/
 venv/
 ENV/
 env/
+.venv/
 
 # IDE
 .vscode/
@@ -38,6 +39,7 @@ env/
 
 # Output files
 output/
+outputs/
 Output_datas/
 *.mp4
 *.avi

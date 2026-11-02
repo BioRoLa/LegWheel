@@ -1,0 +1,596 @@
+import numpy as np
+from typing import overload
+from legwheel.config import RobotParams
+from legwheel.utils import numerical_jacobian, pseudo_inverse_dls
+
+
+class CorgiLegKinematics:
+    """
+    3D Kinematics model for the Corgi Leg-Wheel module with Abduction/Adduction (ABAD).
+
+    This class handles the transformation between the 2D sagittal leg mechanism
+    (solved by PlotLeg/LegModel) and the 3D Body Frame. It accounts for mechanical
+    offsets (ABAD axis and wheel axial distance) and the active ABAD joint angle.
+
+    Coordinate Frames:
+        {B}  - Body Frame: Origin at chassis center. +X Front, +Y Left, +Z Up.
+        {Mi} - Module Frame (Rotated): Base for each limb, centered at the Hip Roll (ABAD) axis.
+               Oriented such that Z_M is the longitudinal roll axis. In this implementation,
+               the frame axes shown in plots rotate with the joint angle gamma.
+        {Li} - Leg Frame (Sagittal): 2D assembly attached to ABAD output.
+               x_L is the mechanism extension axis, y_L is sagittal symmetry.
+
+    Leg Indexing (i):
+        0: FL (Front-Left), 1: FR (Front-Right), 2: RR (Rear-Right), 3: RL (Rear-Left)
+    """
+
+    def __init__(self, leg_index, gamma=0.0):
+        """
+        Initializes the kinematics for a specific leg and sets up the structural offsets.
+
+        Args:
+            leg_index (int): Index of the leg (0-3).
+            gamma (float): ABAD joint angle (rad).
+        """
+        self.leg_index = leg_index
+        self.gamma = gamma
+        # Mechanical symmetry detection
+        self.is_left = leg_index in [0, 3]
+        self.is_front = leg_index in [0, 1]
+
+        # Dimensions from RobotParams
+        self.w_body = RobotParams.BODY_WIDTH
+        self.l_body = RobotParams.WHEEL_BASE
+
+        # d_abad: Lateral distance from the Roll axis center to the Linkage Plane.
+        self.d_abad = RobotParams.ABAD_AXIS_OFFSET
+
+        # d_wheel: Lateral distance from the Linkage Plane to the Wheel Center.
+        self.d_wheel = RobotParams.WHEEL_AXIAL_OFFSET
+
+        # r_wheel: Effective radius for kinematics (distance from ABAD axis to ground contact point).
+        self.r_wheel = RobotParams.WHEEL_RADIUS_PITCH
+
+        # wheel_thickness: Thickness of the wheel for visualization and collision purposes.
+        self.wheel_thickness = RobotParams.WHEEL_THICKNESS
+
+        # sx, sy: "Sign X" and "Sign Y".
+        # Used as multipliers to determine frame origin positions in {B} based on symmetry.
+        self.sx = 1.0 if self.is_front else -1.0
+        self.sy = 1.0 if self.is_left else -1.0
+
+        # p_Mi_in_B: The 3D position of the Module {Mi} origin (ABAD Roll Axis) in {B}.
+        # FL: (+L/2, +W/2, 0), FR: (+L/2, -W/2, 0), etc.
+        self.p_Mi_in_B = np.array(
+            [self.sx * 0.5 * self.l_body, self.sy * 0.5 * self.w_body, self.d_abad]
+        )
+
+        # PlotLeg acts as the internal 2D solver for the 5-bar linkage geometry.
+        from legwheel.visualization.plot_leg import PlotLeg
+
+        self.solver = PlotLeg()
+        self.theta0 = self.solver.theta0
+        # beta0 is typically 90 deg in config, creating an offset for intuitive usage.
+        self.beta0 = self.solver.beta0
+
+    def fk_sagittal(self, theta, beta, alpha=0.0, w=0.0):
+        """
+        Calculates the 2D mechanism state in the sagittal Leg Frame {Li}.
+        Adjusts beta by -90 deg to align the 2D solver with the 3D frame convention.
+
+        Args:
+            theta (float): Joint angle 1 (rad).
+            beta (float): Joint angle 2 (rad).
+            alpha (float): Rim contact angle (deg). 0 is bottom center.
+            w (float): Lateral contact offset from wheel mid-plane (m). Passed to rim_point
+                       to compute the toroidal effective radius r_eff(w).
+
+        Returns:
+            np.ndarray: [x, y, 0] coordinates in {Li}.
+        """
+        # Internal solver adds 90 deg. By subtracting 90 here, user beta=0 points Down.
+        self.solver.forward(theta, beta, vector=True)
+        # rim_point returns the 2D position of a point on the rim for a given alpha and w.
+        p_contact = self.solver.rim_point(alpha, w)
+
+        # if rim_point returns a batch of points, we take the first one for FK.
+        if isinstance(p_contact, np.ndarray):
+            return np.array([p_contact[0], p_contact[1], 0.0])
+        return np.array([p_contact.real, p_contact.imag, 0.0])
+
+    def _get_transformation_matrices(self, gamma=None, type="pos"):
+        """
+        Defines the rotation matrices for coordinate frame mapping.
+
+        Mapping logic (implemented by the side-specific R_L_to_M matrices):
+        - Left legs:  X_L -> -Z_M, Y_L -> +Y_M, Z_L -> +X_M
+        - Right legs: X_L -> +Z_M, Y_L -> -Y_M, Z_L -> -X_M
+
+        The side-specific sign convention keeps the sagittal leg plane mirrored
+        between left and right limbs while preserving the Body Frame convention
+        (+X front, +Y left, +Z up).
+        """
+        if gamma is None:
+            gamma = self.gamma
+        # R_L_to_M: Basis of Leg Frame {Li} expressed in Module Frame {Mi}.
+        if self.is_left:
+            R_L_to_M = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
+        else:
+            R_L_to_M = np.array([[0, 0, -1], [0, -1, 0], [1, 0, 0]])
+
+        # R_M_to_B: Basis of Module Frame {Mi} expressed in Body Frame {B}.
+        if self.is_left:
+            # X_M -> +Y_R*cos(\gamma) + +Z_R *sin(\gamma),
+            # Y_M -> +Z_R*cos(\gamma) - +Y_R*sin(\gamma),
+            # Z_M -> +X_R for left legs
+            R_M_to_B = np.array(
+                [[0, 0, 1], [np.cos(gamma), -np.sin(gamma), 0], [np.sin(gamma), np.cos(gamma), 0]]
+            )
+        else:
+            # X_M -> -Y_R*cos(\gamma) + +Z_R *sin(\gamma),
+            # Y_M -> -Z_R*cos(\gamma) - +Y_R *sin(\gamma),
+            # Z_M -> -X_R for right legs
+            R_M_to_B = np.array(
+                [
+                    [0, 0, -1],
+                    [-np.cos(gamma), -np.sin(gamma), 0],
+                    [np.sin(gamma), -np.cos(gamma), 0],
+                ]
+            )
+
+        if type == "vec":
+            # For direction vectors, we only need the rotation part without translation.
+            return R_L_to_M, R_M_to_B
+
+        # Transform matrices T:
+        # | R | offset |
+        # |---|--------|
+        # | 0 |   1    |
+
+        # T_L_to_M includes the rotation and the translation from Leg Frame to Module Frame
+        T_L_to_M = np.eye(4)
+        T_L_to_M[:3, :3] = R_L_to_M
+        # Lateral offset from Leg Frame to Module Frame
+        offset_L_to_M = np.array([self.d_wheel, 0, 0])
+        T_L_to_M[:3, 3] = offset_L_to_M
+        T_L_to_M[3, 3] = 1
+
+        # T_M_to_R includes the rotation and the translation from Module Frame to Robot Frame
+        T_M_to_B = np.eye(4)
+        T_M_to_B[:3, :3] = R_M_to_B
+        T_M_to_B[:3, 3] = self.p_Mi_in_B
+        T_M_to_B[3, 3] = 1
+        return T_L_to_M, T_M_to_B
+
+    def _L_to_M(self, p_L, gamma=None, type="pos"):
+        """
+        Transforms a point from Leg Frame {Li} to Module Frame {Mi}.
+        Args:
+            p_L (np.ndarray): [x, y, z] point in Leg Frame {Li}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
+        Returns:
+            np.ndarray: [x, y, z] point in Module Frame {Mi}.
+        """
+        if type == "vec":
+            R_L_to_M, _ = self._get_transformation_matrices(gamma, type=type)
+            return R_L_to_M @ p_L  # Rotate the direction vector without translation
+
+        T_L_to_M, _ = self._get_transformation_matrices(gamma, type=type)
+        # append scale factor to set p_l in to 1x4 homogeneous coordinates for transformation
+        # Convert to homogeneous coordinates
+        p_L_homogeneous = np.append(p_L, 1)
+        p_M = T_L_to_M @ p_L_homogeneous
+        return p_M[:3]  # Return only the x, y, z components
+
+    def _M_to_B(self, p_M, gamma=None, type="pos"):
+        """
+        Transforms a point from Module Frame {Mi} to Body Frame {B}.
+        Args:
+            p_M (np.ndarray): [x, y, z] point in Module Frame {Mi}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
+        Returns:
+            np.ndarray: [x, y, z] point in Body Frame {B}.
+        """
+        if type == "vec":
+            _, R_M_to_B = self._get_transformation_matrices(gamma, type=type)
+            return R_M_to_B @ p_M  # Rotate the direction vector without translation
+        _, T_M_to_B = self._get_transformation_matrices(gamma)
+        # Convert to homogeneous coordinates
+        p_M_homogeneous = np.append(p_M, 1)
+        p_B = T_M_to_B @ p_M_homogeneous
+        return p_B[:3]  # Return only the x, y, z components
+
+    def _B_to_M(self, p_B, gamma=None, type="pos"):
+        """
+        Transforms a point from Body Frame {B} to Module Frame {Mi}.
+        Args:
+            p_B (np.ndarray): [x, y, z] point in Body Frame {B}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
+        Returns:
+            np.ndarray: [x, y, z] point in Module Frame {Mi}.
+        """
+        if type == "vec":
+            _, R_M_to_B = self._get_transformation_matrices(gamma, type=type)
+            R_B_to_M = R_M_to_B.T  # Inverse rotation for direction vectors
+            return R_B_to_M @ p_B  # Rotate the direction vector without translation
+        _, T_M_to_B = self._get_transformation_matrices(gamma)
+        T_B_to_M = np.linalg.inv(T_M_to_B)
+        # Convert to homogeneous coordinates
+        p_B_homogeneous = np.append(p_B, 1)
+        p_M = T_B_to_M @ p_B_homogeneous
+        return p_M[:3]  # Return only the x, y, z components
+
+    def _M_to_L(self, p_M, gamma=None, type="pos"):
+        """
+        Transforms a point from Module Frame {Mi} to Leg Frame {Li}.
+        Args:
+            p_M (np.ndarray): [x, y, z] point in Module Frame {Mi}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
+        Returns:
+            np.ndarray: [x, y, z] point in Leg Frame {Li}.
+        """
+        if type == "vec":
+            R_L_to_M, _ = self._get_transformation_matrices(gamma, type=type)
+            R_M_to_L = R_L_to_M.T  # Inverse rotation for direction vectors
+            return R_M_to_L @ p_M  # Rotate the direction vector without translation
+        T_L_to_M, _ = self._get_transformation_matrices(gamma)
+        T_M_to_L = np.linalg.inv(T_L_to_M)
+        # Convert to homogeneous coordinates
+        p_M_homogeneous = np.append(p_M, 1)
+        p_L = T_M_to_L @ p_M_homogeneous
+        return p_L[:3]  # Return only the x, y, z components
+
+    def _transform_to_body(self, p_L, gamma=None, type="pos"):
+        """
+        Transforms a 3D point from the Leg Frame assembly to the Body Frame.
+
+        Logic Sequence:
+        1. Map point from {Li} assembly base to Module orientation {Mi}.
+        3. Transform the result to the global Body Frame {B}.
+        Args:
+            p_L (np.ndarray): [x, y, z] point in Leg Frame {Li}.
+            gamma (float): ABAD joint angle (rad).
+            type (str): "pos" for position vectors, "vec" for direction vectors.
+        """
+
+        # starts with the point in the Leg Frame {Li}
+        # 1. Orientation mapping {Li} -> {Mi}
+        p_M = self._L_to_M(p_L, gamma, type=type)
+        p_B = self._M_to_B(p_M, gamma, type=type)
+        return p_B
+
+    @overload
+    def forward_kinematics(self, q, g=[0.0, 0.0]):
+        """
+        Overloaded method to allow calling with either separate joint angles or a combined state vector.
+        Args:
+            q (list or np.ndarray): Joint angles [theta, beta, gamma] (rad).
+            g (float): Rim contact geometry parameters (alpha, w) (deg) for calculating the foot contact point on the rim.
+        Returns:
+            np.ndarray: [x, y, z] position in Body Frame {B}.
+        """
+        return self.forward_kinematics(
+            q[0], q[1], q[2], alpha=g[0], w=g[1]
+        )  # g is a list [alpha, w]
+
+    def forward_kinematics(self, theta, beta, gamma=None, alpha=0.0, w=0.0):
+        """
+        Full 3D Forward Kinematics for the foot contact point.
+        Args:
+            theta (float): Joint angle 1 (rad).
+            beta (float) : Joint angle 2 (rad).
+            gamma (float): ABAD joint angle (rad).
+            alpha (float): Rim contact angle (deg). 0 is bottom center.
+            w (float)    : Contact point depth(m). ±self.wheel_thickness/2 from the mid surface.
+        Returns:
+            np.ndarray: [x, y, z] position in Body Frame {B}.
+        """
+        p_L = self.fk_sagittal(theta, beta, alpha, w) + np.array([0, 0, w])
+        return self._transform_to_body(p_L, gamma, type="pos")
+
+    def foot_rim_contact_fk(self, theta, beta, gamma=None, ground_slope=0.0):
+        """
+        Specialized FK to calculate the lowest toroidal rim contact point.
+
+        The Body Frame {B} uses +Z upward, so the physically lowest contact is the sample
+        with the minimum Z coordinate. Unlike the legacy flat-tread model, the toroidal
+        tire does not necessarily contact at ``w=±T/2``; the effective radius varies with
+        lateral coordinate ``w`` via ``LegModel.rim_point(alpha, w)``.
+
+        Args:
+            theta (float): Joint angle 1 (rad).
+            beta (float) : Joint angle 2 (rad).
+            gamma (float): ABAD joint angle (rad).
+            ground_slope (float): Local ground slope angle (radians).
+        Returns:
+            alpha, w contact position on rim.
+        """
+        if gamma is None:
+            gamma = self.gamma
+
+        # 1. Base alpha (sagittal)
+        alpha = np.rad2deg(ground_slope - beta)
+
+        # Optimization: for extremely small gamma, assume center contact to avoid flickering
+        if abs(gamma) < 1e-4:
+            return alpha, 0.0
+
+        half_w = self.wheel_thickness / 2.0
+        w_samples = np.linspace(-half_w, half_w, 9)
+        z_values = np.array(
+            [self.forward_kinematics(theta, beta, gamma, alpha=alpha, w=w)[2] for w in w_samples]
+        )
+
+        w = float(w_samples[int(np.argmin(z_values))])
+        return alpha, w
+
+    def get_joint_positions(self, theta, beta, gamma=None):
+        """
+        Returns all linkage joint positions (O, A, B, C, D, E, F, G) in Body Frame {B}.
+        """
+        # Solver is updated inside fk_sagittal
+        self.fk_sagittal(theta, beta)
+        lm = self.solver
+
+        # Mapping 2D attributes to a dict for processing
+        joints_2d = {
+            "O": np.array([0, 0]),
+            "A": lm.A_l,
+            "B": lm.B_l,
+            "C": lm.C_l,
+            "D": lm.D_l,
+            "E": lm.E,
+            "F": lm.F_l,
+            "G": lm.G,
+        }
+        return {
+            k: self._transform_to_body(np.array([v[0], v[1], 0]), gamma, type="pos")
+            for k, v in joints_2d.items()
+        }
+
+    def plot_leg_in_3d_plane(
+        self,
+        theta,
+        beta,
+        gamma=None,
+        z_offset=0.0,
+        ax=None,
+        select_components=["bars", "rims", "joints"],
+        w=0.0,
+    ):
+        """
+        Visualizes the full detailed mechanism by projecting 2D PlotLeg into specific planes in 3D space.
+        This method uses the internal geometry of the PlotLeg solver to render the geometric primitives into 3D Body space.
+
+        Args:
+            w: lateral position of this projection plane (m). Used to compute the correct
+               tire arc half-width via tyre_offset_at_w(w), so rim outlines correctly narrow
+               toward the wheel edges.
+        """
+        # 1. Update the 2D solver with corrected beta to get current linkage geometry
+        self.fk_sagittal(theta, beta)
+        shape = self.solver.leg_shape
+        # Update geometric primitives with the correct tire cross-section width for this w
+        tyre_off = self.solver.tyre_offset_at_w(w)
+        shape.get_shape(shape.O, tyre_offset=tyre_off)
+
+        def proj(x, y, color, lw, z_offset=z_offset):
+            """Internal projection helper."""
+            z = np.full_like(x, z_offset)
+            pts_L = np.vstack([x, y, z]).T
+            pts_B = np.array([self._transform_to_body(p, gamma) for p in pts_L])
+            ax.plot(pts_B[:, 0], pts_B[:, 1], pts_B[:, 2], color=color, linewidth=lw)
+
+        # Iterate through PlotLeg's shape dictionary to find plotable primitives
+        for key, val in shape.__dict__.items():
+            # Determine Z-offset based on whether the component is 'Left' or 'Right' plate
+            z_off = z_offset
+
+            # 1. Linkage Bars (Line2D objects)
+            if "bar" in key and hasattr(val, "get_xdata") and "bars" in select_components:
+                proj(
+                    val.get_xdata(),
+                    val.get_ydata(),
+                    val.get_color(),
+                    val.get_linewidth(),
+                    z_offset=z_off,
+                )
+
+            # 2. Rims and Arcs
+            elif "rim" in key and hasattr(val, "arc") and "rims" in select_components:
+                for arc in val.arc:
+                    t1, t2 = np.deg2rad(arc.theta1), np.deg2rad(arc.theta2)
+                    # Use shortest path interpolation to avoid 'long-way-around' rendering bugs
+                    diff = t2 - t1
+                    while diff > np.pi:
+                        diff -= 2 * np.pi
+                    while diff < -np.pi:
+                        diff += 2 * np.pi
+                    ang = np.linspace(t1, t1 + diff, 20)
+                    cx, cy = arc.center
+                    x, y = cx + (arc.width / 2) * np.cos(ang), cy + (arc.height / 2) * np.sin(ang)
+                    proj(x, y, arc.get_edgecolor(), arc.get_linewidth(), z_offset=z_off)
+
+            # 3. Joints (Circle patches)
+            elif "joint" in key and hasattr(val, "center") and "joints" in select_components:
+                cx, cy = val.center
+                ang = np.linspace(0, 2 * np.pi, 20)
+                x, y = cx + val.radius * np.cos(ang), cy + val.radius * np.sin(ang)
+                proj(x, y, val.get_edgecolor(), val.get_linewidth(), z_offset=z_off)
+
+    def plot_leg_3d(self, theta, beta, gamma=None, ax=None):
+        """
+        Wrapper to plot the leg in 3D with appropriate z-offsets for different components.
+        This method calls plot_leg_in_3d_plane multiple times to layer the main linkage and the wheel rim with a slight offset to prevent visual overlap.
+        """
+        # ±half_w planes: rim outlines only (joints at edges are zero-radius at tyre face)
+        # w=0 center plane: bars + rims + joints (correct tyre_offset and structural joints)
+        half_w = self.wheel_thickness / 2.0
+        self.plot_leg_in_3d_plane(
+            theta, beta, z_offset=half_w, gamma=gamma, ax=ax, select_components=["rims"], w=half_w
+        )
+        self.plot_leg_in_3d_plane(
+            theta, beta, z_offset=-half_w, gamma=gamma, ax=ax, select_components=["rims"], w=-half_w
+        )
+        self.plot_leg_in_3d_plane(
+            theta,
+            beta,
+            z_offset=0.0,
+            gamma=gamma,
+            ax=ax,
+            select_components=["bars", "rims", "joints"],
+            w=0.0,
+        )
+
+        # Add toroidal cross-section profile lines around the wheel.
+        # Sample w across the full wheel width so the line curves with r_eff(w):
+        #   w ∈ [0, ±r_corner]     → torus arc (r_eff drops from R_outer to R_tread)
+        #   w ∈ [±r_corner, ±half] → flat hard-rim face (r_eff stays at R_tread)
+        if ax is not None:
+            alpha_spacing = np.linspace(-180, 180, 100)
+            half_w = self.wheel_thickness / 2.0
+            w_samples = np.linspace(-half_w, half_w, 15)
+            for alpha in alpha_spacing:
+                pts = np.array(
+                    [
+                        self.forward_kinematics(theta, beta, gamma, alpha=alpha, w=w)
+                        for w in w_samples
+                    ]
+                )
+                ax.plot(pts[:, 0], pts[:, 1], pts[:, 2], color="gray", linewidth=2, alpha=0.5)
+
+    def plot_frames(self, ax, gamma=None, axis_len=0.05):
+        """
+        Plots the coordinate frame axes (X=Red, Y=Green, Z=Blue) for {R}, {Mi}, and {Li}.
+        Also labels the limb names (FL, FR, RR, RL).
+        """
+        limb_names = ["FL", "FR", "RR", "RL"]
+        name = limb_names[self.leg_index]
+
+        # Robot Frame {B} origin
+        if self.leg_index == 0:
+            ax.quiver(0, 0, 0, axis_len, 0, 0, color="r", linewidth=2)  # X_B
+            ax.quiver(0, 0, 0, 0, axis_len, 0, color="g", linewidth=2)  # Y_B
+            ax.quiver(0, 0, 0, 0, 0, axis_len, color="b", linewidth=2)  # Z_B
+            ax.text(0, 0, 0.02, "{B}", color="k", fontsize=12, fontweight="bold")
+
+        T_L_to_M, T_M_to_B = self._get_transformation_matrices(gamma=gamma)
+        # Origin of Module Frame {Mi} in Body Frame {B}
+        mo = self._M_to_B(np.array([0, 0, 0]), gamma)
+        # Origin of Leg Frame {Li} in Body Frame {B}
+        lo = self._transform_to_body(np.array([0, 0, 0]), gamma)
+
+        R_M_to_B = T_M_to_B[:3, :3]
+        for i, c in enumerate(["r", "g", "b"]):
+            # Module Frame {Mi} axes
+            axis = R_M_to_B[:, i] * axis_len
+            # Plot the Module Frame axes from the module origin in Robot Frame
+            ax.quiver(mo[0], mo[1], mo[2], axis[0], axis[1], axis[2], color=c, alpha=0.8)
+
+        # Label Module Frame and Limb Name
+        ax.text(
+            mo[0],
+            mo[1],
+            mo[2] + 0.02,
+            f"{name} {{Mi}}",
+            fontsize=10,
+            fontweight="bold",
+            color="blue",
+        )
+
+        # Leg Frame {Li} origin (offset by d_abad and rotated)
+        R_L_to_B = R_M_to_B @ T_L_to_M[:3, :3]
+        # Leg Frame {Li} axes
+        for i, c in enumerate(["r", "g", "b"]):
+            # Plot the Leg Frame axes from the leg origin in Robot Frame
+            axis = R_L_to_B[:, i] * axis_len
+            # Plot the Leg Frame axes from the leg origin in Robot Frame
+            ax.quiver(lo[0], lo[1], lo[2], axis[0], axis[1], axis[2], color=c)
+
+        # Label Leg Frame
+        ax.text(
+            lo[0],
+            lo[1],
+            lo[2] - 0.02,
+            f"{{L{self.leg_index}}}",
+            fontsize=9,
+            fontweight="bold",
+            color="darkgreen",
+        )
+
+    def inverse_kinematics(
+        self, target_pos, guess_q=None, rim_point=(0.0, 0.0), tol=1e-3, max_iter=200
+    ):
+        """
+        3D Inverse Kinematics using numerical Gauss-Newton iteration.
+        assign specific rim point to ensure the IK solution corresponds to a desired contact point on the wheel.
+        Args:
+            target_pos (np.ndarray): [x, y, z] target in {B}.
+            guess_q (np.ndarray): Initial [theta, beta, gamma] guess.
+            rim_point (tuple): (alpha, w) rim contact parameters.
+            tol (float): Tolerance for convergence (m). Default 1e-3 (1mm).
+            max_iter (int): Maximum iterations. Default 200.
+
+        Returns:
+            np.ndarray: Optimized joint angles.
+        """
+        if guess_q is None:
+            guess_q = np.array([self.theta0, self.beta0, 0.0])
+
+        alpha, w = rim_point
+
+        def solve_core(target, q_init):
+            q = np.array(q_init, dtype=float)
+            iterated = 0
+            err = target - self.forward_kinematics(*q, alpha=alpha, w=w)
+            while np.linalg.norm(err) > tol:
+                if iterated > max_iter:
+                    return q, False
+                err = target - self.forward_kinematics(*q, alpha=alpha, w=w)
+
+                def fk_wrapper(q_eval):
+                    return self.forward_kinematics(*q_eval, alpha=alpha, w=w)
+
+                J = numerical_jacobian(fk_wrapper, q, diff=1e-5)
+                # Increase damping slightly for better stability near singularities
+                q += pseudo_inverse_dls(J, damping_factor=0.05) @ err
+                iterated += 1
+            return q, True
+
+        q_opt, success = solve_core(target_pos, guess_q)
+
+        if not success:
+            # Fallback: Midpoint interpolation strategy
+            current_pos = self.forward_kinematics(*guess_q, alpha=alpha, w=w)
+            mid_pos = (current_pos + target_pos) / 2.0
+
+            q_mid, _ = solve_core(mid_pos, guess_q)
+            q_opt, success_final = solve_core(target_pos, q_mid)
+
+            if not success_final:
+                final_err = np.linalg.norm(
+                    target_pos - self.forward_kinematics(*q_opt, alpha=alpha, w=w)
+                )
+                if final_err > 5e-3:  # 5mm hard limit
+                    raise RuntimeError(
+                        f"IK failed to converge for Leg {self.leg_index}. "
+                        f"Target: [{target_pos[0]:.4f}, {target_pos[1]:.4f}, {target_pos[2]:.4f}], "
+                        f"Final Error: {final_err*1000:.2f} mm > 5 mm limit. "
+                        f"Target is likely outside the reachable workspace."
+                    )
+                else:
+                    print(
+                        f"Warning: IK for Leg {self.leg_index} converged with loose tolerance (Error: {final_err*1000:.2f} mm)"
+                    )
+
+        return q_opt
+
+    def set_gamma(self, gamma):
+        """Updates the ABAD angle and recalculates the module position."""
+        self.gamma = gamma
+        # Recalculate the module position in Robot Frame based on new gamma
+        self.p_Mi_in_R = self._M_to_R(np.array([0, 0, self.d_abad]), gamma)

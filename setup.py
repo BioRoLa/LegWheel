@@ -41,4 +41,9 @@ setup(
     package_data={
         "legwheel": ["data/*.csv"],
     },
+    entry_points={
+        'console_scripts': [
+            'legwheel=legwheel.cli:main',
+        ],
+    },
 )
